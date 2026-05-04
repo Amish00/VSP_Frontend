@@ -38,6 +38,8 @@ import HistoryPage from './user/pages/HistoryPage';
 import SubscriptionsPage from './user/pages/SubscriptionsPage';
 import TrendingPage from './user/pages/TrendingPage';
 import PlansPage from './user/pages/PlansPage';
+import PaymentSuccess from './user/pages/PaymentSuccess';
+import PaymentFailure from './user/pages/PaymentFailure';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -70,6 +72,8 @@ function App() {
           <Route path="/subscriptions" element={<SubscriptionsPage />} />
           <Route path="/trending" element={<TrendingPage />} />
           <Route path="/plans" element={<PlansPage />} />
+          <Route path="/payment/success" element={<PaymentSuccess />} />
+          <Route path="/payment/failure" element={<PaymentFailure />} />
           {/*
           <Route path="/profile" element={<Profile />} />
           

@@ -1,5 +1,5 @@
 // src/admin/layout/AdminNav.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Bell,
   Home,
@@ -12,10 +12,13 @@ import {
   Users,
   DollarSign,
   User,
+  Settings,
 } from 'lucide-react';
 import logoUrl from '../../assets/logo.svg';
+import api from '../../user/api/Api';
+import { useNavigate } from 'react-router-dom';
 
-// Notifications (unchanged)
+// Static notifications (same as CreatorNav)
 export const NOTIFICATIONS = [
   { id: 1, icon: '✅', title: 'Video Approved', body: "'React Masterclass' is now live!", time: '2h ago', unread: true },
   { id: 2, icon: '❤️', title: 'New Likes', body: 'Your video got 340 new likes', time: '4h ago', unread: true },
@@ -24,7 +27,6 @@ export const NOTIFICATIONS = [
   { id: 5, icon: '💰', title: 'Payout Processed', body: '$320 sent to your account', time: '3d ago', unread: false },
 ];
 
-// Replace emoji icons with Lucide components
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'videos', label: 'Videos', icon: Video },
@@ -32,18 +34,64 @@ const NAV = [
   { id: 'revenue', label: 'Revenue', icon: DollarSign },
 ];
 
-const AdminNav = ({ user, onLogout, onGoHome, onNavSelect, activeNav }) => {
+const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [profOpen, setProfOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const unread = NOTIFICATIONS.filter((n) => n.unread).length;
+
+  // Fetch real user data from backend
+  useEffect(() => {
+    const fetchUser = async () => {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        navigate('/');
+        return;
+      }
+      try {
+        const response = await api.get('/users/me');
+        setUser(response.data);
+      } catch (err) {
+        console.error('Failed to fetch admin user:', err);
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        navigate('/signin');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUser();
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    if (onLogout) onLogout();
+    navigate('/');
+  };
+
+  if (loading) {
+    return (
+      <header className="h-[68px] bg-bg-side border-b border-border flex items-center px-4 sm:px-5 gap-3 flex-shrink-0 z-50 relative">
+        <div className="animate-pulse w-8 h-8 rounded-full bg-bg-el" />
+      </header>
+    );
+  }
+
+  if (!user) return null;
 
   return (
     <>
       <header
-        className="h-[60px] bg-bg-side border-b border-border flex items-center px-4 sm:px-5 gap-3 flex-shrink-0 z-50 relative"
+        className="h-[68px] bg-bg-side border-b border-border flex items-center px-4 sm:px-5 gap-3 flex-shrink-0 z-50 relative"
         style={{
           boxShadow: '0 1px 0 rgba(255,255,255,.02),0 2px 12px rgba(0,0,0,.25)',
         }}
       >
+        {/* Mobile menu button */}
         <button
           onClick={() => setDrawerOpen(true)}
           aria-label="Open navigation"
@@ -51,28 +99,105 @@ const AdminNav = ({ user, onLogout, onGoHome, onNavSelect, activeNav }) => {
         >
           <Menu size={16} />
         </button>
-        <button
-          onClick={onGoHome}
-          className="flex items-center gap-2.5 flex-shrink-0 group"
-        >
+
+        {/* Logo + Home button */}
+        <button onClick={() => navigate('/admin')} className="flex items-center gap-2.5 flex-shrink-0 group">
           <img src={logoUrl} alt="ViriShare" style={{ height: 26 + 'px', width: 'auto' }} />
           <span className="font-display font-black text-lg text-text-primary tracking-tight group-hover:text-primary-light transition-colors hidden sm:block">
             ViriShare
           </span>
         </button>
+
         <div className="flex-1" />
 
-        {/* Profile dropdown (unchanged) */}
+
+        {/* Notifications bell */}
         <div className="relative">
           <button
-            onClick={() => setProfOpen((p) => !p)}
+            onClick={() => {
+              setNotifOpen((p) => !p);
+              setProfOpen(false);
+            }}
+            aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ''}`}
+            className={`relative w-9 h-9 rounded-xl border flex items-center justify-center transition-all ${
+              notifOpen
+                ? 'border-danger bg-danger/12 text-danger'
+                : 'border-border bg-bg-el text-text-secondary hover:bg-bg-hov hover:text-text-primary'
+            }`}
+          >
+            <Bell size={15} />
+            {unread > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-danger border-2 border-bg-side" />
+            )}
+          </button>
+          {notifOpen && (
+            <>
+              <div className="fixed inset-0 z-[148]" onClick={() => setNotifOpen(false)} />
+              <div className="absolute top-[calc(100%+10px)] right-0 w-72 bg-bg-card border border-border rounded-2xl z-[149] shadow-drop overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                  <span className="font-display font-bold text-base">Notifications</span>
+                  <button
+                    onClick={() => setNotifOpen(false)}
+                    className="w-6 h-6 rounded-lg flex items-center justify-center text-text-muted hover:bg-bg-hov"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+                <div className="max-h-[300px] overflow-y-auto">
+                  {NOTIFICATIONS.map((n) => (
+                    <div
+                      key={n.id}
+                      className={`flex gap-3 px-4 py-3 cursor-pointer hover:bg-bg-hov border-b border-border/50 last:border-0 ${
+                        n.unread
+                          ? 'border-l-2 border-l-danger'
+                          : 'border-l-2 border-l-transparent'
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-xl bg-bg-el flex items-center justify-center text-base flex-shrink-0">
+                        {n.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-sm ${
+                            n.unread
+                              ? 'font-semibold text-text-primary'
+                              : 'font-medium text-text-secondary'
+                          }`}
+                        >
+                          {n.title}
+                        </p>
+                        <p className="text-xs text-text-muted">{n.time}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Profile dropdown (rich, like CreatorNav) */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              setProfOpen((p) => !p);
+              setNotifOpen(false);
+            }}
             className="flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-xl border border-border bg-bg-el hover:bg-bg-hov transition-all"
           >
-            <div className="w-7 h-7 rounded-full bg-danger flex items-center justify-center text-white text-xs font-bold font-display">
-              {(user?.name || 'AD').slice(0, 2).toUpperCase()}
-            </div>
+            {user.profilePicture ? (
+              <img
+                src={user.profilePicture}
+                alt="avatar"
+                className="w-7 h-7 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-danger flex items-center justify-center text-white text-xs font-bold font-display">
+                {user.username?.slice(0, 2).toUpperCase() || 'AD'}
+              </div>
+            )}
             <span className="text-sm font-semibold text-text-primary max-w-[80px] truncate hidden sm:block">
-              {user?.name?.split(' ')[0] || 'Admin'}
+              {user.username?.split(' ')[0] || 'Admin'}
             </span>
             <ChevronDown
               size={12}
@@ -84,36 +209,71 @@ const AdminNav = ({ user, onLogout, onGoHome, onNavSelect, activeNav }) => {
               <div className="fixed inset-0 z-[148]" onClick={() => setProfOpen(false)} />
               <div
                 role="menu"
-                className="absolute top-[calc(100%+8px)] right-0 w-44 bg-bg-card border border-border rounded-2xl z-[149] shadow-drop overflow-hidden p-1.5"
+                className="absolute top-[calc(100%+8px)] right-0 w-52 bg-bg-card border border-border rounded-2xl z-[149] shadow-drop overflow-hidden"
               >
-                <button
-                  role="menuitem"
-                  onClick={() => {
-                    onGoHome();
-                    setProfOpen(false);
-                  }}
-                  className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-text-secondary text-sm hover:bg-bg-hov transition-colors"
-                >
-                  <User size={13} /> My Profile
-                </button>
-                <div className="border-t border-border my-1" />
-                <button
-                  role="menuitem"
-                  onClick={() => {
-                    onLogout();
-                    setProfOpen(false);
-                  }}
-                  className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-danger text-sm font-semibold hover:bg-danger/8 transition-colors"
-                >
-                  <LogOut size={13} /> Sign Out
-                </button>
+                <div className="px-4 py-3.5 border-b border-border">
+                  <div className="flex items-center gap-2.5 mb-2">
+                    {user.profilePicture ? (
+                      <img
+                        src={user.profilePicture}
+                        alt="avatar"
+                        className="w-9 h-9 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-danger flex items-center justify-center text-white text-sm font-bold font-display">
+                        {user.username?.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-semibold text-sm text-text-primary">{user.username}</p>
+                      <p className="text-xs text-text-muted">{user.email}</p>
+                    </div>
+                  </div>
+                  <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger/10 text-danger text-xs font-semibold">
+                     {user.role}
+                  </div>
+                </div>
+                <div className="py-1.5 px-1.5">
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      onNavSelect('users'); // or any default, but profile could go to user list
+                      setProfOpen(false);
+                    }}
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-text-secondary text-sm hover:bg-bg-hov transition-colors"
+                  >
+                    <User size={13} className="text-text-muted" />
+                    My Profile
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      setProfOpen(false);
+                      // could navigate to settings page
+                    }}
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-text-secondary text-sm hover:bg-bg-hov transition-colors"
+                  >
+                    <Settings size={13} className="text-text-muted" />
+                    Settings
+                  </button>
+                </div>
+                <div className="border-t border-border py-1.5 px-1.5">
+                  <button
+                    role="menuitem"
+                    onClick={handleLogout}
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-danger text-sm font-semibold hover:bg-danger/8 transition-colors"
+                  >
+                    <LogOut size={13} />
+                    Sign Out
+                  </button>
+                </div>
               </div>
             </>
           )}
         </div>
       </header>
 
-      {/* Mobile drawer – improved with Lucide icons and larger text */}
+      {/* Mobile drawer */}
       {drawerOpen && (
         <>
           <div
@@ -145,7 +305,7 @@ const AdminNav = ({ user, onLogout, onGoHome, onNavSelect, activeNav }) => {
                       onNavSelect(item.id);
                       setDrawerOpen(false);
                     }}
-                    className={`sbi w-full text-left ${isActive ? 'active' : ''}`}
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-colors text-left"
                   >
                     <IconComponent
                       size={20}

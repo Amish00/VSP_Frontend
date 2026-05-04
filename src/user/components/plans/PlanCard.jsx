@@ -1,19 +1,24 @@
 import React from 'react';
 import Button from '../../components/ui/Button';
 
-const PlanCard = ({ plan, onSelect, currencySymbol = '₹' }) => {
+const PlanCard = ({ plan, onSelect, currencySymbol = '₹', disabled = false, isCurrentPlan = false }) => {
   const formatPrice = (price) => price === 0 ? 'Free' : `${currencySymbol}${price.toLocaleString('en-IN')}`;
 
   return (
     <div
       className={`relative p-6 rounded-2xl border flex flex-col transition-all duration-200 hover:-translate-y-1 hover:border-primary/55 ${
         plan.popular ? 'border-primary bg-primary/6' : 'border-border bg-bg-card'
-      }`}
+      } ${isCurrentPlan ? 'ring-2 ring-primary/60' : ''}`}
       style={plan.popular ? { boxShadow: '0 8px 32px rgba(37,99,235,.18), inset 0 1px 0 rgba(255,255,255,.04)' } : undefined}
     >
       {plan.popular && (
         <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-primary text-white text-xs font-bold whitespace-nowrap">
           🌟 Most Popular
+        </div>
+      )}
+      {isCurrentPlan && (
+        <div className="absolute top-2 right-2 bg-primary/20 text-primary text-xs font-semibold px-2 py-0.5 rounded-full">
+          Current
         </div>
       )}
       <p className="font-display text-xl font-bold mb-1">{plan.name}</p>
@@ -28,8 +33,13 @@ const PlanCard = ({ plan, onSelect, currencySymbol = '₹' }) => {
           </li>
         ))}
       </ul>
-      <Button variant={plan.popular ? 'primary' : 'ghost'} fullWidth onClick={() => onSelect?.(plan)}>
-        {plan.id === 'free' ? 'Get Started Free' : 'Subscribe Now'}
+      <Button
+        variant={plan.popular ? 'primary' : 'ghost'}
+        fullWidth
+        onClick={() => onSelect(plan)}
+        disabled={disabled || (plan.id === 'free' && isCurrentPlan)}
+      >
+        {isCurrentPlan ? 'Current Plan' : (plan.id === 'free' ? 'Get Started Free' : 'Subscribe Now')}
       </Button>
     </div>
   );

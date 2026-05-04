@@ -1,4 +1,4 @@
-// src/api.js
+
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8080/api';
@@ -17,7 +17,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export default api;
+export default api;;
 
 // ---------- History API ----------
 export const getHistory = (page = 0, size = 20) => {
@@ -26,4 +26,14 @@ export const getHistory = (page = 0, size = 20) => {
 
 export const clearHistory = () => {
   return api.delete('/history');
+};
+
+export const getCurrentUser = async () => {
+    const response = await api.get('/users/me');
+    return response.data;
+};
+
+export const upgradeToFreePlan = async () => {
+    const response = await api.post('/payment/upgrade-free');
+    return response.data;
 };

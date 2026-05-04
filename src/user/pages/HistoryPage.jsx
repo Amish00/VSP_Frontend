@@ -1,12 +1,14 @@
 // src/pages/HistoryPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Eye, Trash2, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Badge from '../components/ui/Badge';
 import { getHistory, clearHistory } from '../api/Api';
 
 const PAGE_SIZE = 20;
 
-const HistoryPage = ({ onWatch }) => {
+const HistoryPage = () => {
+  const navigate = useNavigate();
   const [historyItems, setHistoryItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -90,6 +92,11 @@ const HistoryPage = ({ onWatch }) => {
     }
   };
 
+  // Navigate to watch page
+  const handleWatch = (videoId) => {
+    navigate(`/watch/${videoId}`);
+  };
+
   if (error && historyItems.length === 0) {
     return (
       <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pt-[68px] md:pt-[92px] pb-[96px] md:pb-16">
@@ -132,7 +139,7 @@ const HistoryPage = ({ onWatch }) => {
           {historyItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => onWatch({ id: item.videoId, title: item.videoTitle })}
+              onClick={() => handleWatch(item.videoId)}
               className="flex gap-3 p-3.5 bg-bg-card rounded-xl border border-border cursor-pointer hover:border-primary-light transition-colors text-left w-full"
             >
               {/* Thumbnail */}

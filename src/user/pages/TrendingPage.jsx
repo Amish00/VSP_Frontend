@@ -1,10 +1,11 @@
 // src/pages/TrendingPage.jsx
 import React, { useState, useEffect } from 'react';
 import { Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';   // ✅ added
 import VideoGrid from '../components/VideoGrid';
 import api from '../api/Api';
 
-// Helper functions (move to a shared utils file if needed)
+// Helper functions (can be moved to a shared utils file)
 const formatNumber = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
   if (num >= 1_000) return (num / 1_000).toFixed(1) + 'K';
@@ -38,23 +39,27 @@ const transformVideo = (video) => ({
   thumb: video.thumbnailUrl,
   username: video.username,
   profilePicture: video.profilePicture,
-  em: video.thumbnailUrl ? '' : '🎬', // fallback emoji if no thumbnail
-  // Additional fields if needed by VideoGrid
+  em: video.thumbnailUrl ? '' : '🎬',
   description: video.description,
   tags: video.tags?.split(',') || [],
   category: video.category,
   duration: video.duration || '?',
 });
 
-const TrendingPage = ({ onWatch, user }) => {
+const TrendingPage = ({ user }) => {
   const [allVideos, setAllVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();   // ✅ get navigate function
+
+  // ✅ handleWatch defined inside component (was incorrectly placed outside)
+  const handleWatch = (video) => {
+    navigate(`/watch/${video.id}`);
+  };
 
   useEffect(() => {
     const fetchTrendingVideos = async () => {
       try {
-        // Fetch first page of approved videos sorted by publishedAt desc (trending order)
         const response = await api.get('/videos', {
           params: { page: 0, size: 30, sort: 'publishedAt,desc' }
         });
@@ -106,7 +111,7 @@ const TrendingPage = ({ onWatch, user }) => {
         <div className="text-center text-text-secondary py-12">No free videos available.</div>
       ) : (
         <div className="mb-10">
-          <VideoGrid videos={freeVideos.map(transformVideo)} onWatch={onWatch} />
+          <VideoGrid videos={freeVideos.map(transformVideo)} onWatch={handleWatch} />
         </div>
       )}
 
@@ -119,7 +124,7 @@ const TrendingPage = ({ onWatch, user }) => {
       {paidVideos.length === 0 ? (
         <div className="text-center text-text-secondary py-12">No paid videos available.</div>
       ) : (
-        <VideoGrid videos={paidVideos.map(transformVideo)} onWatch={onWatch} />
+        <VideoGrid videos={paidVideos.map(transformVideo)} onWatch={handleWatch} />
       )}
     </div>
   );
