@@ -1,5 +1,5 @@
 // src/creator/layout/CreatorNav.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Bell,
   Home,
@@ -18,9 +18,11 @@ import {
   DollarSign,
 } from 'lucide-react';
 import logoUrl from '../../assets/logo.svg';
-import Avatar from '../components/ui/Avatar';
 import Badge from '../components/ui/Badge';
+import api from '../../user/api/Api';
+import { Navigate, useNavigate } from 'react-router-dom';
 
+// Static notifications (no backend endpoint yet)
 export const NOTIFICATIONS = [
   { id: 1, icon: '✅', title: 'Video Approved', body: "'React Masterclass' is now live!", time: '2h ago', unread: true },
   { id: 2, icon: '❤️', title: 'New Likes', body: 'Your video got 340 new likes', time: '4h ago', unread: true },
@@ -29,7 +31,6 @@ export const NOTIFICATIONS = [
   { id: 5, icon: '💰', title: 'Payout Processed', body: '$320 sent to your account', time: '3d ago', unread: false },
 ];
 
-// Replace emoji icons with Lucide components
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'channel', label: 'My Channel', icon: Tv },
@@ -40,11 +41,56 @@ const NAV = [
   { id: 'earnings', label: 'Earnings', icon: DollarSign },
 ];
 
-const CreatorNav = ({ user, onLogout, onGoHome, onNavSelect, activeNav }) => {
+const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [profOpen, setProfOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const unread = NOTIFICATIONS.filter((n) => n.unread).length;
+
+  // Fetch real user data from backend
+  useEffect(() => {
+    const fetchUser = async () => {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        // No token – should not happen in creator portal, but redirect to home
+        navigate('/');
+        return;
+      }
+      try {
+        const response = await api.get('/users/me');
+        setUser(response.data);
+      } catch (err) {
+        console.error('Failed to fetch user:', err);
+        // If unauthorized, clear token and redirect to signin
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        navigate('/signin');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUser();
+  }, [navigate]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    if (onLogout) onLogout();
+    navigate('/');
+  };
+
+  if (loading) {
+    return (
+      <header className="h-[68px] bg-bg-side border-b border-border flex items-center px-4 sm:px-5 gap-3 flex-shrink-0 z-50 relative">
+        <div className="animate-pulse w-8 h-8 rounded-full bg-bg-el" />
+      </header>
+    );
+  }
+
+  if (!user) return null;
 
   return (
     <>
@@ -62,7 +108,7 @@ const CreatorNav = ({ user, onLogout, onGoHome, onNavSelect, activeNav }) => {
           <Menu size={16} />
         </button>
         <button
-          onClick={onGoHome}
+          onClick={() => Navigate('/creator')}
           aria-label="ViriShare home"
           className="flex items-center gap-2.5 flex-shrink-0 group"
         >
@@ -79,6 +125,8 @@ const CreatorNav = ({ user, onLogout, onGoHome, onNavSelect, activeNav }) => {
           <Home size={14} />
           Home
         </button>
+
+        {/* Notifications */}
         <div className="relative">
           <button
             onClick={() => {
@@ -142,6 +190,8 @@ const CreatorNav = ({ user, onLogout, onGoHome, onNavSelect, activeNav }) => {
             </>
           )}
         </div>
+
+        {/* Profile dropdown */}
         <div className="relative">
           <button
             onClick={() => {
@@ -150,9 +200,19 @@ const CreatorNav = ({ user, onLogout, onGoHome, onNavSelect, activeNav }) => {
             }}
             className="flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-xl border border-border bg-bg-el hover:bg-bg-hov transition-all"
           >
-            <Avatar size={28} initials={(user?.name?.slice(0, 2) || 'ME').toUpperCase()} />
+            {user.profilePicture ? (
+              <img
+                src={user.profilePicture}
+                alt="avatar"
+                className="w-7 h-7 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold font-display">
+                {user.username?.slice(0, 2).toUpperCase()}
+              </div>
+            )}
             <span className="text-sm font-semibold text-text-primary max-w-[80px] truncate hidden sm:block">
-              {user?.name?.split(' ')[0] || 'User'}
+              {user.username?.split(' ')[0] || 'User'}
             </span>
             <ChevronDown
               size={12}
@@ -168,13 +228,23 @@ const CreatorNav = ({ user, onLogout, onGoHome, onNavSelect, activeNav }) => {
               >
                 <div className="px-4 py-3.5 border-b border-border">
                   <div className="flex items-center gap-2.5 mb-2">
-                    <Avatar size={36} initials={(user?.name?.slice(0, 2) || 'ME').toUpperCase()} />
+                    {user.profilePicture ? (
+                      <img
+                        src={user.profilePicture}
+                        alt="avatar"
+                        className="w-9 h-9 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold font-display">
+                        {user.username?.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
                     <div>
-                      <p className="font-semibold text-sm text-text-primary">{user?.name}</p>
-                      <p className="text-xs text-text-muted">{user?.email}</p>
+                      <p className="font-semibold text-sm text-text-primary">{user.username}</p>
+                      <p className="text-xs text-text-muted">{user.email}</p>
                     </div>
                   </div>
-                  <Badge text="⭐ View+Create" type="pro" />
+                  <Badge text={`${user.role}`} type="pro" />
                 </div>
                 <div className="py-1.5 px-1.5">
                   <button
@@ -211,10 +281,7 @@ const CreatorNav = ({ user, onLogout, onGoHome, onNavSelect, activeNav }) => {
                 <div className="border-t border-border py-1.5 px-1.5">
                   <button
                     role="menuitem"
-                    onClick={() => {
-                      onLogout();
-                      setProfOpen(false);
-                    }}
+                    onClick={handleLogout}
                     className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-danger text-sm font-semibold hover:bg-danger/8 transition-colors"
                   >
                     <LogOut size={13} />
@@ -256,7 +323,7 @@ const CreatorNav = ({ user, onLogout, onGoHome, onNavSelect, activeNav }) => {
                       onNavSelect(item.id);
                       setDrawerOpen(false);
                     }}
-                    className={`sbi w-full text-left ${isActive ? 'active' : ''}`}
+                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-colors text-left"
                   >
                     <IconComponent
                       size={20}

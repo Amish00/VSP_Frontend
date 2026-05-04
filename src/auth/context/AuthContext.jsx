@@ -21,7 +21,6 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const data = await authApi.signIn(email, password);
-    // data = { accessToken, refreshToken, username, role, plan }
     localStorage.setItem('access_token', data.accessToken);
     localStorage.setItem('refresh_token', data.refreshToken);
     const userObj = {
@@ -38,7 +37,6 @@ export const AuthProvider = ({ children }) => {
 
   const signupAndLogin = async (username, email, password) => {
     await authApi.signUp(username, email, password);
-    // After signup, automatically sign in
     return login(email, password);
   };
 
@@ -46,7 +44,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await authApi.logout();
     } catch (e) {
-      // ignore errors on logout
+      // ignore errors
     }
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -56,24 +54,32 @@ export const AuthProvider = ({ children }) => {
   };
 
   const setTokensAndUser = async (accessToken, refreshToken, userObj = null) => {
-  localStorage.setItem('access_token', accessToken);
-  localStorage.setItem('refresh_token', refreshToken);
-  
-  const payload = JSON.parse(atob(accessToken.split('.')[1]));
-  const user = userObj || {
-    username: payload.sub.split('@')[0],
-    email: payload.sub,
-    role: payload.role || 'VIEWER',
-    plan: payload.plan || 'FREE'
+    localStorage.setItem('access_token', accessToken);
+    localStorage.setItem('refresh_token', refreshToken);
+    
+    const payload = JSON.parse(atob(accessToken.split('.')[1]));
+    const user = userObj || {
+      username: payload.sub.split('@')[0],
+      email: payload.sub,
+      role: payload.role || 'VIEWER',
+      plan: payload.plan || 'FREE'
+    };
+    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('user_role', user.role || 'VIEWER');
+    setUser(user);
   };
-  localStorage.setItem('user', JSON.stringify(user));
-  localStorage.setItem('user_role', user.role || 'VIEWER');
-  setUser(user);
-};
+
+  // NEW: update user data in state and localStorage
+  const updateUser = (updatedData) => {
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const newUser = { ...currentUser, ...updatedData };
+    localStorage.setItem('user', JSON.stringify(newUser));
+    if (updatedData.role) localStorage.setItem('user_role', updatedData.role);
+    setUser(newUser);
+  };
 
   return (
-    
-    <AuthContext.Provider value={{ user, login, signupAndLogin, logout, setTokensAndUser, loading }}>
+    <AuthContext.Provider value={{ user, login, signupAndLogin, logout, setTokensAndUser, updateUser, loading }}>
       {children}
     </AuthContext.Provider>
   );
