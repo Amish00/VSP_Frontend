@@ -145,7 +145,7 @@ const SearchOverlay = ({ onClose }) => {
             <input ref={ref} value={q} onChange={e => setQ(e.target.value)}
               placeholder="Search videos, channels…"
               className={`${inp} pl-11 pr-20`} />
-            <button onClick={onClose} className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-primary text-white text-sm font-semibold rounded-lg">Done</button>
+            <button onClick={onClose} className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-primary text-white text-sm font-semibold rounded-lg">Search</button>
           </div>
 
           {loading && <div className="mt-3 text-center text-text-muted py-4">Loading videos...</div>}
