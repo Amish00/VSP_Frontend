@@ -40,6 +40,8 @@ import TrendingPage from './user/pages/TrendingPage';
 import PlansPage from './user/pages/PlansPage';
 import PaymentSuccess from './user/pages/PaymentSuccess';
 import PaymentFailure from './user/pages/PaymentFailure';
+import MyVideosPage from './creator/pages/MyVideosPage';
+import VideoInfoPage from './creator/pages/VideoInfoPage';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -113,9 +115,11 @@ function App() {
           <Route path="upload" element={<UploadPage />} />
           <Route path="channel" element={<div>My Channel Page</div>} />
           <Route path="analytics" element={<div>Analytics Page</div>} />
-          <Route path="videos" element={<div>My Videos Page</div>} />
+          <Route path="videos" element={<MyVideosPage />} />
+          <Route path="video/:id" element={<VideoInfoPage />} />
           <Route path="editors" element={<div>Editors Page</div>} />
           <Route path="earnings" element={<div>Earnings Page</div>} />
+
         </Route>
 
         {/* Fallback */}

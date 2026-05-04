@@ -1,5 +1,6 @@
 // src/creator/layout/CreatorSidebar.js
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronRight,
@@ -10,22 +11,37 @@ import {
   Upload,
   Scissors,
   DollarSign,
-  VideoIcon,
   Clapperboard,
 } from 'lucide-react';
 
 const NAV = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'channel', label: 'My Channel', icon: Tv },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'videos', label: 'My Videos', icon: Video },
-  { id: 'upload', label: 'Upload', icon: Upload },
-  { id: 'editors', label: 'Editors', icon: Scissors },
-  { id: 'earnings', label: 'Earnings', icon: DollarSign },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/creator/dashboard' },
+  { id: 'channel', label: 'My Channel', icon: Tv, path: '/creator/channel' },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/creator/analytics' },
+  { id: 'videos', label: 'My Videos', icon: Video, path: '/creator/videos' },
+  { id: 'upload', label: 'Upload', icon: Upload, path: '/creator/upload' },
+  { id: 'editors', label: 'Editors', icon: Scissors, path: '/creator/editors' },
+  { id: 'earnings', label: 'Earnings', icon: DollarSign, path: '/creator/earnings' },
 ];
 
 const CreatorSidebar = ({ active, onSelect, className = '' }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const location = useLocation();
+
+  // Determine active item from pathname so only one nav item is highlighted.
+  const isActive = (item) => {
+    const pathname = location.pathname;
+
+    if (item.id === 'dashboard') {
+      return pathname === '/creator' || pathname === '/creator/dashboard';
+    }
+
+    if (item.id === 'videos') {
+      return pathname.startsWith('/creator/video') || pathname.startsWith('/creator/videos');
+    }
+
+    return pathname === item.path || pathname.startsWith(`${item.path}/`);
+  };
 
   return (
     <aside
@@ -60,32 +76,32 @@ const CreatorSidebar = ({ active, onSelect, className = '' }) => {
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
         {NAV.map((item) => {
           const IconComponent = item.icon;
-          const isActive = active === item.id;
+          const activeItem = isActive(item);
           return (
             <button
               key={item.id}
               onClick={() => onSelect(item.id)}
-              aria-current={isActive ? 'page' : undefined}
-              className={`sbi w-full text-left ${isActive ? 'active' : ''} ${
+              aria-current={activeItem ? 'page' : undefined}
+              className={`sbi w-full text-left ${activeItem ? 'active' : ''} ${
                 collapsed ? 'justify-center !px-2' : ''
               }`}
             >
               <IconComponent
                 size={20}
                 className="flex-shrink-0"
-                color={isActive ? '#60A5FA' : undefined}
+                color={activeItem ? '#60A5FA' : undefined}
                 strokeWidth={1.8}
               />
               {!collapsed && (
                 <span
                   className={`flex-1 truncate text-lg font-medium ${
-                    isActive ? 'text-primary-light font-semibold' : 'text-text-secondary'
+                    activeItem ? 'text-primary-light font-semibold' : 'text-text-secondary'
                   }`}
                 >
                   {item.label}
                 </span>
               )}
-              {isActive && (
+              {activeItem && (
                 <span
                   className="absolute right-0 top-2 bottom-2 w-0.5 rounded-l-full bg-primary-light"
                   aria-hidden
