@@ -34,6 +34,28 @@
 
   input, select, textarea, button { font-family: 'DM Sans', sans-serif; outline: none; }
 
+  /* Keep dark inputs consistent when browser autofill is applied */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-text-fill-color: #ECF0FB;
+    -webkit-box-shadow: 0 0 0px 1000px #111C2E inset;
+    box-shadow: 0 0 0px 1000px #111C2E inset;
+    caret-color: #ECF0FB;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  select option {
+    background-color: #111C2E;
+    color: #ECF0FB;
+  }
+
   :focus-visible {
     outline: 2px solid #2563EB;
     outline-offset: 3px;

@@ -46,4 +46,13 @@ export const userApi = {
         });
         return response.data;
     },
+
+    uploadBanner: async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await axios.post(`${API_BASE_URL}/users/me/banner`, formData, {
+            headers: { ...getAuthHeader(), 'Content-Type': 'multipart/form-data' }
+        });
+        return response.data;
+    },
 };
