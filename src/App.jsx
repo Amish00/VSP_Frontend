@@ -11,23 +11,11 @@ import OtpPage from './auth/pages/OtpPage';
 import ResetPasswordPage from './auth/pages/ResetPasswordPage';
 import OAuth2RedirectHandler from './auth/pages/OAuth2RedirectHandler';
 
-// Viewer pages (used inside UserLayout)
- import Home from './auth/pages/Home';
-// import Trending from './auth/pages/Trending';
-// import Subscriptions from './auth/pages/Subscriptions';
-// import Plans from './auth/pages/Plans';
-// import Profile from './auth/pages/Profile';
-// import Watch from './auth/pages/Watch';
-
-// import Liked from './auth/pages/Liked';
-// import Settings from './auth/pages/Settings';
-
-// Admin & Creator pages (standalone, no UserLayout)
+import Home from './auth/pages/Home';
 import AdminDashboard from './auth/pages/AdminDashboard';
 import CreatorDashboard from './auth/pages/CreatorDashboard';
 import UploadPage from './creator/pages/UploadPage';
 
-// Layouts
 import UserLayout from './user/layout/UserLayout'; 
 import CreatorLayout from './creator/layout/CreatorLayout'; 
 import AdminLayout from './admin/layout/AdminLayout';
@@ -42,6 +30,10 @@ import PaymentSuccess from './user/pages/PaymentSuccess';
 import PaymentFailure from './user/pages/PaymentFailure';
 import MyVideosPage from './creator/pages/MyVideosPage';
 import VideoInfoPage from './creator/pages/VideoInfoPage';
+import RevenuePage from './admin/pages/RevenuePage';
+import EarningsPage from './creator/pages/EarningsPage';
+import Report from './admin/pages/Report';
+import ProfilePage from './user/pages/ProfilePage';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -76,10 +68,9 @@ function App() {
           <Route path="/plans" element={<PlansPage />} />
           <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/payment/failure" element={<PaymentFailure />} />
+          <Route path="/profile" element={<ProfilePage />} />
+
           {/*
-          <Route path="/profile" element={<Profile />} />
-          
-          
           <Route path="/liked" element={<Liked />} />
           <Route path="/settings" element={<Settings />} /> */}
           {/* add other viewer pages here */}
@@ -98,9 +89,9 @@ function App() {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="videos" element={<VideosPage />} />
+          <Route path="revenue" element={<RevenuePage />} />
+          <Route path="reports" element={<Report />} />
           {/*<Route path="users" element={<div>User Management Page</div>} />
-          <Route path="revenue" element={<div>Revenue Page</div>} />
-          <Route path="reports" element={<div>Reports Page</div>} />
           <Route path="settings" element={<div>Settings Page</div>} /> */}
         </Route>
 
@@ -118,7 +109,7 @@ function App() {
           <Route path="videos" element={<MyVideosPage />} />
           <Route path="video/:id" element={<VideoInfoPage />} />
           <Route path="editors" element={<div>Editors Page</div>} />
-          <Route path="earnings" element={<div>Earnings Page</div>} />
+          <Route path="earnings" element={<EarningsPage />} />
 
         </Route>
 

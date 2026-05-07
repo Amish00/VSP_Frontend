@@ -53,3 +53,20 @@ export const creatorApi = {
   getEarnings: (range) => axiosInstance.get(`/api/creator/earnings?range=${range}`),
   requestPayout: (amount) => axiosInstance.post('/api/creator/earnings/payout', { amount }),
 }
+
+export const earningsApi = {
+    getSummary: () => axiosInstance.get('/api/creator/earnings/summary'),
+    getHistory: () => axiosInstance.get('/api/creator/earnings/history'),
+    getPayouts: () => axiosInstance.get('/api/creator/earnings/payouts'),
+    requestPayout: (amount, method, accountDetails) => 
+        axiosInstance.post('/api/creator/earnings/request', { amount, method, accountDetails }),
+};
+
+export const adminRevenueApi = {
+    getMonthlyRevenue: (months = 12) => axiosInstance.get('/api/admin/revenue/monthly', { params: { months } }),
+    getPendingPayouts: () => axiosInstance.get('/api/admin/revenue/payouts/pending'),
+    processPayout: (id) => axiosInstance.post(`/api/admin/revenue/payouts/${id}/process`),
+    rejectPayout: (id, reason) => axiosInstance.post(`/api/admin/revenue/payouts/${id}/reject`, { reason }),
+    getPaymentRecords: (page = 0, size = 20) => axiosInstance.get(`/api/admin/revenue/records?page=${page}&size=${size}`),
+    getAllCreatorEarnings: () => axiosInstance.get('/api/admin/revenue/earnings/all'),
+};

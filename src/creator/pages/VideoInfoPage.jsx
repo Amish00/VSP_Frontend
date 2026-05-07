@@ -4,10 +4,11 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Upload, X, Edit, Save, Eye, Heart, MessageCircle, ThumbsUp, ArrowLeft } from 'lucide-react';
 import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
+import StatCard from '../components/ui/StatCard';          // ✅ imported StatCard
 import { creatorApi } from '../api/creatorApi';
 import axios from 'axios';
 
-// Reusable styles
+// Reusable styles (unchanged)
 const inp = "w-full bg-bg-el text-text-primary text-base rounded-xl border border-border px-4 py-3 placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all";
 const sel = `${inp} appearance-none`;
 const area = `${inp} resize-none`;
@@ -36,7 +37,7 @@ const VideoInfoPage = () => {
   const thumbInputRef = useRef();
   const videoInputRef = useRef();
 
-  // Fetch video
+  // Fetch video (unchanged)
   useEffect(() => {
     const fetchVideo = async () => {
       try {
@@ -62,7 +63,7 @@ const VideoInfoPage = () => {
     fetchVideo();
   }, [id, navigate]);
 
-  // Fetch comments
+  // Fetch comments (unchanged)
   const fetchComments = async () => {
     setCommentsLoading(true);
     try {
@@ -141,7 +142,6 @@ const VideoInfoPage = () => {
 
       await creatorApi.updateVideoWithFiles(id, formData);
 
-      // Refresh and go back to view mode
       const refreshed = await creatorApi.getVideo(id);
       setVideo(refreshed.data);
       setEditData({
@@ -173,7 +173,6 @@ const VideoInfoPage = () => {
   const isEditMode = mode === 'edit';
   const tagsArray = video.tags ? video.tags.split(',').map(t => t.trim()) : [];
 
-  // Status color mapping
   const statusConfig = {
     APPROVED: { label: 'Approved', color: '#10B981', bg: 'rgba(16,185,129,0.1)' },
     REJECTED: { label: 'Rejected', color: '#EF4444', bg: 'rgba(239,68,68,0.1)' },
@@ -183,7 +182,7 @@ const VideoInfoPage = () => {
 
   return (
     <div className="w-full px-4 sm:px-6 pb-8">
-      {/* Header with back button in edit mode */}
+      {/* Header (unchanged) */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3">
           {isEditMode && (
@@ -208,39 +207,38 @@ const VideoInfoPage = () => {
         )}
       </div>
 
-      {/* Stats row (no Badge component – consistent with others) */}
+      {/* ✅ STATS ROW – replaced with StatCard components */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div className="bg-bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-          <Eye size={24} className="text-text-muted" />
-          <div>
-            <p className="text-xs text-text-muted">Views</p>
-            <p className="text-xl font-bold text-text-primary">{video.viewCount?.toLocaleString() || 0}</p>
-          </div>
-        </div>
-        <div className="bg-bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-          <Heart size={24} className="text-text-muted" />
-          <div>
-            <p className="text-xs text-text-muted">Likes</p>
-            <p className="text-xl font-bold text-text-primary">{video.likesCount?.toLocaleString() || 0}</p>
-          </div>
-        </div>
-        <div className="bg-bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-          <MessageCircle size={24} className="text-text-muted" />
-          <div>
-            <p className="text-xs text-text-muted">Comments</p>
-            <p className="text-xl font-bold text-text-primary">{video.commentCount?.toLocaleString() || 0}</p>
-          </div>
-        </div>
-        <div className="bg-bg-card border border-border rounded-xl p-3 flex items-center gap-3" style={{ backgroundColor: status.bg }}>
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: status.color }} />
-          <div>
-            <p className="text-xs text-text-muted">Status</p>
-            <p className="text-xl font-bold" style={{ color: status.color }}>{status.label}</p>
-          </div>
-        </div>
+        <StatCard
+          icon={<Eye size={24} />}
+          label="Views"
+          value={video.viewCount?.toLocaleString() || 0}
+        />
+        <StatCard
+          icon={<Heart size={24} />}
+          label="Likes"
+          value={video.likesCount?.toLocaleString() || 0}
+        />
+        <StatCard
+          icon={<MessageCircle size={24} />}
+          label="Comments"
+          value={video.commentCount?.toLocaleString() || 0}
+        />
+        <StatCard
+            icon={
+              video.status === 'APPROVED' ? (
+                <ThumbsUp size={24} className="text-green-500" />
+              ) : (
+                <div className="w-6 h-6 rounded-full" style={{ backgroundColor: status.color }} />
+              )
+            }
+            label="Status"
+            value={status.label}
+            color={status.color}
+          />
       </div>
 
-      {/* Main content – 2 columns */}
+      {/* Main content – 2 columns (rest of the component unchanged) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* LEFT COLUMN: Video & Thumbnail */}
         <div className="space-y-6">
@@ -282,7 +280,7 @@ const VideoInfoPage = () => {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Metadata + Comments */}
+        {/* RIGHT COLUMN: Metadata + Comments (unchanged) */}
         <div className="space-y-6">
           {/* Metadata card */}
           <div className="bg-bg-card border border-border rounded-2xl p-6 space-y-5">
@@ -427,7 +425,7 @@ const VideoInfoPage = () => {
         </div>
       </div>
 
-      {/* Modals – using 'open' as your Modal component expects */}
+      {/* Modals (unchanged) */}
       <Modal open={showThumbConfirm} onClose={cancelThumbnailReplace} title="Replace Thumbnail">
         <p className="text-text-secondary mb-4">Are you sure you want to replace the current thumbnail with the new image?</p>
         <div className="flex justify-end gap-3">
