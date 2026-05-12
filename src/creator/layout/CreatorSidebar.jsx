@@ -16,7 +16,6 @@ import {
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/creator/dashboard' },
-  { id: 'channel', label: 'My Channel', icon: Tv, path: '/creator/channel' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/creator/analytics' },
   { id: 'videos', label: 'My Videos', icon: Video, path: '/creator/videos' },
   { id: 'upload', label: 'Upload', icon: Upload, path: '/creator/upload' },

@@ -1,4 +1,3 @@
-// src/admin/layout/AdminNav.js
 import React, { useState, useEffect } from 'react';
 import {
   Bell,
@@ -110,7 +109,6 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
 
         <div className="flex-1" />
 
-
         {/* Notifications bell */}
         <div className="relative">
           <button
@@ -176,7 +174,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
           )}
         </div>
 
-        {/* Profile dropdown (rich, like CreatorNav) */}
+        {/* Profile dropdown */}
         <div className="relative">
           <button
             onClick={() => {
@@ -237,7 +235,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                   <button
                     role="menuitem"
                     onClick={() => {
-                      onNavSelect('users'); // or any default, but profile could go to user list
+                      navigate('/admin/profile');
                       setProfOpen(false);
                     }}
                     className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-text-secondary text-sm hover:bg-bg-hov transition-colors"
@@ -249,7 +247,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     role="menuitem"
                     onClick={() => {
                       setProfOpen(false);
-                      // could navigate to settings page
+                      // could navigate to settings page later
                     }}
                     className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-text-secondary text-sm hover:bg-bg-hov transition-colors"
                   >

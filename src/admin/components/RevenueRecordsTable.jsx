@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Badge from '../components/ui/Badge';
 import { adminRevenueApi } from '../../creator/api/creatorApi';
 
 const RevenueRecordsTable = () => {
@@ -24,6 +25,39 @@ const RevenueRecordsTable = () => {
         }
     };
 
+    const getPaymentMethodBadgeType = (method) => {
+        const m = method?.toLowerCase();
+        if (m === 'esewa') return 'esewa';
+        if (m === 'khalti') return 'khalti';
+        return 'info';
+    };
+
+    const getPlanBadgeType = (planId) => {
+        switch (planId?.toUpperCase()) {
+            case 'CREATE': return 'create_plan';
+            case 'VIEW':   return 'view_plan';
+            case 'FREE':   return 'free_plan';
+            default:       return 'draft';
+        }
+    };
+
+    const getBillingCycleBadgeType = (cycle) => {
+        const c = cycle?.toUpperCase();
+        if (c === 'MONTHLY') return 'monthly';
+        if (c === 'YEARLY') return 'yearly';
+        if (c === '6 MONTHS' || c === 'SEMIANNUAL' || c === 'SIX_MONTHS') return 'semiannual';
+        return 'info';
+    };
+
+    const getStatusBadgeType = (status) => {
+        switch (status?.toUpperCase()) {
+            case 'SUCCESS': return 'approved';
+            case 'PENDING': return 'pending';
+            case 'FAILED':  return 'rejected';
+            default:        return 'draft';
+        }
+    };
+
     if (loading) return <div className="text-center py-8 text-text-secondary">Loading...</div>;
 
     return (
@@ -45,22 +79,31 @@ const RevenueRecordsTable = () => {
                         {records.map(record => (
                             <tr key={record.id} className="border-b border-border/50 hover:bg-bg-hov transition-colors">
                                 <td className="px-4 py-3 font-medium text-text-primary">{record.username}</td>
-                                <td className="px-4 py-3 text-text-secondary capitalize">{record.paymentMethod}</td>
-                                <td className="px-4 py-3 text-text-muted">{new Date(record.transactionDate).toLocaleDateString()}</td>
-                                <td className="px-4 py-3 text-text-secondary capitalize">{record.planId}</td>
-                                <td className="px-4 py-3 text-text-secondary capitalize">{record.billingCycle}</td>
                                 <td className="px-4 py-3">
-                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                        record.status === 'SUCCESS' ? 'bg-green-500/20 text-green-400' :
-                                        record.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-400' :
-                                        'bg-red-500/20 text-red-400'
-                                    }`}>
-                                        {record.status}
-                                    </span>
+                                    <Badge text={record.paymentMethod} type={getPaymentMethodBadgeType(record.paymentMethod)} small />
+                                </td>
+                                <td className="px-4 py-3 text-text-muted">
+                                    {new Date(record.transactionDate).toLocaleDateString()}
+                                </td>
+                                <td className="px-4 py-3">
+                                    <Badge text={record.planId} type={getPlanBadgeType(record.planId)} small />
+                                </td>
+                                <td className="px-4 py-3">
+                                    <Badge text={record.billingCycle} type={getBillingCycleBadgeType(record.billingCycle)} small />
+                                </td>
+                                <td className="px-4 py-3">
+                                    <Badge text={record.status} type={getStatusBadgeType(record.status)} small />
                                 </td>
                                 <td className="px-4 py-3 font-semibold text-text-primary">Rs. {record.amount}</td>
                             </tr>
                         ))}
+                        {records.length === 0 && (
+                            <tr>
+                                <td colSpan={7} className="px-4 py-8 text-center text-text-muted">
+                                    No payment records found.
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>

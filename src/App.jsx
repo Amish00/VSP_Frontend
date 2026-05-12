@@ -11,9 +11,9 @@ import OtpPage from './auth/pages/OtpPage';
 import ResetPasswordPage from './auth/pages/ResetPasswordPage';
 import OAuth2RedirectHandler from './auth/pages/OAuth2RedirectHandler';
 
-import Home from './auth/pages/Home';
-import AdminDashboard from './auth/pages/AdminDashboard';
-import CreatorDashboard from './auth/pages/CreatorDashboard';
+import Home from './user/pages/Home';
+import AdminDashboard from './admin/pages/AdminDashboard';
+import CreatorDashboard from './creator/pages/CreatorDashboard';
 import UploadPage from './creator/pages/UploadPage';
 
 import UserLayout from './user/layout/UserLayout'; 
@@ -34,6 +34,7 @@ import RevenuePage from './admin/pages/RevenuePage';
 import EarningsPage from './creator/pages/EarningsPage';
 import Report from './admin/pages/Report';
 import ProfilePage from './user/pages/ProfilePage';
+import AnalyticsPage from "./creator/pages/AnalyticsPage";
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -69,10 +70,11 @@ function App() {
           <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/payment/failure" element={<PaymentFailure />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<div> Settings Pages </div>} />
 
           {/*
           <Route path="/liked" element={<Liked />} />
-          <Route path="/settings" element={<Settings />} /> */}
+           */}
           {/* add other viewer pages here */}
         </Route>
 
@@ -91,8 +93,9 @@ function App() {
           <Route path="videos" element={<VideosPage />} />
           <Route path="revenue" element={<RevenuePage />} />
           <Route path="reports" element={<Report />} />
-          {/*<Route path="users" element={<div>User Management Page</div>} />
-          <Route path="settings" element={<div>Settings Page</div>} /> */}
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="settings" element={<div>Settings Page</div>} />
+          
         </Route>
 
         {/* Creator nested layout (kept as is) */}
@@ -104,8 +107,8 @@ function App() {
           <Route index element={<CreatorDashboard />} />
           <Route path="dashboard" element={<CreatorDashboard />} />
           <Route path="upload" element={<UploadPage />} />
-          <Route path="channel" element={<div>My Channel Page</div>} />
-          <Route path="analytics" element={<div>Analytics Page</div>} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="videos" element={<MyVideosPage />} />
           <Route path="video/:id" element={<VideoInfoPage />} />
           <Route path="editors" element={<div>Editors Page</div>} />

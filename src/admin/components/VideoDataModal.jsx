@@ -1,16 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { videoApi } from '../api/videoApi';
-
-const Badge = ({ text, type }) => {
-    const colors = {
-        approved: 'bg-green-500/10 text-green-600',
-        rejected: 'bg-red-500/10 text-red-600',
-        pending: 'bg-yellow-500/10 text-yellow-600',
-        VIDEO: 'bg-blue-500/10 text-blue-600',
-        SHORTS: 'bg-purple-500/10 text-purple-600',
-    };
-    return <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${colors[type] || colors.pending}`}>{text}</span>;
-};
+import Badge from './ui/Badge';
+import { Eye, ThumbsUp, MessageCircle } from 'lucide-react'; // optional icons
 
 const Field = ({ label, children }) => (
     <div className="space-y-1.5">
@@ -31,10 +22,8 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
     const [loading, setLoading] = useState(false);
     const [editMode, setEditMode] = useState(false);
     
-    // Track previous video ID to only reset when video changes
     const prevVideoIdRef = useRef(null);
 
-    // Reset form data only when video ID changes (not on every render)
     useEffect(() => {
         if (video && isOpen && video.id !== prevVideoIdRef.current) {
             prevVideoIdRef.current = video.id;
@@ -75,10 +64,18 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
         }
     };
 
+    // Helper to format numbers (e.g., 1234 -> 1.2K)
+    const formatNumber = (num) => {
+        if (num === undefined || num === null) return '0';
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num.toString();
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
             <div className="bg-bg-card border border-border rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-xl">
-                {/* Sticky header with higher z-index and opaque background */}
+                {/* Header */}
                 <div className="sticky top-0 z-10 bg-bg-card border-b border-border px-6 py-4 flex justify-between items-center">
                     <h2 className="text-xl font-display font-bold text-text-primary">
                         {editMode ? 'Edit Video' : video.title}
@@ -121,7 +118,7 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
                     {/* Details Section */}
                     <form onSubmit={handleSubmit}>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                            {/* Title - full width */}
+                            {/* Title */}
                             <div className="md:col-span-2">
                                 <Field label="Title">
                                     {editMode ? (
@@ -140,7 +137,7 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
                                 </Field>
                             </div>
 
-                            {/* Description - full width */}
+                            {/* Description */}
                             <div className="md:col-span-2">
                                 <Field label="Description">
                                     {editMode ? (
@@ -159,7 +156,7 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
                                 </Field>
                             </div>
 
-                            {/* Tags */}
+                            {/* Tags - Fixed visibility */}
                             <Field label="Tags">
                                 {editMode ? (
                                     <input
@@ -174,7 +171,12 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
                                         {video.tags ? (
                                             <div className="flex flex-wrap gap-1">
                                                 {video.tags.split(',').map((tag, idx) => (
-                                                    <span key={idx} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">#{tag.trim()}</span>
+                                                    <span 
+                                                        key={idx} 
+                                                        className="px-2 py-0.5 rounded-full bg-primary/20 text-primary-light text-xs font-medium"
+                                                    >
+                                                        #{tag.trim()}
+                                                    </span>
                                                 ))}
                                             </div>
                                         ) : (
@@ -223,23 +225,10 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
                                                 value={formData.type}
                                                 onChange={handleChange}
                                                 className="w-full appearance-none bg-bg-el border border-border text-text-primary rounded-xl p-2.5 pr-10 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                                                style={{
-                                                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E")`,
-                                                    backgroundPosition: 'right 10px center',
-                                                    backgroundRepeat: 'no-repeat',
-                                                    backgroundSize: '20px',
-                                                }}
                                             >
                                                 <option value="VIDEO">VIDEO</option>
                                                 <option value="SHORTS">SHORTS</option>
                                             </select>
-                                            {/* Custom dropdown backdrop fix: style options */}
-                                            <style>{`
-                                                select option {
-                                                    background-color: #1e293b;
-                                                    color: #f1f5f9;
-                                                }
-                                            `}</style>
                                         </div>
                                     </div>
                                 </>
@@ -247,18 +236,22 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
                                 <>
                                     <Field label="Paid">
                                         <div className="bg-bg-el/30 p-2.5 rounded-xl border border-border/50">
-                                            <p className="text-text-primary">{video.paid ? 'Yes' : 'No'}</p>
+                                            <Badge 
+                                                text={video.paid ? 'Paid' : 'Free'} 
+                                                type={video.paid ? 'paid' : 'free'} 
+                                                small={false}
+                                            />
                                         </div>
                                     </Field>
                                     <Field label="Type">
                                         <div className="bg-bg-el/30 p-2.5 rounded-xl border border-border/50">
-                                            <Badge text={video.type} type={video.type} />
+                                            <Badge text={video.type} type={video.type === 'SHORTS' ? 'info' : 'pro'} />
                                         </div>
                                     </Field>
                                 </>
                             )}
 
-                            {/* Status - read-only */}
+                            {/* Status */}
                             <Field label="Status">
                                 <div className="bg-bg-el/30 p-2.5 rounded-xl border border-border/50">
                                     <Badge text={video.status} type={video.status.toLowerCase()} />
@@ -279,7 +272,35 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
                                 </div>
                             </Field>
 
-                            {/* Rejection reason (if exists) */}
+                            {/* ===== NEW ENGAGEMENT SECTION ===== */}
+                            <div className="md:col-span-2">
+                                <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3 mt-2">Engagement</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="bg-bg-el/30 p-3 rounded-xl border border-border/50 flex items-center gap-3">
+                                        <Eye size={20} className="text-text-muted" />
+                                        <div>
+                                            <p className="text-xs text-text-muted">Views</p>
+                                            <p className="text-lg font-semibold text-text-primary">{formatNumber(video.viewCount)}</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-bg-el/30 p-3 rounded-xl border border-border/50 flex items-center gap-3">
+                                        <ThumbsUp size={20} className="text-text-muted" />
+                                        <div>
+                                            <p className="text-xs text-text-muted">Likes</p>
+                                            <p className="text-lg font-semibold text-text-primary">{formatNumber(video.likesCount)}</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-bg-el/30 p-3 rounded-xl border border-border/50 flex items-center gap-3">
+                                        <MessageCircle size={20} className="text-text-muted" />
+                                        <div>
+                                            <p className="text-xs text-text-muted">Comments</p>
+                                            <p className="text-lg font-semibold text-text-primary">{formatNumber(video.commentCount)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Rejection reason */}
                             {video.rejectionReason && (
                                 <div className="md:col-span-2">
                                     <Field label="Rejection Reason">

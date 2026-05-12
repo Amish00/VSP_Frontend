@@ -63,14 +63,6 @@ const VideoTable = () => {
         fetchVideos();
     }, [fetchVideos]);
 
-    // Summary counts
-    const counts = {
-        total: videos.length,
-        pending: videos.filter(v => v.status === 'PENDING').length,
-        approved: videos.filter(v => v.status === 'APPROVED').length,
-        rejected: videos.filter(v => v.status === 'REJECTED').length,
-    };
-
     const handleApprove = async (id) => {
         try {
             await videoApi.updateVideoStatus(id, 'APPROVED');
@@ -132,7 +124,6 @@ const VideoTable = () => {
 
     return (
         <div>
-
             {/* Filters row */}
             <div className="flex gap-3 mb-4 flex-wrap items-center">
                 <div className="relative flex-1 min-w-[200px]">
@@ -163,7 +154,7 @@ const VideoTable = () => {
                 <table className="w-full text-sm" style={{ minWidth: 720 }}>
                     <thead>
                         <tr className="border-b border-border bg-bg-el">
-                            {['Video', 'Creator', 'Type', 'Category', 'Submitted', 'Status', 'Actions'].map(h => (
+                            {['Video', 'Creator', 'Type', 'Category', 'Paid', 'Submitted', 'Status', 'Actions'].map(h => (
                                 <th key={h} className="px-4 py-3 text-left text-xs font-bold text-text-muted uppercase tracking-wider whitespace-nowrap">
                                     {h}
                                 </th>
@@ -173,7 +164,7 @@ const VideoTable = () => {
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={7} className="py-10 text-center text-text-secondary">
+                                <td colSpan={8} className="py-10 text-center text-text-secondary">
                                     <div className="flex justify-center items-center gap-2">
                                         <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                                         Loading videos...
@@ -182,7 +173,7 @@ const VideoTable = () => {
                             </tr>
                         ) : videos.length === 0 ? (
                             <tr>
-                                <td colSpan={7} className="px-4 py-10 text-center text-text-muted">No videos match your search.</td>
+                                <td colSpan={8} className="px-4 py-10 text-center text-text-muted">No videos match your search.</td>
                             </tr>
                         ) : (
                             videos.map(video => {
@@ -214,6 +205,14 @@ const VideoTable = () => {
                                             <Badge text={video.type} type={video.type === 'SHORTS' ? 'info' : 'pro'} />
                                         </td>
                                         <td className="px-4 py-3 text-text-secondary whitespace-nowrap">{video.category || '—'}</td>
+                                        {/* Paid Column - using Badge with free/paid types */}
+                                        <td className="px-4 py-3 whitespace-nowrap">
+                                            <Badge 
+                                                text={video.paid ? 'Paid' : 'Free'} 
+                                                type={video.paid ? 'paid' : 'free'} 
+                                                small={true}
+                                            />
+                                        </td>
                                         <td className="px-4 py-3 text-text-muted whitespace-nowrap">
                                             {new Date(video.publishedAt).toLocaleDateString()}
                                         </td>

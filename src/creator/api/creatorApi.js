@@ -28,14 +28,18 @@ export const creatorApi = {
   updateChannel: (data) => axiosInstance.put('/api/creator/channel', data),
   getAnalytics: (range) => axiosInstance.get(`/api/creator/analytics?range=${range}`),
   
-  getVideos: (status, search = '') => {
-    let url = '/api/creator/videos?'
-    if (status && status !== 'All') url += `status=${status}&`
-    if (search) url += `search=${encodeURIComponent(search)}&`
-    return axiosInstance.get(url)
-  },
+  getVideos: (status, search = '', size = 10, page = 0) => {
+  let url = `/api/creator/videos?size=${size}&page=${page}`;
+  if (status && status !== 'All') url += `&status=${status}`;
+  if (search) url += `&search=${encodeURIComponent(search)}`;
+  return axiosInstance.get(url);
+},
   
-  uploadVideo: (formData) => axiosInstance.post('/api/videos', formData),
+  uploadVideo: (formData, onProgress) => {
+    return axiosInstance.post('/api/videos', formData, {
+      onUploadProgress: onProgress,
+    });
+  },
   
   getVideo: (id) => axiosInstance.get(`/api/videos/${id}`),
   
@@ -52,6 +56,13 @@ export const creatorApi = {
   removeEditor: (id) => axiosInstance.delete(`/api/creator/editors/${id}`),
   getEarnings: (range) => axiosInstance.get(`/api/creator/earnings?range=${range}`),
   requestPayout: (amount) => axiosInstance.post('/api/creator/earnings/payout', { amount }),
+
+  getViewsOverTime: (days = 180) => axiosInstance.get(`/api/creator/analytics/views-over-time?days=${days}`),
+  getContentBreakdown: () => axiosInstance.get('/api/creator/analytics/content-breakdown'),
+
+  getAnalyticsSummary: (days) => axiosInstance.get(`/api/creator/analytics/summary?days=${days}`),
+  getTopVideos: (limit = 5) => axiosInstance.get(`/api/creator/analytics/top-videos?limit=${limit}`),
+  getDashboardStats: () => axiosInstance.get('/api/creator/dashboard/stats'),
 }
 
 export const earningsApi = {
