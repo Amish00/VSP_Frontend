@@ -1,4 +1,3 @@
-// RevenueChart.jsx
 import React from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
@@ -6,7 +5,7 @@ const RevenueChart = ({ data }) => {
     const chartData = data.map(item => ({
         m: item.month,
         subs: item.total,
-        ads: 0, // not using ads in this model
+        ads: 0,
         coins: item.platformFee
     }));
 

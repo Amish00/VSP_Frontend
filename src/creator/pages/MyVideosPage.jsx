@@ -43,7 +43,7 @@ const MyVideosPage = ({ onNav }) => {
     setLoading(true);
     try {
       const filterParam = statusFilter === 'All' ? null : statusFilter;
-      const response = await creatorApi.getVideos(filterParam, debouncedSearch);
+      const response = await creatorApi.getVideos(filterParam, debouncedSearch, 10, 0);
       setVideos(response.data.content || []);
     } catch (err) {
       console.error('Failed to fetch videos', err);

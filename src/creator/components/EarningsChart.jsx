@@ -1,21 +1,57 @@
-// EarningsChart.jsx
 import React, { useState, useEffect } from 'react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from 'recharts';
 import { earningsApi } from '../api/creatorApi';
 
+// Helper: Convert "YYYY-MM" to abbreviated month name
+const getMonthName = (monthYear) => {
+    const [year, month] = monthYear.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    return date.toLocaleString('default', { month: 'short' }); // "Jan", "Feb", etc.
+};
+
 const EarningsChart = ({ range }) => {
     const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        earningsApi.getHistory().then(res => {
-            // res.data is array of MonthlyEarnings [{monthYear, earningsAmount}]
-            const formatted = res.data.slice(-12).map(item => ({
-                m: item.monthYear.slice(5), // "02" for Feb
-                e: item.earningsAmount
-            }));
-            setData(formatted);
-        }).catch(console.error);
-    }, [range]); // re-fetch on range change (we can pass range param to API later)
+        earningsApi.getHistory()
+            .then(res => {
+                // res.data is array of MonthlyEarnings [{monthYear, earningsAmount}]
+                let earnings = res.data || [];
+                // Sort by monthYear ascending (oldest first) for proper chart order
+                earnings.sort((a, b) => a.monthYear.localeCompare(b.monthYear));
+                // Take last 12 months
+                const last12 = earnings.slice(-12);
+                const formatted = last12.map(item => ({
+                    m: getMonthName(item.monthYear),
+                    e: item.earningsAmount
+                }));
+                setData(formatted);
+            })
+            .catch(err => {
+                console.error('Failed to load earnings history', err);
+                setData([]);
+            })
+            .finally(() => setLoading(false));
+    }, [range]);
+
+    if (loading) {
+        return (
+            <div className="bg-bg-card border border-border rounded-2xl p-5">
+                <h3 className="font-display font-bold text-base mb-4 text-text-primary">Monthly Earnings</h3>
+                <div className="h-40 flex items-center justify-center text-text-secondary">Loading...</div>
+            </div>
+        );
+    }
+
+    if (data.length === 0) {
+        return (
+            <div className="bg-bg-card border border-border rounded-2xl p-5">
+                <h3 className="font-display font-bold text-base mb-4 text-text-primary">Monthly Earnings</h3>
+                <div className="h-40 flex items-center justify-center text-text-secondary">No earnings data available yet.</div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-bg-card border border-border rounded-2xl p-5">

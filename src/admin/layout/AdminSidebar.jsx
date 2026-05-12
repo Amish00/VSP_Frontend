@@ -1,5 +1,5 @@
-// src/admin/layout/AdminSidebar.js
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,16 +13,41 @@ import {
 } from 'lucide-react';
 
 const NAV = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'videos', label: 'Video Management', icon: Video },
-  { id: 'users', label: 'User Management', icon: Users },
-  { id: 'revenue', label: 'Revenue', icon: DollarSign },
-  { id: 'reports', label: 'Reports', icon: FileText },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
+  { id: 'videos', label: 'Video Management', icon: Video, path: '/admin/videos' },
+  { id: 'users', label: 'User Management', icon: Users, path: '/admin/users' },
+  { id: 'revenue', label: 'Revenue', icon: DollarSign, path: '/admin/revenue' },
+  { id: 'reports', label: 'Reports', icon: FileText, path: '/admin/reports' },
+  { id: 'settings', label: 'Settings', icon: Settings, path: '/admin/settings' },
 ];
 
 const AdminSidebar = ({ active, onSelect, className = '' }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const location = useLocation();
+  const currentPath = location.pathname;
+
+  const getActiveFromPath = () => {
+    if (!currentPath.startsWith('/admin')) return null;
+
+    if (currentPath === '/admin') return 'dashboard';
+    if (currentPath.startsWith('/admin/videos')) return 'videos';
+    if (currentPath.startsWith('/admin/users')) return 'users';
+    if (currentPath.startsWith('/admin/revenue')) return 'revenue';
+    if (currentPath.startsWith('/admin/reports')) return 'reports';
+    if (currentPath.startsWith('/admin/settings')) return 'settings';
+
+    return null;
+  };
+
+  const activeId = currentPath.startsWith('/admin')
+    ? (active !== undefined ? active : getActiveFromPath())
+    : null;
+
+  const handleItemClick = (item) => {
+    if (onSelect) {
+      onSelect(item.id);
+    }
+  };
 
   return (
     <aside
@@ -59,11 +84,11 @@ const AdminSidebar = ({ active, onSelect, className = '' }) => {
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
         {NAV.map((item) => {
           const IconComponent = item.icon;
-          const isActive = active === item.id;
+          const isActive = activeId === item.id;
           return (
             <button
               key={item.id}
-              onClick={() => onSelect(item.id)}
+              onClick={() => handleItemClick(item)}
               aria-current={isActive ? 'page' : undefined}
               className={`sbi w-full text-left ${isActive ? 'active' : ''} ${
                 collapsed ? 'justify-center !px-2' : ''

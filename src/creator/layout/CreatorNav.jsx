@@ -1,4 +1,3 @@
-// src/creator/layout/CreatorNav.js
 import React, { useState, useEffect } from 'react';
 import {
   Bell,
@@ -10,7 +9,6 @@ import {
   Menu,
   ChevronDown,
   LayoutDashboard,
-  Tv,
   BarChart3,
   Video,
   Upload,
@@ -20,7 +18,7 @@ import {
 import logoUrl from '../../assets/logo.svg';
 import Badge from '../components/ui/Badge';
 import api from '../../user/api/Api';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 // Static notifications (no backend endpoint yet)
 export const NOTIFICATIONS = [
@@ -32,17 +30,18 @@ export const NOTIFICATIONS = [
 ];
 
 const NAV = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'channel', label: 'My Channel', icon: Tv },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'videos', label: 'My Videos', icon: Video },
-  { id: 'upload', label: 'Upload', icon: Upload },
-  { id: 'editors', label: 'Editors', icon: Scissors },
-  { id: 'earnings', label: 'Earnings', icon: DollarSign },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/creator/dashboard' },
+  { id: 'profile', label: 'My Profile', icon: User, path: '/creator/profile' },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/creator/analytics' },
+  { id: 'videos', label: 'My Videos', icon: Video, path: '/creator/videos' },
+  { id: 'upload', label: 'Upload', icon: Upload, path: '/creator/upload' },
+  { id: 'editors', label: 'Editors', icon: Scissors, path: '/creator/editors' },
+  { id: 'earnings', label: 'Earnings', icon: DollarSign, path: '/creator/earnings' },
 ];
 
 const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profOpen, setProfOpen] = useState(false);
@@ -50,12 +49,20 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const unread = NOTIFICATIONS.filter((n) => n.unread).length;
 
+  // Determine active nav based on current path
+  const getActiveNavFromPath = () => {
+    const currentPath = location.pathname;
+    const navItem = NAV.find(item => currentPath.startsWith(item.path));
+    return navItem ? navItem.id : 'dashboard';
+  };
+
+  const currentActiveNav = activeNav || getActiveNavFromPath();
+
   // Fetch real user data from backend
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem('access_token');
       if (!token) {
-        // No token – should not happen in creator portal, but redirect to home
         navigate('/');
         return;
       }
@@ -64,7 +71,6 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
         setUser(response.data);
       } catch (err) {
         console.error('Failed to fetch user:', err);
-        // If unauthorized, clear token and redirect to signin
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         navigate('/signin');
@@ -80,6 +86,22 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     localStorage.removeItem('refresh_token');
     if (onLogout) onLogout();
     navigate('/');
+  };
+
+  // Navigation handler – uses paths for profile and other items
+  const handleNavClick = (item) => {
+    if (item.id === 'profile') {
+      navigate('/creator/profile');
+    } else {
+      // For other nav items, use the existing onNavSelect (or directly navigate)
+      if (onNavSelect) {
+        onNavSelect(item.id);
+      } else {
+        navigate(item.path);
+      }
+    }
+    setDrawerOpen(false);
+    setProfOpen(false);
   };
 
   if (loading) {
@@ -108,7 +130,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
           <Menu size={16} />
         </button>
         <button
-          onClick={() => Navigate('/creator')}
+          onClick={() => navigate('/creator')}
           aria-label="ViriShare home"
           className="flex items-center gap-2.5 flex-shrink-0 group"
         >
@@ -250,17 +272,20 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                   <button
                     role="menuitem"
                     onClick={() => {
-                      onNavSelect('channel');
+                      navigate('/creator/profile');
                       setProfOpen(false);
                     }}
                     className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-text-secondary text-sm hover:bg-bg-hov transition-colors"
                   >
                     <User size={13} className="text-text-muted" />
-                    My Channel
+                    My Profile
                   </button>
                   <button
                     role="menuitem"
-                    onClick={() => setProfOpen(false)}
+                    onClick={() => {
+                      // Settings page can be added later
+                      setProfOpen(false);
+                    }}
                     className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-text-secondary text-sm hover:bg-bg-hov transition-colors"
                   >
                     <Settings size={13} className="text-text-muted" />
@@ -315,14 +340,11 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
             <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
               {NAV.map((item) => {
                 const IconComponent = item.icon;
-                const isActive = activeNav === item.id;
+                const isActive = currentActiveNav === item.id;
                 return (
                   <button
                     key={item.id}
-                    onClick={() => {
-                      onNavSelect(item.id);
-                      setDrawerOpen(false);
-                    }}
+                    onClick={() => handleNavClick(item)}
                     className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-colors text-left"
                   >
                     <IconComponent

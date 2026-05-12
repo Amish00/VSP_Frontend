@@ -23,7 +23,6 @@ const CreatorLayout = () => {
   const pathToNavId = {
     '/creator': 'dashboard',
     '/creator/dashboard': 'dashboard',
-    '/creator/channel': 'channel',
     '/creator/analytics': 'analytics',
     '/creator/videos': 'videos',
     '/creator/upload': 'upload',

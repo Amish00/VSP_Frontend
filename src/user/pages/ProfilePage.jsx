@@ -251,7 +251,7 @@ const ProfilePage = () => {
               <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-text-primary mb-0.5 [text-shadow:0_2px_14px_rgba(0,0,0,0.65)]">{profile.fullName || profile.username}</h1>
               <p className="text-sm text-text-muted mb-2 [text-shadow:0_1px_10px_rgba(0,0,0,0.55)]">@{profile.username}</p>
               <div className="flex flex-wrap gap-2">
-                <Badge text={user?.role === 'CREATOR' ? '⭐ Creator' : user?.role === 'VIEWER' ? '👀 Viewer' : '🛡️ Admin'} type={user?.role === 'CREATOR' ? 'pro' : 'draft'} />
+                <Badge text={user?.role === 'CREATOR' ? 'Creator' : user?.role === 'VIEWER' ? '👀 Viewer' : '🛡️ Admin'} type={user?.role === 'CREATOR' ? 'pro' : 'draft'} />
                 <Badge text={profile.country || 'Nepal'} type="draft" />
               </div>
             </div>

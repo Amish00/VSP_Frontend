@@ -29,7 +29,7 @@ const AdminLayout = () => {
     '/admin/reports': 'reports',
     '/admin/settings': 'settings',
   };
-  const activeNav = pathToNavId[location.pathname] || 'dashboard';
+  const activeNav = pathToNavId[location.pathname] || null;
 
   const onNavSelect = (navId) => {
     const routeMap = {
