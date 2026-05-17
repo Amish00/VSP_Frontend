@@ -37,3 +37,9 @@
       const response = await api.post('/payment/upgrade-free');
       return response.data;
   };
+
+export const canWatchPaidVideo = (user) => {
+  if (!user) return false; // not logged in
+  if (user.role === 'ADMIN' || user.role === 'CREATOR') return true;
+  return user.plan && user.plan !== 'FREE';
+};

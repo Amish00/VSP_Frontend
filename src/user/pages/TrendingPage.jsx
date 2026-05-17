@@ -1,11 +1,12 @@
 // src/pages/TrendingPage.jsx
 import React, { useState, useEffect } from 'react';
-import { Lock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';   // ✅ added
+import { Lock, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import VideoGrid from '../components/VideoGrid';
-import api from '../api/Api';
+import api, { canWatchPaidVideo } from '../api/Api';
+import { useAuth } from '../../auth/context/AuthContext';
+import LockedModal from '../components/LockedModal';
 
-// Helper functions (can be moved to a shared utils file)
 const formatNumber = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
   if (num >= 1_000) return (num / 1_000).toFixed(1) + 'K';
@@ -17,11 +18,9 @@ const formatRelativeDate = (isoDate) => {
   const date = new Date(isoDate);
   const now = new Date();
   const diffMs = now - date;
-  const diffSec = diffMs / 1000;
-  const diffMin = diffSec / 60;
+  const diffMin = diffMs / 1000 / 60;
   const diffHour = diffMin / 60;
   const diffDay = diffHour / 24;
-
   if (diffDay >= 7) return `${Math.floor(diffDay / 7)} weeks ago`;
   if (diffDay >= 1) return `${Math.floor(diffDay)} days ago`;
   if (diffHour >= 1) return `${Math.floor(diffHour)} hours ago`;
@@ -43,38 +42,98 @@ const transformVideo = (video) => ({
   description: video.description,
   tags: video.tags?.split(',') || [],
   category: video.category,
-  duration: video.duration || '?',
 });
 
-const TrendingPage = ({ user }) => {
-  const [allVideos, setAllVideos] = useState([]);
+const TrendingPage = () => {
+  const [freeVideos, setFreeVideos] = useState([]);
+  const [paidVideos, setPaidVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const navigate = useNavigate();   // ✅ get navigate function
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedVideoTitle, setSelectedVideoTitle] = useState('');
+  const [freePage, setFreePage] = useState(0);
+  const [paidPage, setPaidPage] = useState(0);
+  const [hasMoreFree, setHasMoreFree] = useState(true);
+  const [hasMorePaid, setHasMorePaid] = useState(true);
+  const [loadingMoreFree, setLoadingMoreFree] = useState(false);
+  const [loadingMorePaid, setLoadingMorePaid] = useState(false);
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  // ✅ handleWatch defined inside component (was incorrectly placed outside)
-  const handleWatch = (video) => {
-    navigate(`/watch/${video.id}`);
+  // Fetch videos by type (free or paid) with pagination
+  const fetchVideos = async (page, isPaid) => {
+    const params = { page, size: 12, sort: 'publishedAt,desc' };
+    const response = await api.get('/videos', { params });
+    const all = response.data.content;
+    return all.filter(v => v.paid === isPaid);
   };
 
+  // Load initial videos for both sections
   useEffect(() => {
-    const fetchTrendingVideos = async () => {
+    const loadInitial = async () => {
+      setLoading(true);
       try {
-        const response = await api.get('/videos', {
-          params: { page: 0, size: 30, sort: 'publishedAt,desc' }
-        });
-        const videos = response.data.content || [];
-        setAllVideos(videos);
+        const [free, paid] = await Promise.all([
+          fetchVideos(0, false),
+          fetchVideos(0, true)
+        ]);
+        setFreeVideos(free);
+        setPaidVideos(paid);
+        setHasMoreFree(free.length === 12);
+        setHasMorePaid(paid.length === 12);
+        setFreePage(1);
+        setPaidPage(1);
       } catch (err) {
-        console.error('Failed to fetch trending videos:', err);
-        setError(err.message || 'Could not load videos');
+        setError(err.message);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchTrendingVideos();
+    loadInitial();
   }, []);
+
+  const loadMoreFree = async () => {
+    if (loadingMoreFree || !hasMoreFree) return;
+    setLoadingMoreFree(true);
+    try {
+      const newVideos = await fetchVideos(freePage, false);
+      setFreeVideos(prev => [...prev, ...newVideos]);
+      setHasMoreFree(newVideos.length === 12);
+      setFreePage(prev => prev + 1);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMoreFree(false);
+    }
+  };
+
+  const loadMorePaid = async () => {
+    if (loadingMorePaid || !hasMorePaid) return;
+    setLoadingMorePaid(true);
+    try {
+      const newVideos = await fetchVideos(paidPage, true);
+      setPaidVideos(prev => [...prev, ...newVideos]);
+      setHasMorePaid(newVideos.length === 12);
+      setPaidPage(prev => prev + 1);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMorePaid(false);
+    }
+  };
+
+  const handleWatch = (video) => {
+    if (!video.paid) {
+      navigate(`/watch/${video.id}`);
+      return;
+    }
+    if (!canWatchPaidVideo(user)) {
+      setSelectedVideoTitle(video.title);
+      setModalOpen(true);
+    } else {
+      navigate(`/watch/${video.id}`);
+    }
+  };
 
   if (loading) {
     return (
@@ -94,38 +153,85 @@ const TrendingPage = ({ user }) => {
   if (error) {
     return (
       <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pt-[68px] md:pt-[92px] pb-[96px] md:pb-16">
-        <div className="text-center py-12 text-red-500">
-          Error: {error}
-        </div>
+        <div className="text-center py-12 text-red-500">Error: {error}</div>
       </div>
     );
   }
 
-  const freeVideos = allVideos.filter(v => !v.paid);
-  const paidVideos = allVideos.filter(v => v.paid);
-
   return (
     <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pt-[68px] md:pt-[92px] pb-[96px] md:pb-16">
-      <h1 className="text-3xl font-bold mb-6">Trending Free</h1>
-      {freeVideos.length === 0 ? (
-        <div className="text-center text-text-secondary py-12">No free videos available.</div>
-      ) : (
-        <div className="mb-10">
-          <VideoGrid videos={freeVideos.map(transformVideo)} onWatch={handleWatch} />
+      {/* Free Videos Section */}
+      <div className="mb-12">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-3xl font-bold">Trending Free</h1>
+          <a
+            href="/all-videos?type=free"
+            className="text-blue-500 hover:text-blue-600 flex items-center gap-1 text-sm font-semibold"
+          >
+            View all free <ArrowRight size={16} />
+          </a>
         </div>
-      )}
+        {freeVideos.length === 0 ? (
+          <div className="text-center py-8 text-text-secondary">No free videos available.</div>
+        ) : (
+          <>
+            <VideoGrid videos={freeVideos.map(transformVideo)} onWatch={handleWatch} />
+            {hasMoreFree && (
+              <div className="flex justify-center mt-6">
+                <button
+                  onClick={loadMoreFree}
+                  disabled={loadingMoreFree}
+                  className="px-5 py-2 rounded-lg bg-bg-el text-text-primary font-medium hover:bg-bg-hov transition disabled:opacity-50"
+                >
+                  {loadingMoreFree ? 'Loading...' : 'Load More Free Videos'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
-      <h1 className="text-3xl font-bold mb-2">Trending Paid</h1>
-      {!user && (
-        <p className="flex items-center gap-1.5 text-sm text-text-muted -mt-1 mb-3">
-          <Lock size={13} /> Log in to watch paid videos
-        </p>
-      )}
-      {paidVideos.length === 0 ? (
-        <div className="text-center text-text-secondary py-12">No paid videos available.</div>
-      ) : (
-        <VideoGrid videos={paidVideos.map(transformVideo)} onWatch={handleWatch} />
-      )}
+      {/* Paid Videos Section */}
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <h1 className="text-3xl font-bold">Trending Paid</h1>
+          <a
+            href="/all-videos?type=paid"
+            className="text-blue-500 hover:text-blue-600 flex items-center gap-1 text-sm font-semibold"
+          >
+            View all paid <ArrowRight size={16} />
+          </a>
+        </div>
+        {!user && (
+          <p className="flex items-center gap-1.5 text-sm text-text-muted mb-3">
+            <Lock size={13} /> Log in to watch paid videos
+          </p>
+        )}
+        {paidVideos.length === 0 ? (
+          <div className="text-center py-8 text-text-secondary">No paid videos available.</div>
+        ) : (
+          <>
+            <VideoGrid videos={paidVideos.map(transformVideo)} onWatch={handleWatch} />
+            {hasMorePaid && (
+              <div className="flex justify-center mt-6">
+                <button
+                  onClick={loadMorePaid}
+                  disabled={loadingMorePaid}
+                  className="px-5 py-2 rounded-lg bg-bg-el text-text-primary font-medium hover:bg-bg-hov transition disabled:opacity-50"
+                >
+                  {loadingMorePaid ? 'Loading...' : 'Load More Paid Videos'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <LockedModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        videoTitle={selectedVideoTitle}
+      />
     </div>
   );
 };

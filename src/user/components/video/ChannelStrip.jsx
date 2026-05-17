@@ -1,11 +1,40 @@
 // src/components/ChannelStrip.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../../api/Api';
 
 const ChannelStrip = ({ onChannelClick }) => {
   const [channels, setChannels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const scrollRef = useRef(null);
+  const [preview, setPreview] = useState(null); // { channel, x, y, anchorRect }
+  const previewTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewTimeoutRef.current) clearTimeout(previewTimeoutRef.current);
+    };
+  }, []);
+
+  const handleHoverEnter = (e, channel) => {
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+      previewTimeoutRef.current = null;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setPreview({ channel, x: rect.right + 12, y: rect.top, anchorRect: rect });
+  };
+
+  const handleHoverMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setPreview(prev => prev ? ({ ...prev, x: rect.right + 12, y: rect.top, anchorRect: rect }) : prev);
+  };
+
+  const handleHoverLeave = () => {
+    // small delay to avoid flicker when moving between items
+    previewTimeoutRef.current = setTimeout(() => setPreview(null), 80);
+  };
 
   useEffect(() => {
     const fetchSubscribedChannels = async () => {
@@ -80,17 +109,20 @@ const ChannelStrip = ({ onChannelClick }) => {
   }
 
   return (
-    <div className="relative mb-10">
+    <div className="relative mb-10 overflow-visible">
       {/* Gradient fade on edges (optional, for nicer scroll indication) */}
       <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-bg-main to-transparent pointer-events-none z-10" />
       <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-bg-main to-transparent pointer-events-none z-10" />
       
-      <div className="flex gap-5 overflow-x-auto pb-4 scrollbar-hide snap-x">
+      <div ref={scrollRef} className="flex gap-5 overflow-x-auto overflow-y-visible pb-4 scrollbar-hide snap-x">
         {channels.map((channel) => (
           <button
             key={channel.id}
             onClick={() => onChannelClick?.(channel)}
-            className="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer p-4 rounded-2xl border border-border bg-bg-card w-32 hover:scale-105 hover:border-primary hover:shadow-lg transition-all duration-200 snap-start"
+            onMouseEnter={(e) => handleHoverEnter(e, channel)}
+            onMouseMove={(e) => handleHoverMove(e)}
+            onMouseLeave={() => handleHoverLeave()}
+            className="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer p-4 rounded-2xl border border-border bg-bg-card w-32 hover:scale-105 hover:border-primary hover:shadow-lg transition-all duration-200 snap-start z-20"
           >
             {/* Avatar - much larger and with gradient border */}
             <div className="relative">
@@ -111,16 +143,50 @@ const ChannelStrip = ({ onChannelClick }) => {
             <p className="text-sm font-bold text-text-primary truncate w-full text-center mt-1">
               {channel.name}
             </p>
-          
-            
-            {/* Subscriber count - clean badge style */}
-            <div className="mt-1 px-3 py-0.5 bg-bg-elevated rounded-full">
-              <p className="text-2xs font-medium text-text-secondary">{channel.subs} subscribers</p>
-            </div>
+
           </button>
         ))}
       </div>
+      {preview && preview.channel && <ChannelPreviewPortal preview={preview} />}
     </div>
+  );
+};
+
+const ChannelPreviewPortal = ({ preview }) => {
+  if (!preview || !preview.channel) return null;
+  const width = 260;
+  const height = 120;
+  let left = preview.x;
+  const top = Math.max(8, preview.y - 8);
+  if (left + width > window.innerWidth) {
+    left = preview.anchorRect.left - width - 12;
+  }
+
+  const style = {
+    position: 'fixed',
+    left: `${left}px`,
+    top: `${top}px`,
+    width: `${width}px`,
+    zIndex: 9999,
+  };
+
+  return createPortal(
+    <div style={style} className="bg-bg-card border border-border rounded-2xl p-4 shadow-2xl text-text-primary">
+      <div className="flex items-center gap-3">
+        <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-2xl font-bold">
+          {preview.channel.avatar?.startsWith('http') ? (
+            <img src={preview.channel.avatar} alt={preview.channel.name} className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-white">{preview.channel.avatar}</span>
+          )}
+        </div>
+        <div>
+          <div className="font-semibold text-lg">{preview.channel.name}</div>
+          <div className="text-text-muted text-sm mt-1">{preview.channel.subs} subscribers</div>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 };
 
