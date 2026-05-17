@@ -1,12 +1,11 @@
-// src/pages/SubscriptionsPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VideoGrid from '../components/VideoGrid';
 import api from '../api/Api';
-import { Lock } from 'lucide-react';
+import { Lock, ArrowRight } from 'lucide-react';
 import ChannelStrip from '../components/video/ChannelStrip';
 
-// Helper functions (can be moved to a separate utils file)
+// Helper functions (same as before)
 const formatNumber = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
   if (num >= 1_000) return (num / 1_000).toFixed(1) + 'K';
@@ -21,7 +20,6 @@ const formatRelativeDate = (isoDate) => {
   const diffMin = diffSec / 60;
   const diffHour = diffMin / 60;
   const diffDay = diffHour / 24;
-
   if (diffDay >= 7) return `${Math.floor(diffDay / 7)} weeks ago`;
   if (diffDay >= 1) return `${Math.floor(diffDay)} days ago`;
   if (diffHour >= 1) return `${Math.floor(diffHour)} hours ago`;
@@ -49,13 +47,12 @@ const SubscriptionsPage = () => {
     const fetchSubscribedVideos = async () => {
       try {
         const response = await api.get('/subscriptions/subscribed', {
-          params: { page: 0, size: 20, sort: 'publishedAt,desc' }
+          params: { page: 0, size: 8, sort: 'publishedAt,desc' }
         });
         setSubscribedVideos(response.data.content || []);
       } catch (err) {
         console.error('Failed to fetch subscribed videos:', err);
         if (err.response?.status === 401) {
-          // Token invalid or expired – clear and redirect to login
           localStorage.removeItem('access_token');
           setIsLoggedIn(false);
           setError('Session expired. Please log in again.');
@@ -72,6 +69,11 @@ const SubscriptionsPage = () => {
 
   const handleWatch = (video) => {
     navigate(`/watch/${video.id}`);
+  };
+
+  const handleChannelClick = (channel) => {
+    // Navigate to search page with channel name as query
+    navigate(`/search?q=${encodeURIComponent(channel.name)}`);
   };
 
   if (loading) {
@@ -93,7 +95,6 @@ const SubscriptionsPage = () => {
     );
   }
 
-  // Separate free and paid videos
   const freeVideos = subscribedVideos.filter(v => !v.paid);
   const paidVideos = subscribedVideos.filter(v => v.paid);
 
@@ -101,9 +102,7 @@ const SubscriptionsPage = () => {
     <div className="max-w-[1760px] mx-auto px-4 sm:px-8 pb-10 pt-[68px] md:pt-[92px]">
       <h1 className="text-3xl font-bold mb-6">Subscriptions</h1>
 
-      <ChannelStrip onChannelClick={(channel) => {
-        console.log('Channel clicked:', channel);
-      }} />
+      <ChannelStrip onChannelClick={handleChannelClick} />
 
       {subscribedVideos.length === 0 && (
         <div className="text-center py-12">
@@ -111,50 +110,69 @@ const SubscriptionsPage = () => {
         </div>
       )}
 
+      {/* Free Videos Section */}
       {freeVideos.length > 0 && (
-        <>
-          <h2 className="font-display font-bold text-xl mb-4">Latest Free</h2>
-          <div className="mb-10">
-            <VideoGrid
-              videos={freeVideos.map(v => ({
-                id: v.id,
-                title: v.title,
-                paid: v.paid,
-                views: formatNumber(v.viewCount),
-                likes: formatNumber(v.likesCount),
-                time: formatRelativeDate(v.updatedAt),
-                thumb: v.thumbnailUrl,
-                username: v.username,
-                profilePicture: v.profilePicture,
-                em: v.thumbnailUrl ? '' : '🎬',
-              }))}
-              onWatch={handleWatch}
-            />
+        <div className="mb-10">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-3xl font-bold">Latest Free</h2>
+            <a
+              href="/subscribed-videos?type=free"
+              className="text-blue-500 hover:text-blue-600 flex items-center gap-1 text-sm font-semibold"
+            >
+              View all free <ArrowRight size={16} />
+            </a>
           </div>
-        </>
+          <VideoGrid
+            videos={freeVideos.map(v => ({
+              id: v.id,
+              title: v.title,
+              paid: v.paid,
+              views: formatNumber(v.viewCount),
+              likes: formatNumber(v.likesCount),
+              time: formatRelativeDate(v.updatedAt),
+              thumb: v.thumbnailUrl,
+              username: v.username,
+              profilePicture: v.profilePicture,
+              em: v.thumbnailUrl ? '' : '🎬',
+            }))}
+            onWatch={handleWatch}
+          />
+        </div>
       )}
 
+      {/* Paid Videos Section */}
       {paidVideos.length > 0 && (
-        <>
-          <h2 className="font-display font-bold text-xl mb-4">Latest Paid</h2>
-          <div className="mb-10">
-            <VideoGrid
-              videos={paidVideos.map(v => ({
-                id: v.id,
-                title: v.title,
-                paid: v.paid,
-                views: formatNumber(v.viewCount),
-                likes: formatNumber(v.likesCount),
-                time: formatRelativeDate(v.updatedAt),
-                thumb: v.thumbnailUrl,
-                username: v.username,
-                profilePicture: v.profilePicture,
-                em: v.thumbnailUrl ? '' : '🎬',
-              }))}
-              onWatch={handleWatch}
-            />
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-3xl font-bold">Latest Paid</h2>
+            <a
+              href="/subscribed-videos?type=paid"
+              className="text-blue-500 hover:text-blue-600 flex items-center gap-1 text-sm font-semibold"
+            >
+              View all paid <ArrowRight size={16} />
+            </a>
           </div>
-        </>
+          {!isLoggedIn && (
+            <p className="flex items-center gap-1.5 text-sm text-text-muted mb-3">
+              <Lock size={13} /> Log in to watch paid videos
+            </p>
+          )}
+          <VideoGrid
+            videos={paidVideos.map(v => ({
+              id: v.id,
+              title: v.title,
+              paid: v.paid,
+              views: formatNumber(v.viewCount),
+              likes: formatNumber(v.likesCount),
+              time: formatRelativeDate(v.updatedAt),
+              thumb: v.thumbnailUrl,
+              username: v.username,
+              profilePicture: v.profilePicture,
+              em: v.thumbnailUrl ? '' : '🎬',
+            }))}
+            onWatch={handleWatch}
+          />
+        </div>
       )}
     </div>
   );

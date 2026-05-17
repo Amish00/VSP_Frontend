@@ -1,0 +1,15 @@
+export const editorTheme = {
+  base: '#080D18',
+  side: '#0A1020',
+  card: '#0F1724',
+  el: '#141E2E',
+  hov: '#192236',
+  border: '#1A2B42',
+  borderLight: '#243348',
+  text: '#ECF0FB',
+  textSecondary: '#8FA3BE',
+  textMuted: '#4A6080',
+  primary: '#2563EB',
+  primaryLight: '#60A5FA',
+  accent: '#0EA5E9',
+};

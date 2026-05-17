@@ -35,6 +35,10 @@ import EarningsPage from './creator/pages/EarningsPage';
 import Report from './admin/pages/Report';
 import ProfilePage from './user/pages/ProfilePage';
 import AnalyticsPage from "./creator/pages/AnalyticsPage";
+import ThumbnailEditor from './creator/pages/ThumbnailEditor';
+import { SnackbarProvider } from 'notistack';
+import AllVideosPage from './user/pages/AllVideosPage';
+import SearchPage from './user/pages/SearchPage';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -49,6 +53,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 function App() {
   return (
     <AuthProvider>
+      <SnackbarProvider maxSnack={3} autoHideDuration={3000} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
       <Routes>
         {/* Public routes */}
         <Route path="/signin" element={<SignInPage />} />
@@ -71,6 +76,9 @@ function App() {
           <Route path="/payment/failure" element={<PaymentFailure />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<div> Settings Pages </div>} />
+          <Route path="/all-videos" element={<AllVideosPage />} />
+          <Route path="/search" element={<SearchPage />} />
+          
 
           {/*
           <Route path="/liked" element={<Liked />} />
@@ -111,14 +119,15 @@ function App() {
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="videos" element={<MyVideosPage />} />
           <Route path="video/:id" element={<VideoInfoPage />} />
-          <Route path="editors" element={<div>Editors Page</div>} />
+          
           <Route path="earnings" element={<EarningsPage />} />
 
         </Route>
-
+        <Route path="creator/editors" element={<ThumbnailEditor />} />
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </SnackbarProvider>
     </AuthProvider>
   );
 }

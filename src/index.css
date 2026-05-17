@@ -80,7 +80,133 @@
 
   ::selection { background: rgba(37,99,235,0.3); color: #ECF0FB; }
   h1,h2,h3,h4,h5,h6 { font-family: 'Outfit', sans-serif; }
+
+  .panel {
+    background: #14141a;
+    border-right: 1px solid #2a2a30;
+    border-left: 1px solid #2a2a30;
+  }
+  .panel-right {
+    background: #14141a;
+    border-left: 1px solid #2a2a30;
+  }
+  .sep {
+    height: 1px;
+    background: #2a2a30;
+    margin: 6px 0;
+  }
+  .btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: #aaa;
+    transition: all 0.12s;
+  }
+  .btn-icon:hover {
+    background: #2a2a30;
+    color: #fff;
+  }
+  .btn-icon.active {
+    background: #2a2a30;
+    color: #3b82f6;
+  }
+  .tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 48px;
+    padding: 8px 0;
+    border-radius: 10px;
+    background: transparent;
+    border: none;
+    color: #aaa;
+    font-size: 10px;
+    transition: all 0.12s;
+  }
+  .tool-btn:hover {
+    background: #2a2a30;
+    color: #fff;
+  }
+  .tool-btn.active {
+    background: #2a2a30;
+    color: #3b82f6;
+  }
+  .tab-pill {
+    flex: 1;
+    text-align: center;
+    padding: 6px 0;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 11px;
+    font-weight: 500;
+    transition: all 0.12s;
+  }
+  .tab-pill.active {
+    background: #2a2a30;
+    color: #fff;
+  }
+  .sec-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    color: #666;
+    margin-bottom: 8px;
+    padding: 0 4px;
+  }
+  .inp {
+    background: #1e1e24;
+    border: 1px solid #2e2e36;
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: #e5e5e5;
+    font-size: 12px;
+    width: 100%;
+    outline: none;
+  }
+  .inp:focus {
+    border-color: #3b82f6;
+  }
+  .num-inp {
+    background: #1e1e24;
+    border: 1px solid #2e2e36;
+    border-radius: 6px;
+    padding: 5px 8px;
+    color: #e5e5e5;
+    font-size: 12px;
+    width: 100%;
+    text-align: center;
+    outline: none;
+  }
+  .photo-card {
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .photo-card .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+  .photo-card:hover .overlay {
+    opacity: 1;
+  }
 }
+
 
 @layer components {
   .card-hover {
