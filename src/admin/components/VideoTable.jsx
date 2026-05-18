@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Badge from './ui/Badge';
 import VideoDataModal from './VideoDataModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
+import Modal from '../components/ui/Modal'; 
+import Pagination from './Pagination';
 import { videoApi } from '../api/videoApi';
 
 const STATUS_META = {
@@ -9,6 +11,8 @@ const STATUS_META = {
     REJECTED: { color: '#EF4444', bg: 'rgba(239,68,68,.12)', label: 'Rejected' },
     PENDING:  { color: '#F59E0B', bg: 'rgba(245,158,11,.12)', label: 'Pending' },
 };
+
+const PAGE_SIZE = 10; // items per page
 
 const VideoTable = () => {
     const [videos, setVideos] = useState([]);
@@ -22,6 +26,11 @@ const VideoTable = () => {
     const [rejectReason, setRejectReason] = useState('');
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [pendingRejectId, setPendingRejectId] = useState(null);
+    
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalElements, setTotalElements] = useState(0);
 
     // Debounced search
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -31,9 +40,15 @@ const VideoTable = () => {
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
         debounceTimer.current = setTimeout(() => {
             setDebouncedSearch(search);
+            setCurrentPage(1); // reset to first page on new search
         }, 500);
         return () => clearTimeout(debounceTimer.current);
     }, [search]);
+
+    // Reset page when filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [statusFilter]);
 
     const fetchVideos = useCallback(async () => {
         setLoading(true);
@@ -41,10 +56,12 @@ const VideoTable = () => {
             const data = await videoApi.getAllVideos(
                 statusFilter === 'All' ? null : statusFilter,
                 debouncedSearch,
-                0,
-                50
+                currentPage - 1,
+                PAGE_SIZE
             );
             setVideos(data.content || []);
+            setTotalPages(data.totalPages || 1);
+            setTotalElements(data.totalElements || 0);
         } catch (err) {
             console.error('Failed to fetch videos', err);
             if (err.response?.status === 403) {
@@ -54,10 +71,13 @@ const VideoTable = () => {
             } else {
                 alert('Failed to load videos. Check console for details.');
             }
+            setVideos([]);
+            setTotalPages(1);
+            setTotalElements(0);
         } finally {
             setLoading(false);
         }
-    }, [statusFilter, debouncedSearch]);
+    }, [statusFilter, debouncedSearch, currentPage]);
 
     useEffect(() => {
         fetchVideos();
@@ -205,7 +225,6 @@ const VideoTable = () => {
                                             <Badge text={video.type} type={video.type === 'SHORTS' ? 'info' : 'pro'} />
                                         </td>
                                         <td className="px-4 py-3 text-text-secondary whitespace-nowrap">{video.category || '—'}</td>
-                                        {/* Paid Column - using Badge with free/paid types */}
                                         <td className="px-4 py-3 whitespace-nowrap">
                                             <Badge 
                                                 text={video.paid ? 'Paid' : 'Free'} 
@@ -260,32 +279,56 @@ const VideoTable = () => {
                 </table>
             </div>
 
-            {/* Rejection Reason Modal */}
-            {showRejectModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-bg-card border border-border rounded-2xl w-full max-w-md p-6 shadow-xl">
-                        <h2 className="text-xl font-display font-bold text-text-primary mb-2">Reject Video</h2>
-                        <p className="text-text-secondary mb-4">Please provide a reason for rejection:</p>
-                        <textarea
-                            value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
-                            rows="3"
-                            className="w-full p-3 rounded-xl border border-border bg-bg-el text-text-primary focus:border-primary focus:outline-none"
-                            placeholder="Why is this video being rejected?"
-                        />
-                        <div className="flex justify-end gap-3 mt-4">
-                            <button onClick={() => setShowRejectModal(false)} className="px-4 py-2 rounded-lg border border-border text-text-secondary hover:bg-bg-el">
-                                Cancel
-                            </button>
-                            <button onClick={confirmReject} className="px-4 py-2 rounded-lg bg-danger text-white font-semibold hover:bg-danger/90">
-                                Reject
-                            </button>
-                        </div>
+            {/* Pagination Component */}
+            {totalPages > 1 && (
+                <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <div className="text-sm text-text-muted">
+                        Showing {(currentPage-1)*PAGE_SIZE+1} to {Math.min(currentPage*PAGE_SIZE, totalElements)} of {totalElements} videos
                     </div>
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={setCurrentPage}
+                        siblingCount={1}
+                    />
                 </div>
             )}
 
-            {/* Video Data Modal */}
+            {/* Modals */}
+            <Modal
+                open={showRejectModal}
+                onClose={() => setShowRejectModal(false)}
+                title="Reject Video"
+                maxW={480}
+            >
+                <div className="space-y-4">
+                    <p className="text-text-secondary">
+                        Please provide a reason for rejection:
+                    </p>
+                    <textarea
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        rows="3"
+                        className="w-full p-3 rounded-xl border border-border bg-bg-el text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                        placeholder="Why is this video being rejected?"
+                    />
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button
+                            onClick={() => setShowRejectModal(false)}
+                            className="px-4 py-2 rounded-lg border border-border text-text-secondary hover:bg-bg-el transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={confirmReject}
+                            className="px-4 py-2 rounded-lg bg-danger text-white font-semibold hover:bg-danger/90 transition-colors"
+                        >
+                            Reject
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
             <VideoDataModal
                 isOpen={modalOpen}
                 onClose={() => setModalOpen(false)}
@@ -293,7 +336,6 @@ const VideoTable = () => {
                 onVideoUpdated={handleVideoUpdated}
             />
 
-            {/* Delete Confirmation Modal */}
             <ConfirmDeleteModal
                 isOpen={deleteModalOpen}
                 onClose={() => setDeleteModalOpen(false)}

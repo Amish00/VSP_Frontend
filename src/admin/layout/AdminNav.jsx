@@ -17,14 +17,21 @@ import logoUrl from '../../assets/logo.svg';
 import api from '../../user/api/Api';
 import { useNavigate } from 'react-router-dom';
 
-// Static notifications (same as CreatorNav)
-export const NOTIFICATIONS = [
-  { id: 1, icon: '✅', title: 'Video Approved', body: "'React Masterclass' is now live!", time: '2h ago', unread: true },
-  { id: 2, icon: '❤️', title: 'New Likes', body: 'Your video got 340 new likes', time: '4h ago', unread: true },
-  { id: 3, icon: '💬', title: 'New Comment', body: 'Dev_Ninja: "Amazing content!"', time: '6h ago', unread: true },
-  { id: 4, icon: '👥', title: '+340 subscribers', body: 'You gained 340 new subs this week', time: '1d ago', unread: false },
-  { id: 5, icon: '💰', title: 'Payout Processed', body: '$320 sent to your account', time: '3d ago', unread: false },
-];
+// Map notification type to an icon (emoji)
+const getNotificationIcon = (type) => {
+  const icons = {
+    VIDEO_APPROVED: '✅',
+    VIDEO_REJECTED: '❌',
+    NEW_VIDEO_UPLOAD: '📹',
+    PAYOUT_REQUEST: '💰',
+    MONTHLY_EARNINGS: '📊',
+    MONTHLY_REVENUE_REPORT: '📈',
+    SUBSCRIPTION: '👥',
+    COMMENT: '💬',
+    LIKE: '❤️',
+  };
+  return icons[type] || '🔔';
+};
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -40,9 +47,13 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
   const [profOpen, setProfOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const unread = NOTIFICATIONS.filter((n) => n.unread).length;
 
-  // Fetch real user data from backend
+  // Real notifications state
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifLoading, setNotifLoading] = useState(false);
+
+  // Fetch admin user data
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem('access_token');
@@ -64,6 +75,57 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     };
     fetchUser();
   }, [navigate]);
+
+  // Notification API calls
+  const fetchUnreadCount = async () => {
+    if (!user) return;
+    try {
+      const res = await api.get('/notifications/unread-count');
+      setUnreadCount(res.data.unreadCount);
+    } catch (err) {
+      console.error('Failed to fetch unread count:', err);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    if (!user) return;
+    setNotifLoading(true);
+    try {
+      const res = await api.get('/notifications', { params: { page: 0, size: 20 } });
+      setNotifications(res.data.content);
+      await fetchUnreadCount();
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    } finally {
+      setNotifLoading(false);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    if (!user) return;
+    try {
+      await api.put('/notifications/mark-read');
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+    }
+  };
+
+  // Poll unread count every 30 seconds
+  useEffect(() => {
+    if (!user) return;
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  // Load notifications when panel opens
+  useEffect(() => {
+    if (notifOpen && user) {
+      fetchNotifications();
+    }
+  }, [notifOpen, user]);
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -90,7 +152,6 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
           boxShadow: '0 1px 0 rgba(255,255,255,.02),0 2px 12px rgba(0,0,0,.25)',
         }}
       >
-        {/* Mobile menu button */}
         <button
           onClick={() => setDrawerOpen(true)}
           aria-label="Open navigation"
@@ -99,9 +160,8 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
           <Menu size={16} />
         </button>
 
-        {/* Logo + Home button */}
         <button onClick={() => navigate('/admin')} className="flex items-center gap-2.5 flex-shrink-0 group">
-          <img src={logoUrl} alt="ViriShare" style={{ height: 26 + 'px', width: 'auto' }} />
+          <img src={logoUrl} alt="ViriShare" style={{ height: 26, width: 'auto' }} />
           <span className="font-display font-black text-lg text-text-primary tracking-tight group-hover:text-primary-light transition-colors hidden sm:block">
             ViriShare
           </span>
@@ -109,14 +169,14 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
 
         <div className="flex-1" />
 
-        {/* Notifications bell */}
+        {/* Notifications */}
         <div className="relative">
           <button
             onClick={() => {
-              setNotifOpen((p) => !p);
+              setNotifOpen(p => !p);
               setProfOpen(false);
             }}
-            aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ''}`}
+            aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
             className={`relative w-9 h-9 rounded-xl border flex items-center justify-center transition-all ${
               notifOpen
                 ? 'border-danger bg-danger/12 text-danger'
@@ -124,51 +184,68 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
             }`}
           >
             <Bell size={15} />
-            {unread > 0 && (
+            {unreadCount > 0 && (
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-danger border-2 border-bg-side" />
             )}
           </button>
           {notifOpen && (
             <>
               <div className="fixed inset-0 z-[148]" onClick={() => setNotifOpen(false)} />
-              <div className="absolute top-[calc(100%+10px)] right-0 w-72 bg-bg-card border border-border rounded-2xl z-[149] shadow-drop overflow-hidden">
+              <div className="absolute top-[calc(100%+10px)] right-0 w-80 bg-bg-card border border-border rounded-2xl z-[149] shadow-drop overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                  <span className="font-display font-bold text-base">Notifications</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-display font-bold text-lg text-text-primary">Notifications</span>
+                    {unreadCount > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-danger text-white text-xs font-bold">{unreadCount}</span>
+                    )}
+                  </div>
                   <button
                     onClick={() => setNotifOpen(false)}
-                    className="w-6 h-6 rounded-lg flex items-center justify-center text-text-muted hover:bg-bg-hov"
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:bg-bg-hov"
                   >
-                    <X size={12} />
+                    <X size={14} />
                   </button>
                 </div>
-                <div className="max-h-[300px] overflow-y-auto">
-                  {NOTIFICATIONS.map((n) => (
-                    <div
-                      key={n.id}
-                      className={`flex gap-3 px-4 py-3 cursor-pointer hover:bg-bg-hov border-b border-border/50 last:border-0 ${
-                        n.unread
-                          ? 'border-l-2 border-l-danger'
-                          : 'border-l-2 border-l-transparent'
-                      }`}
-                    >
-                      <div className="w-8 h-8 rounded-xl bg-bg-el flex items-center justify-center text-base flex-shrink-0">
-                        {n.icon}
+                <div className="max-h-86 overflow-y-auto">
+                  {notifLoading ? (
+                    <div className="px-4 py-8 text-center text-text-muted">Loading...</div>
+                  ) : notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-text-muted text-sm">No notifications yet</div>
+                  ) : (
+                    notifications.map(n => (
+                      <div
+                        key={n.id}
+                        className={`flex gap-3 px-4 py-3.5 hover:bg-bg-hov border-b border-border/50 last:border-0 ${
+                          !n.read ? 'border-l-2 border-l-danger' : 'border-l-2 border-l-transparent'
+                        }`}
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-bg-el flex items-center justify-center text-lg flex-shrink-0">
+                          {getNotificationIcon(n.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm ${!n.read ? 'font-semibold text-text-primary' : 'font-medium text-text-secondary'}`}>
+                            {n.title}
+                          </p>
+                          <p className="text-xs text-text-muted mt-0.5">{n.message}</p>
+                          <p className="text-xs text-text-muted mt-1">
+                            {new Date(n.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        {!n.read && <div className="w-2 h-2 rounded-full bg-danger mt-2 flex-shrink-0" />}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className={`text-sm ${
-                            n.unread
-                              ? 'font-semibold text-text-primary'
-                              : 'font-medium text-text-secondary'
-                          }`}
-                        >
-                          {n.title}
-                        </p>
-                        <p className="text-xs text-text-muted">{n.time}</p>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
+                {unreadCount > 0 && (
+                  <div className="px-4 py-3 border-t border-border">
+                    <button
+                      onClick={markAllAsRead}
+                      className="text-sm text-danger font-semibold hover:opacity-80"
+                    >
+                      Mark all as read
+                    </button>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -178,17 +255,13 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
         <div className="relative">
           <button
             onClick={() => {
-              setProfOpen((p) => !p);
+              setProfOpen(p => !p);
               setNotifOpen(false);
             }}
             className="flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-xl border border-border bg-bg-el hover:bg-bg-hov transition-all"
           >
             {user.profilePicture ? (
-              <img
-                src={user.profilePicture}
-                alt="avatar"
-                className="w-7 h-7 rounded-full object-cover"
-              />
+              <img src={user.profilePicture} alt="avatar" className="w-7 h-7 rounded-full object-cover" />
             ) : (
               <div className="w-7 h-7 rounded-full bg-danger flex items-center justify-center text-white text-xs font-bold font-display">
                 {user.username?.slice(0, 2).toUpperCase() || 'AD'}
@@ -212,11 +285,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                 <div className="px-4 py-3.5 border-b border-border">
                   <div className="flex items-center gap-2.5 mb-2">
                     {user.profilePicture ? (
-                      <img
-                        src={user.profilePicture}
-                        alt="avatar"
-                        className="w-9 h-9 rounded-full object-cover"
-                      />
+                      <img src={user.profilePicture} alt="avatar" className="w-9 h-9 rounded-full object-cover" />
                     ) : (
                       <div className="w-9 h-9 rounded-full bg-danger flex items-center justify-center text-white text-sm font-bold font-display">
                         {user.username?.slice(0, 2).toUpperCase()}
@@ -228,7 +297,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     </div>
                   </div>
                   <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger/10 text-danger text-xs font-semibold">
-                     {user.role}
+                    {user.role}
                   </div>
                 </div>
                 <div className="py-1.5 px-1.5">
@@ -245,10 +314,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                   </button>
                   <button
                     role="menuitem"
-                    onClick={() => {
-                      setProfOpen(false);
-                      // could navigate to settings page later
-                    }}
+                    onClick={() => setProfOpen(false)}
                     className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-text-secondary text-sm hover:bg-bg-hov transition-colors"
                   >
                     <Settings size={13} className="text-text-muted" />
@@ -274,16 +340,13 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
       {/* Mobile drawer */}
       {drawerOpen && (
         <>
-          <div
-            className="fixed inset-0 z-[149] bg-black/60 md:hidden"
-            onClick={() => setDrawerOpen(false)}
-          />
+          <div className="fixed inset-0 z-[149] bg-black/60 md:hidden" onClick={() => setDrawerOpen(false)} />
           <div
             className="fixed top-0 left-0 bottom-0 w-[220px] z-[150] bg-bg-side border-r border-border flex flex-col md:hidden"
             style={{ boxShadow: '4px 0 24px rgba(0,0,0,.5)' }}
           >
             <div className="h-[60px] flex items-center px-4 gap-2.5 border-b border-border">
-              <img src={logoUrl} alt="ViriShare" style={{ height: 22 + 'px', width: 'auto' }} />
+              <img src={logoUrl} alt="ViriShare" style={{ height: 22, width: 'auto' }} />
               <span className="font-display font-black text-base text-text-primary">ViriShare</span>
               <button
                 onClick={() => setDrawerOpen(false)}
@@ -293,7 +356,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
               </button>
             </div>
             <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-              {NAV.map((item) => {
+              {NAV.map(item => {
                 const IconComponent = item.icon;
                 const isActive = activeNav === item.id;
                 return (

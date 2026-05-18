@@ -110,7 +110,6 @@ const ChannelStrip = ({ onChannelClick }) => {
 
   return (
     <div className="relative mb-10 overflow-visible">
-      {/* Gradient fade on edges (optional, for nicer scroll indication) */}
       <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-bg-main to-transparent pointer-events-none z-10" />
       <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-bg-main to-transparent pointer-events-none z-10" />
       

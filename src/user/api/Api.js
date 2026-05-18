@@ -43,3 +43,12 @@ export const canWatchPaidVideo = (user) => {
   if (user.role === 'ADMIN' || user.role === 'CREATOR') return true;
   return user.plan && user.plan !== 'FREE';
 };
+
+export const getNotifications = (page = 0, size = 20) => 
+    api.get('/notifications', { params: { page, size } });
+
+export const markAllNotificationsAsRead = () => 
+    api.put('/notifications/mark-read');
+
+export const getUnreadNotificationCount = () => 
+    api.get('/notifications/unread-count');

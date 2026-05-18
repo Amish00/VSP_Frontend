@@ -10,43 +10,49 @@ import Badge from '../components/ui/Badge';
 import { useAuth } from '../../auth/context/AuthContext';
 import api from '../api/Api';
 
-// ─── Notifications (static) ──────────────────────────────────────────────────
-export const NOTIFICATIONS = [
-  { id: 1, icon: '✅', title: 'Video Approved',    body: "'React Masterclass' is now live!", time: '2h ago',  unread: true  },
-  { id: 2, icon: '❤️', title: 'New Likes',         body: 'Your video got 340 new likes',       time: '4h ago',  unread: true  },
-  { id: 3, icon: '💬', title: 'New Comment',       body: 'Dev_Ninja: "Amazing content!"',      time: '6h ago',  unread: true  },
-  { id: 4, icon: '👥', title: '+340 subscribers',  body: 'You gained 340 new subs this week',  time: '1d ago',  unread: false },
-  { id: 5, icon: '💰', title: 'Payout Processed',  body: '$320 sent to your account',          time: '3d ago',  unread: false },
-];
+// Map notification type to icon (emoji or component later)
+const getNotificationIcon = (type) => {
+  const icons = {
+    VIDEO_APPROVED: '✅',
+    VIDEO_REJECTED: '❌',
+    NEW_VIDEO_UPLOAD: '📹',
+    PAYOUT_REQUEST: '💰',
+    MONTHLY_EARNINGS: '📊',
+    MONTHLY_REVENUE_REPORT: '📈',
+    SUBSCRIPTION: '👥',   // for future
+    COMMENT: '💬',        // for future
+    LIKE: '❤️',           // for future
+  };
+  return icons[type] || '🔔';
+};
 
 const inp = "w-full bg-bg-el text-text-primary text-base rounded-xl border border-border px-4 py-3 placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all";
 
-// Navigation links (desktop & mobile)
 const NAV_LINKS = [
-  { to: '/',              label: 'Home',          icon: Home },
-  { to: '/trending',      label: 'Trending',      icon: TrendingUp },
+  { to: '/', label: 'Home', icon: Home },
+  { to: '/trending', label: 'Trending', icon: TrendingUp },
   { to: '/subscriptions', label: 'Subscriptions', icon: Users },
-  { to: '/plans',         label: 'Plans',         icon: CreditCard },
+  { to: '/plans', label: 'Plans', icon: CreditCard },
 ];
 
 const PROFILE_ITEMS = [
-  { icon: User,       label: 'Profile',          to: '/profile'       },
-  { icon: Clock,      label: 'Watch History',    to: '/history'       },
-  { icon: Heart,      label: 'Liked Videos',     to: '/liked'         },
-  { icon: Users,      label: 'Subscriptions',    to: '/subscriptions' },
-  { icon: DollarSign, label: 'Subscription Plan', to: '/plans'         },
-  { icon: Settings,   label: 'Settings',         to: '/settings'      },
+  { icon: User, label: 'Profile', to: '/profile' },
+  { icon: Clock, label: 'Watch History', to: '/history' },
+  { icon: Heart, label: 'Liked Videos', to: '/liked' },
+  { icon: Users, label: 'Subscriptions', to: '/subscriptions' },
+  { icon: DollarSign, label: 'Subscription Plan', to: '/plans' },
+  { icon: Settings, label: 'Settings', to: '/settings' },
 ];
 
-// Helper to check if user can access Creator Studio
 const canAccessStudio = (user) => {
   if (!user) return false;
   return user.role === 'CREATOR' || user.plan === 'CREATE' || user.role === 'ADMIN';
 };
 
-// ── Notification panel ────────────────────────────────────────────────────────
-const NotifPanel = ({ onClose }) => {
-  const unread = NOTIFICATIONS.filter(n => n.unread).length;
+// ----------------------------------------------------------------------
+// Notification Panel (real data)
+// ----------------------------------------------------------------------
+const NotifPanel = ({ onClose, notifications, onMarkAllRead, unreadCount }) => {
   return (
     <>
       <div className="fixed inset-0 z-[148]" onClick={onClose} />
@@ -54,32 +60,60 @@ const NotifPanel = ({ onClose }) => {
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-border">
           <div className="flex items-center gap-2">
             <span className="font-display font-bold text-lg text-text-primary">Notifications</span>
-            {unread > 0 && <span className="px-2 py-0.5 rounded-full bg-danger text-white text-xs font-bold">{unread}</span>}
+            {unreadCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-danger text-white text-xs font-bold">{unreadCount}</span>
+            )}
           </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:bg-bg-hov"><X size={14} /></button>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-text-muted hover:bg-bg-hov">
+            <X size={14} />
+          </button>
         </div>
         <div className="max-h-86 overflow-y-auto">
-          {NOTIFICATIONS.map(n => (
-            <div key={n.id} className={`flex gap-3 px-4 py-3.5 hover:bg-bg-hov border-b border-border/50 last:border-0 ${n.unread ? 'border-l-2 border-l-primary' : 'border-l-2 border-l-transparent'}`}>
-              <div className="w-9 h-9 rounded-xl bg-bg-el flex items-center justify-center text-lg flex-shrink-0">{n.icon}</div>
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm ${n.unread ? 'font-semibold text-text-primary' : 'font-medium text-text-secondary'}`}>{n.title}</p>
-                <p className="text-xs text-text-muted truncate mt-0.5">{n.body}</p>
-                <p className="text-xs text-text-muted mt-1">{n.time}</p>
+          {notifications.length === 0 ? (
+            <div className="px-4 py-8 text-center text-text-muted text-sm">No notifications yet</div>
+          ) : (
+            notifications.map((n) => (
+              <div
+                key={n.id}
+                className={`flex gap-3 px-4 py-3.5 hover:bg-bg-hov border-b border-border/50 last:border-0 ${
+                  !n.read ? 'border-l-2 border-l-primary' : 'border-l-2 border-l-transparent'
+                }`}
+              >
+                <div className="w-9 h-9 rounded-xl bg-bg-el flex items-center justify-center text-lg flex-shrink-0">
+                  {getNotificationIcon(n.type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm ${!n.read ? 'font-semibold text-text-primary' : 'font-medium text-text-secondary'}`}>
+                    {n.title}
+                  </p>
+                  <p className="text-xs text-text-muted mt-0.5">{n.message}</p>
+                  <p className="text-xs text-text-muted mt-1">
+                    {new Date(n.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                {!n.read && <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />}
               </div>
-              {n.unread && <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />}
-            </div>
-          ))}
+            ))
+          )}
         </div>
-        <div className="px-4 py-3 border-t border-border">
-          <button className="text-sm text-primary-light font-semibold hover:opacity-80">Mark all as read</button>
-        </div>
+        {unreadCount > 0 && (
+          <div className="px-4 py-3 border-t border-border">
+            <button
+              onClick={onMarkAllRead}
+              className="text-sm text-primary-light font-semibold hover:opacity-80"
+            >
+              Mark all as read
+            </button>
+          </div>
+        )}
       </div>
     </>
   );
 };
 
-// ── Search overlay (live results + dedicated search page) ────────────────────
+// ----------------------------------------------------------------------
+// Search Overlay (unchanged)
+// ----------------------------------------------------------------------
 const SearchOverlay = ({ onClose }) => {
   const [q, setQ] = useState('');
   const [allVideos, setAllVideos] = useState([]);
@@ -130,7 +164,6 @@ const SearchOverlay = ({ onClose }) => {
     return 'Just now';
   };
 
-  // Filter by title, username, tags, category
   const filteredVideos = q.length > 1
     ? allVideos.filter(v =>
         v.title?.toLowerCase().includes(q.toLowerCase()) ||
@@ -234,7 +267,9 @@ const SearchOverlay = ({ onClose }) => {
   );
 };
 
-// ── Mobile drawer (with icons for nav links) ─────────────────────────────────
+// ----------------------------------------------------------------------
+// Mobile Drawer (unchanged except using real user data)
+// ----------------------------------------------------------------------
 const MobileDrawer = ({ user, onClose }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -245,7 +280,7 @@ const MobileDrawer = ({ user, onClose }) => {
   return (
     <>
       <div className="fixed inset-0 z-[149] bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed top-0 left-0 bottom-0 w-[280px] z-[150] bg-bg-side border-r border-border flex flex-col overflow-y-auto" style={{ boxShadow: '4px 0 32px rgba(0,0,0,.5)' }}>
+      <div className="fixed top-0 left-0 bottom-0 w-[280px] z-[150] bg-bg-side border-r border-border flex flex-col overflow-y-auto">
         <div className="flex items-center justify-between px-4 h-16 border-b border-border flex-shrink-0">
           <span className="font-display font-black text-lg text-text-primary">Menu</span>
           <button onClick={onClose} className="w-8 h-8 rounded-xl flex items-center justify-center text-text-muted hover:bg-bg-hov transition-colors">
@@ -279,7 +314,6 @@ const MobileDrawer = ({ user, onClose }) => {
         )}
 
         <nav className="px-2 py-3 flex-1">
-          {/* Main navigation with icons */}
           {NAV_LINKS.map(({ to, label, icon: Icon }) => (
             <button
               key={to}
@@ -333,7 +367,9 @@ const MobileDrawer = ({ user, onClose }) => {
   );
 };
 
-// ── Main Navbar ──────────────────────────────────────────────────────────────
+// ----------------------------------------------------------------------
+// Main Navbar (with real notification integration)
+// ----------------------------------------------------------------------
 const Navbar = () => {
   const { user: authUser, logout } = useAuth();
   const navigate = useNavigate();
@@ -344,8 +380,13 @@ const Navbar = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [realUser, setRealUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
-  const unread = NOTIFICATIONS.filter(n => n.unread).length;
 
+  // Notifications state
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifLoading, setNotifLoading] = useState(false);
+
+  // Fetch current user
   useEffect(() => {
     const fetchRealUser = async () => {
       const token = localStorage.getItem('access_token');
@@ -369,6 +410,63 @@ const Navbar = () => {
 
   const displayUser = realUser || authUser;
 
+  // Fetch unread count periodically and when panel opens
+  const fetchUnreadCount = async () => {
+    if (!displayUser) return;
+    try {
+      const res = await api.get('/notifications/unread-count');
+      setUnreadCount(res.data.unreadCount);
+    } catch (err) {
+      console.error('Failed to fetch unread count:', err);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    if (!displayUser) return;
+    setNotifLoading(true);
+    try {
+      const res = await api.get('/notifications', { params: { page: 0, size: 20 } });
+      setNotifications(res.data.content);
+      // also update unread count
+      const unreadRes = await api.get('/notifications/unread-count');
+      setUnreadCount(unreadRes.data.unreadCount);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    } finally {
+      setNotifLoading(false);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    if (!displayUser) return;
+    try {
+      await api.put('/notifications/mark-read');
+      // update local state: mark all notifications as read
+      setNotifications(prev =>
+        prev.map(n => ({ ...n, read: true }))
+      );
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+    }
+  };
+
+  // Poll unread count every 30 seconds when user is logged in
+  useEffect(() => {
+    if (!displayUser) return;
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [displayUser]);
+
+  // Load notifications when panel opens
+  useEffect(() => {
+    if (notifOpen && displayUser) {
+      fetchNotifications();
+    }
+  }, [notifOpen, displayUser]);
+
+  // Close panels on outside click
   useEffect(() => {
     const handleClick = e => {
       if (!e.target.closest('[data-dd]')) {
@@ -386,31 +484,49 @@ const Navbar = () => {
 
   return (
     <>
-      <header
-        className="fixed top-0 left-0 right-0 z-[100] h-16 bg-bg-base/96 backdrop-blur-2xl border-b border-border"
-        style={{ boxShadow: '0 1px 0 rgba(255,255,255,.03), 0 4px 24px rgba(0,0,0,.35)' }}
-      >
+      <header className="fixed top-0 left-0 right-0 z-[100] h-16 bg-bg-base/96 backdrop-blur-2xl border-b border-border">
         {/* Mobile layout */}
         <div className="flex md:hidden items-center h-full px-4 relative">
           <button onClick={() => setDrawerOpen(true)} aria-label="Open menu" className="w-10 h-10 rounded-xl flex items-center justify-center text-text-secondary hover:bg-bg-el transition-colors">
             <Menu size={22} />
           </button>
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-            <Link to="/" className="flex items-center gap-2" aria-label="ViriShare home">
+            <Link to="/" className="flex items-center gap-2">
               <img src={logoUrl} alt="" className="h-7 w-auto" />
               <span className="font-display font-black text-lg text-text-primary tracking-tight">ViriShare</span>
             </Link>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex gap-1">
             <button onClick={() => setSearchOpen(true)} aria-label="Search" className="w-10 h-10 rounded-xl flex items-center justify-center text-text-secondary hover:bg-bg-el transition-colors">
               <Search size={20} />
             </button>
+            {displayUser && (
+              <div className="relative" data-dd>
+                <button
+                  onClick={() => { setNotifOpen(p => !p); setProfOpen(false); }}
+                  className="relative w-10 h-10 rounded-xl flex items-center justify-center text-text-secondary hover:bg-bg-el transition-colors"
+                >
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-danger border-2 border-bg-base" />
+                  )}
+                </button>
+                {notifOpen && (
+                  <NotifPanel
+                    onClose={() => setNotifOpen(false)}
+                    notifications={notifications}
+                    onMarkAllRead={markAllAsRead}
+                    unreadCount={unreadCount}
+                  />
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Desktop layout */}
         <div className="hidden md:flex items-center h-full px-6 gap-5">
-          <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 group" aria-label="ViriShare home">
+          <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 group">
             <img src={logoUrl} alt="ViriShare logo" className="h-8 w-auto" />
             <span className="font-display font-black text-xl text-text-primary tracking-tight group-hover:text-primary-light transition-colors">
               ViriShare
@@ -441,14 +557,23 @@ const Navbar = () => {
                 <div className="relative" data-dd>
                   <button
                     onClick={() => { setNotifOpen(p => !p); setProfOpen(false); }}
-                    aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ''}`}
+                    aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
                     className={`relative w-10 h-10 rounded-xl border flex items-center justify-center transition-all
                       ${notifOpen ? 'border-primary bg-primary/12 text-primary-light' : 'border-border bg-bg-el text-text-secondary hover:bg-bg-hov hover:text-text-primary'}`}
                   >
                     <Bell size={17} />
-                    {unread > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-danger border-2 border-bg-base" />}
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-danger border-2 border-bg-base" />
+                    )}
                   </button>
-                  {notifOpen && <NotifPanel onClose={() => setNotifOpen(false)} />}
+                  {notifOpen && (
+                    <NotifPanel
+                      onClose={() => setNotifOpen(false)}
+                      notifications={notifications}
+                      onMarkAllRead={markAllAsRead}
+                      unreadCount={unreadCount}
+                    />
+                  )}
                 </div>
 
                 {canAccessStudio(displayUser) && (
@@ -474,7 +599,7 @@ const Navbar = () => {
                   </button>
 
                   {profOpen && (
-                    <div role="menu" className="absolute top-[calc(100%+10px)] right-0 w-60 bg-bg-card border border-border rounded-2xl z-[149] shadow-[0_8px_40px_rgba(0,0,0,.6)] overflow-hidden">
+                    <div className="absolute top-[calc(100%+10px)] right-0 w-60 bg-bg-card border border-border rounded-2xl z-[149] shadow-[0_8px_40px_rgba(0,0,0,.6)] overflow-hidden">
                       <div className="px-4 py-4 border-b border-border">
                         <div className="flex items-center gap-3 mb-2.5">
                           {displayUser.profilePicture ? (
@@ -494,14 +619,14 @@ const Navbar = () => {
 
                       <div className="py-1.5 px-1.5">
                         {PROFILE_ITEMS.map(({ icon: Icon, label, to }) => (
-                          <Link key={to} to={to} role="menuitem" onClick={() => setProfOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-text-secondary text-base hover:bg-bg-hov hover:text-text-primary transition-colors">
+                          <Link key={to} to={to} onClick={() => setProfOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-text-secondary text-base hover:bg-bg-hov hover:text-text-primary transition-colors">
                             <Icon size={14} className="text-text-muted flex-shrink-0" /> {label}
                           </Link>
                         ))}
                       </div>
 
                       <div className="border-t border-border py-1.5 px-1.5">
-                        <button onClick={() => { logout(); navigate('/'); setProfOpen(false); }} role="menuitem" className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-danger text-base font-semibold hover:bg-danger/8 transition-colors text-left">
+                        <button onClick={() => { logout(); navigate('/'); setProfOpen(false); }} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-danger text-base font-semibold hover:bg-danger/8 transition-colors text-left">
                           <LogOut size={14} /> Sign Out
                         </button>
                       </div>

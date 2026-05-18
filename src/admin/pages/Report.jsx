@@ -17,6 +17,11 @@ const Report = () => {
     const [payoutsData, setPayoutsData] = useState([]);
     const [loading, setLoading] = useState(false);
 
+    const normalizeList = (payload) => {
+        if (Array.isArray(payload)) return payload;
+        return payload?.content ?? payload?.data ?? payload?.items ?? [];
+    };
+
     useEffect(() => {
         if (activeTab === 'revenue') fetchRevenueReport();
         if (activeTab === 'earnings') fetchEarningsReport();
@@ -159,15 +164,21 @@ const Report = () => {
 
     const renderPayoutsReport = () => (
         <div>
+            {(() => {
+                const payoutRows = normalizeList(payoutsData);
+                const pendingRows = payoutRows.filter(p => p.status === 'PENDING');
+
+                return (
+                    <>
             <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-bg-card border border-border rounded-xl p-4">
                     <div className="flex items-center gap-2 text-text-secondary mb-1"><Users size={16}/> Pending Requests</div>
-                    <div className="text-2xl font-bold text-text-primary">{payoutsData.filter(p => p.status === 'PENDING').length}</div>
+                    <div className="text-2xl font-bold text-text-primary">{pendingRows.length}</div>
                 </div>
                 <div className="bg-bg-card border border-border rounded-xl p-4">
                     <div className="flex items-center gap-2 text-text-secondary mb-1"><DollarSign size={16}/> Total Pending Amount</div>
                     <div className="text-2xl font-bold text-text-primary">
-                        Rs. {payoutsData.filter(p => p.status === 'PENDING').reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+                        Rs. {pendingRows.reduce((sum, p) => sum + (p.amount || 0), 0).toFixed(2)}
                     </div>
                 </div>
             </div>
@@ -183,10 +194,10 @@ const Report = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {payoutsData.length === 0 ? (
+                        {payoutRows.length === 0 ? (
                             <tr><td colSpan="5" className="px-4 py-8 text-center text-text-secondary">No payout requests found.</td></tr>
                         ) : (
-                            payoutsData.map(payout => (
+                            payoutRows.map(payout => (
                                 <tr key={payout.id} className="border-b border-border/50">
                                     <td className="px-4 py-3 text-text-primary">{payout.creator?.username || 'Unknown'}</td>
                                     <td className="px-4 py-3 text-text-primary">Rs. {payout.amount}</td>
@@ -207,6 +218,9 @@ const Report = () => {
                     </tbody>
                 </table>
             </div>
+                    </>
+                );
+            })()}
         </div>
     );
 

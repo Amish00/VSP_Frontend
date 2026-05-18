@@ -12,8 +12,15 @@ export const userApi = {
         const response = await axios.get(`${API_BASE_URL}/users/me`, { headers: getAuthHeader() });
         return response.data;
     },
-    getAllUsers: async () => {
-        const response = await axios.get(`${API_BASE_URL}/users`, { headers: getAuthHeader() });
+    getAllUsers: async (status = null, search = '', page = null, size = null) => {
+        const params = new URLSearchParams();
+        if (status && status !== 'All') params.append('status', status);
+        if (search) params.append('search', search);
+        if (page !== null && page !== undefined) params.append('page', page);
+        if (size !== null && size !== undefined) params.append('size', size);
+
+        const url = params.toString() ? `${API_BASE_URL}/users?${params.toString()}` : `${API_BASE_URL}/users`;
+        const response = await axios.get(url, { headers: getAuthHeader() });
         return response.data;
     },
     getUserById: async (id) => {
