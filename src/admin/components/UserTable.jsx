@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import Badge from './ui/Badge';               // reuse the same component
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Badge from './ui/Badge';
 import UserDataModal from './UserDataModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
+import Pagination from './Pagination';
 import { userApi } from '../api/userApi';
+
+const PAGE_SIZE = 10;
 
 const UserTable = () => {
   const [users, setUsers] = useState([]);
@@ -16,6 +19,30 @@ const UserTable = () => {
   const [currentUserRole, setCurrentUserRole] = useState('');
   const [currentUserId, setCurrentUserId] = useState(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+
+  // Debounced search
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const debounceTimer = useRef(null);
+
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1); // reset to first page on new search
+    }, 500);
+    return () => clearTimeout(debounceTimer.current);
+  }, [search]);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
+
+  // Fetch current user role and id
   useEffect(() => {
     const role = localStorage.getItem('user_role');
     setCurrentUserRole(role || 'VIEWER');
@@ -30,20 +57,40 @@ const UserTable = () => {
     fetchCurrentUser();
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
     try {
-      const data = await userApi.getAllUsers();
-      setUsers(data);
+      const data = await userApi.getAllUsers(
+        filter === 'All' ? null : filter,
+        debouncedSearch,
+        currentPage - 1,
+        PAGE_SIZE
+      );
+
+      if (Array.isArray(data)) {
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const pageUsers = data.slice(start, start + PAGE_SIZE);
+        setUsers(pageUsers);
+        setTotalElements(data.length);
+        setTotalPages(Math.max(1, Math.ceil(data.length / PAGE_SIZE)));
+      } else {
+        setUsers(data.content || []);
+        setTotalPages(data.totalPages || 1);
+        setTotalElements(data.totalElements || data.content?.length || 0);
+      }
     } catch (err) {
       console.error('Failed to fetch users', err);
+      setUsers([]);
+      setTotalPages(1);
+      setTotalElements(0);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, debouncedSearch, currentPage]);
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
   const openEditModal = (user) => {
     setSelectedUser(user);
@@ -59,7 +106,7 @@ const UserTable = () => {
     if (!userToDelete) return;
     try {
       await userApi.deleteUser(userToDelete.id);
-      setUsers(users.filter(u => u.id !== userToDelete.id));
+      await fetchUsers(); // refresh current page after delete
       setDeleteModalOpen(false);
       setUserToDelete(null);
     } catch (err) {
@@ -68,24 +115,9 @@ const UserTable = () => {
   };
 
   const handleUserUpdated = (updatedUser) => {
-    setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+    // Refresh current page to reflect updated data
+    fetchUsers();
   };
-
-  const filteredUsers = users.filter(u => {
-    const matchSearch =
-      (u.fullName || u.username).toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase());
-    const matchFilter =
-      filter === 'All' ||
-      u.role === filter ||
-      (filter === 'Blocked' && u.status === 'BLOCKED') ||
-      (filter === 'Suspended' && u.status === 'SUSPENDED');
-    return matchSearch && matchFilter;
-  });
-
-  if (loading) {
-    return <div className="text-center py-10 text-text-secondary">Loading users...</div>;
-  }
 
   // Helper to map role to badge type
   const getRoleBadgeType = (role) => {
@@ -96,7 +128,6 @@ const UserTable = () => {
     }
   };
 
-  // Helper to map plan to badge type
   const getPlanBadgeType = (plan) => {
     switch (plan) {
       case 'CREATE': return 'create_plan';
@@ -105,7 +136,6 @@ const UserTable = () => {
     }
   };
 
-  // Helper to map status to badge type
   const getStatusBadgeType = (status) => {
     switch (status) {
       case 'ACTIVE': return 'active';
@@ -115,9 +145,13 @@ const UserTable = () => {
     }
   };
 
+  if (loading && users.length === 0) {
+    return <div className="text-center py-10 text-text-secondary">Loading users...</div>;
+  }
+
   return (
     <div>
-      {/* Filters */}
+      {/* Filters row */}
       <div className="flex gap-3 mb-4 flex-wrap items-center">
         <div className="relative flex-1 min-w-[200px]">
           <input
@@ -142,6 +176,7 @@ const UserTable = () => {
         </div>
       </div>
 
+      {/* User Table */}
       <div className="bg-bg-card border border-border rounded-xl overflow-x-auto">
         <table className="w-full text-sm" style={{ minWidth: 720 }}>
           <thead>
@@ -154,7 +189,7 @@ const UserTable = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map(u => {
+            {users.map(u => {
               const displayName = u.fullName || u.username;
               const avatarUrl = u.profilePicture;
               const isBlockedOrSuspended = u.status === 'BLOCKED' || u.status === 'SUSPENDED';
@@ -227,10 +262,17 @@ const UserTable = () => {
                 </tr>
               );
             })}
-            {filteredUsers.length === 0 && (
+            {users.length === 0 && !loading && (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-text-muted">
                   No users match your search.
+                </td>
+              </tr>
+            )}
+            {loading && users.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-10 text-center text-text-muted">
+                  Loading...
                 </td>
               </tr>
             )}
@@ -238,6 +280,22 @@ const UserTable = () => {
         </table>
       </div>
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <div className="text-sm text-text-muted">
+            Showing {(currentPage-1)*PAGE_SIZE+1} to {Math.min(currentPage*PAGE_SIZE, totalElements)} of {totalElements} users
+          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            siblingCount={1}
+          />
+        </div>
+      )}
+
+      {/* Modals */}
       <UserDataModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
