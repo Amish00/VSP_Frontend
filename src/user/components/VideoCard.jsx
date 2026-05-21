@@ -1,3 +1,4 @@
+// src/components/VideoCard.jsx
 import React from 'react';
 import { Eye, Heart, Clock } from 'lucide-react';
 import Badge from '../components/ui/Badge';
@@ -16,8 +17,9 @@ const VideoCard = ({ video, onClick }) => {
   const profilePic = video.profilePicture || null;
 
   return (
-    <article className="card-hover rounded-xl overflow-hidden bg-bg-card border border-border cursor-pointer" style={{ boxShadow: '0 2px 12px rgba(0,0,0,.3)' }}>
+    <article className="card-hover rounded-xl overflow-hidden bg-bg-card border border-border cursor-pointer">
       <button onClick={() => onClick?.(video)} className="w-full text-left focus:outline-none" aria-label={`Watch ${video.title}`}>
+        {/* Thumbnail - fixed ratio */}
         <div className="relative aspect-video bg-bg-el overflow-hidden">
           {video.thumb ? (
             <img src={video.thumb} alt="" className="w-full h-full object-cover" loading="lazy" />
@@ -35,9 +37,10 @@ const VideoCard = ({ video, onClick }) => {
             </div>
           </div>
         </div>
+
+        {/* Content - no stretching, natural height */}
         <div className="p-3 sm:p-4 min-w-0">
           <div className="flex gap-3 items-start">
-            {/* Profile picture */}
             <div className="w-10 h-10 rounded-full overflow-hidden bg-bg-el flex-shrink-0">
               {profilePic ? (
                 <img src={profilePic} alt={username} className="w-full h-full object-cover" />
@@ -48,11 +51,13 @@ const VideoCard = ({ video, onClick }) => {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-lg sm:text-xl text-text-primary leading-tight line-clamp-2">{video.title}</h3>
+              <h3 className="font-semibold text-lg sm:text-xl text-text-primary leading-tight line-clamp-1">
+                {video.title}
+              </h3>
               <p className="mt-0.5 text-sm font-medium text-text-secondary truncate">{username}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 pl-[44px] text-sm" style={{ color: '#8FA3BE' }}>
+          <div className="flex items-center gap-3 pl-[44px] text-sm mt-1.5" style={{ color: '#8FA3BE' }}>
             <Meta Icon={Eye} value={video.views} label="views" />
             <span aria-hidden>·</span>
             <Meta Icon={Heart} value={video.likes} label="likes" />

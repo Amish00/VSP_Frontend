@@ -3,11 +3,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authApi } from '../api/authApi';
 import AuthCard from '../components/AuthCard';
+import { useSnackbar } from 'notistack';
 
 const OtpPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const email = location.state?.email || ''; // passed from ForgotPasswordPage
+  const { enqueueSnackbar } = useSnackbar();
+  const email = location.state?.email || '';
 
   const [digits, setDigits] = useState(Array(6).fill(''));
   const [timer, setTimer] = useState(60);
@@ -22,11 +24,11 @@ const OtpPage = () => {
   }, [timer]);
 
   useEffect(() => {
-  if (!email) {
-    navigate('/forgot-password', { replace: true });
-  }
-}, [email, navigate]);
-
+    if (!email) {
+      enqueueSnackbar('Missing email. Please restart the password reset process.', { variant: 'error' });
+      navigate('/forgot-password', { replace: true });
+    }
+  }, [email, navigate, enqueueSnackbar]);
 
   const handleKey = (i, e) => {
     if (e.key === 'Backspace') {
@@ -49,13 +51,18 @@ const OtpPage = () => {
 
   const verify = async () => {
     const otp = digits.join('');
-    if (otp.length < 6) { setError(true); return; }
+    if (otp.length < 6) {
+      enqueueSnackbar('Please enter the 6-digit code.', { variant: 'error' });
+      setError(true);
+      return;
+    }
     setLoading(true);
     try {
       await authApi.verifyOtp(email, otp);
-      // OTP is valid – go to reset password page, passing email + OTP
+      enqueueSnackbar('Code verified! Set your new password.', { variant: 'success' });
       navigate('/reset-password', { state: { email, otp } });
     } catch (err) {
+      enqueueSnackbar('Invalid code. Please try again.', { variant: 'error' });
       setError(true);
       setDigits(Array(6).fill(''));
       if (refs.current[0]) refs.current[0].focus();
@@ -72,9 +79,10 @@ const OtpPage = () => {
       setTimer(60);
       setDigits(Array(6).fill(''));
       setError(false);
+      enqueueSnackbar('New code sent to your email.', { variant: 'success' });
       if (refs.current[0]) refs.current[0].focus();
     } catch (err) {
-      setError(true);
+      enqueueSnackbar('Failed to resend code. Please try again.', { variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -100,8 +108,6 @@ const OtpPage = () => {
                        ${error ? 'border-danger ring-2 ring-danger/20' : d ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`} />
         ))}
       </div>
-
-      {error && <p className="text-center text-sm text-danger mb-3" role="alert">⚠ Invalid code — try again.</p>}
 
       <button onClick={verify} disabled={loading || digits.join('').length < 6}
         className="w-full bg-primary text-white font-bold text-base rounded-xl py-3 mb-4 hover:bg-[#1d4ed8] disabled:opacity-40 transition-all shadow-[0_2px_8px_rgba(37,99,235,.4)]">

@@ -1,3 +1,4 @@
+// src/pages/ProfilePage.jsx
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Camera, Save } from 'lucide-react'
@@ -15,7 +16,6 @@ const inp = "w-full bg-bg-el text-text-primary text-base rounded-xl border borde
 const sel = `${inp} appearance-none`
 const readOnlyInput = "w-full bg-bg-el/50 text-text-secondary text-base rounded-xl border border-border px-4 py-3 cursor-not-allowed"
 
-// Helper to format numbers (K, M)
 const formatNumber = (num) => {
   if (num == null) return '0'
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M'
@@ -23,7 +23,6 @@ const formatNumber = (num) => {
   return num.toString()
 }
 
-// Helper for relative time
 const formatRelativeDate = (isoDate) => {
   if (!isoDate) return 'Recently'
   const date = new Date(isoDate)
@@ -41,7 +40,6 @@ const formatRelativeDate = (isoDate) => {
   return 'Just now'
 }
 
-// Transform backend video object to what VideoGrid expects
 const transformVideo = (video) => ({
   id: video.id,
   title: video.title,
@@ -144,13 +142,12 @@ const ProfilePage = () => {
     }
   }
 
-  // Avatar upload – show modal instead of window.confirm
   const handleAvatarSelect = (e) => {
     const file = e.target.files[0]
     if (!file) return
     setPendingAvatarFile(file)
     setShowAvatarModal(true)
-    e.target.value = '' // allow re‑selecting same file later
+    e.target.value = ''
   }
 
   const confirmAvatarUpload = async () => {
@@ -170,7 +167,6 @@ const ProfilePage = () => {
     }
   }
 
-  // Banner upload – show modal
   const handleBannerSelect = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -201,7 +197,6 @@ const ProfilePage = () => {
   }
 
   const isCreatorOrViewer = user?.role === 'CREATOR' || user?.role === 'VIEWER'
-  const isAdmin = user?.role === 'ADMIN'
 
   if (loading) {
     return <div className="min-h-screen bg-bg-base flex items-center justify-center text-text-muted">Loading profile...</div>
@@ -227,7 +222,8 @@ const ProfilePage = () => {
         </label>
       </div>
 
-      <div className="w-full px-4 sm:px-8">
+      {/* Main content with consistent container */}
+      <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pb-[96px] md:pb-16">
         {/* Avatar + header */}
         <div className="relative z-10 -mt-14 sm:-mt-16 mb-6 pb-6 border-b border-border">
           <div className="inline-flex flex-col sm:flex-row items-start sm:items-end gap-4 px-4 py-3 rounded-2xl bg-bg-base/70 backdrop-blur-sm border border-border/70 shadow-[0_8px_22px_rgba(0,0,0,0.28)]">
@@ -258,7 +254,7 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {/* Form sections - full width */}
+        {/* Form sections */}
         <div className="w-full mb-10">
           <div className="bg-bg-card border border-border rounded-2xl p-6 mb-5">
             <div className="flex items-center justify-between mb-5">
@@ -345,7 +341,7 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      {/* Confirmation Modal for Avatar */}
+      {/* Modals */}
       <Modal open={showAvatarModal} onClose={() => setShowAvatarModal(false)} title="Change Profile Picture">
         <p className="text-text-secondary mb-4">Are you sure you want to replace your current profile picture with the new image?</p>
         <div className="flex justify-end gap-3">
@@ -354,7 +350,6 @@ const ProfilePage = () => {
         </div>
       </Modal>
 
-      {/* Confirmation Modal for Banner */}
       <Modal open={showBannerModal} onClose={() => setShowBannerModal(false)} title="Change Channel Banner">
         <p className="text-text-secondary mb-4">Are you sure you want to replace your channel banner? The new banner will be visible to everyone.</p>
         <div className="flex justify-end gap-3">
@@ -363,7 +358,6 @@ const ProfilePage = () => {
         </div>
       </Modal>
 
-      {/* Confirmation Modal for Basic Info Save */}
       <Modal open={showSaveModal} onClose={() => setShowSaveModal(false)} title="Save Profile Changes">
         <p className="text-text-secondary mb-4">Are you sure you want to save the updated profile information?</p>
         <div className="flex justify-end gap-3">
@@ -383,4 +377,4 @@ const ProfilePage = () => {
   )
 }
 
-export default ProfilePage
+export default ProfilePage;

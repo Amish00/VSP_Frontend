@@ -39,6 +39,8 @@ import ThumbnailEditor from './creator/pages/ThumbnailEditor';
 import { SnackbarProvider } from 'notistack';
 import AllVideosPage from './user/pages/AllVideosPage';
 import SearchPage from './user/pages/SearchPage';
+import VideoEditor from './creator/pages/VideoEditor';
+import NotFound from './user/pages/NotFound';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -78,12 +80,9 @@ function App() {
           <Route path="/settings" element={<div> Settings Pages </div>} />
           <Route path="/all-videos" element={<AllVideosPage />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/not-found" element={<NotFound />} />
           
 
-          {/*
-          <Route path="/liked" element={<Liked />} />
-           */}
-          {/* add other viewer pages here */}
         </Route>
 
         {/* Admin routes with AdminLayout (top nav + sidebar) */}
@@ -102,7 +101,7 @@ function App() {
           <Route path="revenue" element={<RevenuePage />} />
           <Route path="reports" element={<Report />} />
           <Route path="profile" element={<ProfilePage />} />
-          <Route path="settings" element={<div>Settings Page</div>} />
+          <Route path="settings" element={<NotFound />} />
           
         </Route>
 
@@ -124,6 +123,7 @@ function App() {
 
         </Route>
         <Route path="creator/editors" element={<ThumbnailEditor />} />
+        <Route path="creator/video-editor" element={<VideoEditor />} />
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

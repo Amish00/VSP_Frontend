@@ -1,5 +1,7 @@
+// src/pages/PlansPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSnackbar } from 'notistack';
 import PlanCard from '../components/plans/PlanCard';
 import BillingToggle from '../components/plans/BillingToggle';
 import Modal from '../components/ui/Modal';
@@ -34,6 +36,7 @@ const CONTENT_CATEGORIES = [
 
 const PlansPage = () => {
   const navigate = useNavigate();
+  const { enqueueSnackbar } = useSnackbar();
   const [billing, setBilling] = useState('monthly');
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -56,58 +59,51 @@ const PlansPage = () => {
         setUser(userData);
       } catch (err) {
         console.error('Failed to fetch user', err);
+        enqueueSnackbar('Failed to load user data. Please refresh the page.', { variant: 'error' });
       } finally {
         setLoading(false);
       }
     };
     fetchUser();
-  }, []);
+  }, [enqueueSnackbar]);
 
   const plans = PLANS[billing] || [];
-
-  // Does the user have an active paid subscription?
-  const hasActivePaidPlan = user &&
-    user.subscriptionExpiry &&
-    new Date(user.subscriptionExpiry) > new Date() &&
-    user.plan !== 'FREE';
-
-  // Hide "Most Popular" badge for ANY logged‑in user (not just those with paid plans)
+  const hasActivePaidPlan = user && user.subscriptionExpiry && new Date(user.subscriptionExpiry) > new Date() && user.plan !== 'FREE';
   const hidePopularBadge = !!user;
 
   const handleSelect = async (plan) => {
-    // 1. Authentication check
     const token = localStorage.getItem('access_token');
     if (!token) {
+      enqueueSnackbar('Please sign in to subscribe to a plan.', { variant: 'warning' });
       navigate('/signin', { state: { from: '/plans' } });
       return;
     }
-
-    // 2. Free plan upgrade
     if (plan.id === 'free') {
-      // Prevent downgrade if user has an active paid subscription
       if (hasActivePaidPlan) {
-        alert(`You have an active ${user.plan} plan until ${new Date(user.subscriptionExpiry).toLocaleDateString()}. You cannot switch to Free until it expires.`);
+        enqueueSnackbar(
+          `You have an active ${user.plan} plan until ${new Date(user.subscriptionExpiry).toLocaleDateString()}. You cannot switch to Free until it expires.`,
+          { variant: 'warning' }
+        );
         return;
       }
       try {
         await upgradeToFreePlan();
-        alert('Successfully switched to Free plan!');
+        enqueueSnackbar('Successfully switched to Free plan!', { variant: 'success' });
         const updatedUser = await getCurrentUser();
         setUser(updatedUser);
       } catch (err) {
         console.error(err);
-        alert('Failed to upgrade to Free plan.');
+        enqueueSnackbar('Failed to upgrade to Free plan. Please try again.', { variant: 'error' });
       }
       return;
     }
-
-    // 3. Paid plan: check active subscription
     if (hasActivePaidPlan) {
-      alert(`You already have an active ${user.plan} plan until ${new Date(user.subscriptionExpiry).toLocaleDateString()}. Cannot subscribe to another plan.`);
+      enqueueSnackbar(
+        `You already have an active ${user.plan} plan until ${new Date(user.subscriptionExpiry).toLocaleDateString()}. Cannot subscribe to another plan.`,
+        { variant: 'warning' }
+      );
       return;
     }
-
-    // 4. Proceed to payment modal
     setSelectedPlan(plan);
     setStep(0);
     setSelectedCategories([]);
@@ -118,13 +114,7 @@ const PlansPage = () => {
     if (!selectedPlan) return;
     setPurchasing(true);
     try {
-      const data = await initiatePayment(
-        paymentMethod.toLowerCase(),
-        selectedPlan.price,
-        selectedPlan.id,
-        billing
-      );
-
+      const data = await initiatePayment(paymentMethod.toLowerCase(), selectedPlan.price, selectedPlan.id, billing);
       if (data.gateway === 'esewa') {
         const form = document.createElement('form');
         form.method = 'POST';
@@ -143,7 +133,8 @@ const PlansPage = () => {
       }
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || 'Payment initiation failed. Please try again.');
+      const errorMsg = err.response?.data?.message || 'Payment initiation failed. Please try again.';
+      enqueueSnackbar(errorMsg, { variant: 'error' });
       setPurchasing(false);
     }
   };
@@ -151,49 +142,49 @@ const PlansPage = () => {
   const formatPrice = (price) => `Rs.${price.toLocaleString('en-IN')}`;
 
   if (loading) {
-    return <div className="text-center py-20">Loading your account...</div>;
+    return <div className="text-center py-20 text-text-muted">Loading your account...</div>;
   }
 
   return (
-    <div className="max-w-[1100px] mx-auto px-4 sm:px-8 py-10 pb-16 text-center">
-      <h1 className="font-display text-3xl sm:text-4xl font-extrabold mb-2 text-text-primary">
-        Choose Your Plan
-      </h1>
-      <p className="text-text-secondary text-base mb-8 max-w-md mx-auto leading-relaxed">
-        Unlock premium content or start creating and earning with ViriShare.
-      </p>
+    <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pt-[68px] md:pt-[92px] pb-[96px] md:pb-16">
+      <div className="max-w-[1100px] mx-auto text-center">
+        <h1 className="font-display text-3xl sm:text-4xl font-extrabold mb-2 text-text-primary">
+          Choose Your Plan
+        </h1>
+        <p className="text-text-secondary text-base mb-8 max-w-md mx-auto leading-relaxed">
+          Unlock premium content or start creating and earning with ViriShare.
+        </p>
 
-      <div className="flex justify-center mb-10">
-        <BillingToggle value={billing} onChange={setBilling} />
+        <div className="flex justify-center mb-10">
+          <BillingToggle value={billing} onChange={setBilling} />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-[900px] mx-auto text-left mb-10">
+          {plans.map(plan => {
+            const isCurrentPlan = user && user.plan === plan.id.toUpperCase();
+            const disabled = (plan.id !== 'free' && hasActivePaidPlan) || isCurrentPlan;
+            const planWithPopular = { ...plan, popular: plan.popular && !hidePopularBadge };
+            return (
+              <PlanCard
+                key={plan.id}
+                plan={planWithPopular}
+                onSelect={handleSelect}
+                currencySymbol="Rs."
+                disabled={disabled}
+                isCurrentPlan={isCurrentPlan}
+              />
+            );
+          })}
+        </div>
+
+        <div className="flex flex-wrap gap-5 justify-center text-sm text-text-muted">
+          {['✓ Cancel anytime', '✓ No credit card for Free', '✓ eSewa & Khalti accepted', '✓ Instant activation'].map(t => (
+            <span key={t}>{t}</span>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-[900px] mx-auto text-left mb-10">
-        {plans.map(plan => {
-          const isCurrentPlan = user && user.plan === plan.id.toUpperCase();
-          const disabled = (plan.id !== 'free' && hasActivePaidPlan) || isCurrentPlan;
-          // Hide the "popular" badge for any logged‑in user
-          const planWithPopular = { ...plan, popular: plan.popular && !hidePopularBadge };
-
-          return (
-            <PlanCard
-              key={plan.id}
-              plan={planWithPopular}
-              onSelect={handleSelect}
-              currencySymbol="Rs."
-              disabled={disabled}
-              isCurrentPlan={isCurrentPlan}
-            />
-          );
-        })}
-      </div>
-
-      <div className="flex flex-wrap gap-5 justify-center text-sm text-text-muted">
-        {['✓ Cancel anytime', '✓ No credit card for Free', '✓ eSewa & Khalti accepted', '✓ Instant activation'].map(t => (
-          <span key={t}>{t}</span>
-        ))}
-      </div>
-
-      {/* Payment Modal (unchanged) */}
+      {/* Payment Modal */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={`Subscribe to ${selectedPlan?.name}`} maxW={560}>
         <div className="flex gap-1 mb-6">
           {['Content Preferences', 'Payment & Bill'].map((s, i) => (

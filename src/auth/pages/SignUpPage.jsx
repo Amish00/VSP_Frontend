@@ -1,8 +1,10 @@
+// src/auth/pages/SignUpPage.jsx
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import AuthCard from '../components/AuthCard'
 import { Eye, EyeOff } from 'lucide-react'
+import { useSnackbar } from 'notistack'
 
 const inp = "w-full bg-bg-el text-text-primary text-base rounded-xl border border-border px-4 py-3 placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
 
@@ -18,20 +20,20 @@ const getPasswordStrength = (pw) => {
   return map[0]
 }
 
-
 const SignUpPage = () => {
-  const { signupAndLogin }  = useAuth()
-  const navigate   = useNavigate()
+  const { signupAndLogin } = useAuth()
+  const navigate = useNavigate()
+  const { enqueueSnackbar } = useSnackbar()
   const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState('')
-  const [showPw,  setShowPw]  = useState(false)
+  const [error, setError] = useState('')
+  const [showPw, setShowPw] = useState(false)
   const [showConfirmPw, setShowConfirmPw] = useState(false)
   const [confirmTouched, setConfirmTouched] = useState(false)
   const [f, setF] = useState({ name:'', email:'', password:'', confirm:'' })
   const upd = (k, v) => setF(p => ({ ...p, [k]: v }))
 
   const strength = getPasswordStrength(f.password)
-  const bars     = Math.ceil(f.password.length / 3)
+  const bars = Math.ceil(f.password.length / 3)
 
   const validate = () => {
     if (!f.name.trim())     return 'Full name is required.'
@@ -45,25 +47,32 @@ const SignUpPage = () => {
   const submit = async () => {
     setConfirmTouched(true)
     const err = validate()
-    if (err) { setError(err); return }
+    if (err) {
+      enqueueSnackbar(err, { variant: 'error' })
+      setError(err)
+      return
+    }
     setError('')
     setLoading(true)
     try {
-      const user = await signupAndLogin(f.name, f.email, f.password);
-      const role = user.role?.toLowerCase();
-      if (role === 'admin') navigate('/admin');
-      else if (role === 'creator') navigate('/creator');
-      else navigate('/'); // viewer → home
+      const user = await signupAndLogin(f.name, f.email, f.password)
+      enqueueSnackbar('Account created successfully!', { variant: 'success' })
+      const role = user.role?.toLowerCase()
+      if (role === 'admin') navigate('/admin')
+      else if (role === 'creator') navigate('/creator')
+      else navigate('/')
     } catch (err) {
-      setError(err.message || 'Signup failed. Email or username may already exist.');
+      const msg = err.message || 'Signup failed. Email or username may already exist.'
+      enqueueSnackbar(msg, { variant: 'error' })
+      setError(msg)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleOAuth = (provider) => {
-    setError(`${provider} login will be available soon.`);
-  };
+    enqueueSnackbar(`${provider} login will be available soon.`, { variant: 'info' })
+  }
 
   return (
     <AuthCard>
@@ -166,8 +175,6 @@ const SignUpPage = () => {
         <span className="text-primary-light cursor-pointer hover:opacity-80">Terms</span> and{' '}
         <span className="text-primary-light cursor-pointer hover:opacity-80">Privacy Policy</span>
       </p>
-
-
 
       <p className="text-center text-sm text-text-muted">
         Already have an account?{' '}
