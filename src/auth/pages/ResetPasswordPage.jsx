@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { authApi } from '../api/authApi';
 import AuthCard from '../components/AuthCard';
 import { Eye, EyeOff } from 'lucide-react';
+import { useSnackbar } from 'notistack';
 
 const inp = "w-full bg-bg-el text-text-primary text-base rounded-xl border border-border px-4 py-3 placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all";
 
@@ -22,11 +23,11 @@ const getPasswordStrength = (pw) => {
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { enqueueSnackbar } = useSnackbar();
   const { email, otp } = location.state || { email: '', otp: '' };
 
   const [pw, setPw] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [showPw, setShowPw] = useState(false);
@@ -36,24 +37,38 @@ const ResetPasswordPage = () => {
   const bars = Math.min(4, Math.ceil(pw.length / 3));
 
   useEffect(() => {
-  if (!email || !otp) {
-    navigate('/forgot-password', { replace: true });
-  }
-}, [email, otp, navigate]);
+    if (!email || !otp) {
+      enqueueSnackbar('Missing information. Please restart the password reset process.', { variant: 'error' });
+      navigate('/forgot-password', { replace: true });
+    }
+  }, [email, otp, navigate, enqueueSnackbar]);
 
   const reset = async () => {
-    if (!pw) { setError('Enter a new password.'); return; }
-    if (pw.length < 8) { setError('At least 8 characters needed.'); return; }
-    if (pw !== confirm) { setError("Passwords don't match."); return; }
-    if (!email || !otp) { setError('Missing information. Please restart the password reset process.'); return; }
+    if (!pw) {
+      enqueueSnackbar('Enter a new password.', { variant: 'error' });
+      return;
+    }
+    if (pw.length < 8) {
+      enqueueSnackbar('Password must be at least 8 characters.', { variant: 'error' });
+      return;
+    }
+    if (pw !== confirm) {
+      enqueueSnackbar("Passwords don't match.", { variant: 'error' });
+      return;
+    }
+    if (!email || !otp) {
+      enqueueSnackbar('Missing information. Please restart the password reset process.', { variant: 'error' });
+      return;
+    }
 
-    setError('');
     setLoading(true);
     try {
       await authApi.resetPassword(email, otp, pw);
       setDone(true);
+      enqueueSnackbar('Password reset successfully!', { variant: 'success' });
     } catch (err) {
-      setError(err.message || 'Password reset failed. Please try again.');
+      const msg = err.message || 'Password reset failed. Please try again.';
+      enqueueSnackbar(msg, { variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -111,8 +126,6 @@ const ResetPasswordPage = () => {
           {showConfirmPw ? <EyeOff /> : <Eye />}
         </button>
       </div>
-
-      {error && <p className="text-sm text-danger mb-3" role="alert">⚠ {error}</p>}
 
       <button onClick={reset} disabled={loading}
         className="w-full bg-primary text-white font-bold text-base rounded-xl py-3 hover:bg-[#1d4ed8] disabled:opacity-40 transition-all shadow-[0_2px_8px_rgba(37,99,235,.4)]">

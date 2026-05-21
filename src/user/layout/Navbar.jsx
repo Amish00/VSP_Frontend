@@ -1,16 +1,17 @@
+// src/layout/Navbar.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Search, Bell, X, Menu, LogOut, User, Clock, Heart, Users,
   DollarSign, Settings, Video, ChevronDown, Home, TrendingUp,
-  CreditCard
+  CreditCard, Twitter, Youtube, Instagram, Linkedin
 } from 'lucide-react';
 import logoUrl from '../../assets/logo.svg';
 import Badge from '../components/ui/Badge';
 import { useAuth } from '../../auth/context/AuthContext';
 import api from '../api/Api';
 
-// Map notification type to icon (emoji or component later)
+// Map notification type to icon (emoji)
 const getNotificationIcon = (type) => {
   const icons = {
     VIDEO_APPROVED: '✅',
@@ -19,9 +20,9 @@ const getNotificationIcon = (type) => {
     PAYOUT_REQUEST: '💰',
     MONTHLY_EARNINGS: '📊',
     MONTHLY_REVENUE_REPORT: '📈',
-    SUBSCRIPTION: '👥',   // for future
-    COMMENT: '💬',        // for future
-    LIKE: '❤️',           // for future
+    SUBSCRIPTION: '👥',
+    COMMENT: '💬',
+    LIKE: '❤️',
   };
   return icons[type] || '🔔';
 };
@@ -50,7 +51,7 @@ const canAccessStudio = (user) => {
 };
 
 // ----------------------------------------------------------------------
-// Notification Panel (real data)
+// Notification Panel (same as original)
 // ----------------------------------------------------------------------
 const NotifPanel = ({ onClose, notifications, onMarkAllRead, unreadCount }) => {
   return (
@@ -268,7 +269,7 @@ const SearchOverlay = ({ onClose }) => {
 };
 
 // ----------------------------------------------------------------------
-// Mobile Drawer (unchanged except using real user data)
+// Mobile Drawer (unchanged)
 // ----------------------------------------------------------------------
 const MobileDrawer = ({ user, onClose }) => {
   const { logout } = useAuth();
@@ -368,7 +369,7 @@ const MobileDrawer = ({ user, onClose }) => {
 };
 
 // ----------------------------------------------------------------------
-// Main Navbar (with real notification integration)
+// Main Navbar (solid background, consistent container)
 // ----------------------------------------------------------------------
 const Navbar = () => {
   const { user: authUser, logout } = useAuth();
@@ -381,12 +382,9 @@ const Navbar = () => {
   const [realUser, setRealUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
-  // Notifications state
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [notifLoading, setNotifLoading] = useState(false);
 
-  // Fetch current user
   useEffect(() => {
     const fetchRealUser = async () => {
       const token = localStorage.getItem('access_token');
@@ -410,7 +408,6 @@ const Navbar = () => {
 
   const displayUser = realUser || authUser;
 
-  // Fetch unread count periodically and when panel opens
   const fetchUnreadCount = async () => {
     if (!displayUser) return;
     try {
@@ -423,17 +420,13 @@ const Navbar = () => {
 
   const fetchNotifications = async () => {
     if (!displayUser) return;
-    setNotifLoading(true);
     try {
       const res = await api.get('/notifications', { params: { page: 0, size: 20 } });
       setNotifications(res.data.content);
-      // also update unread count
       const unreadRes = await api.get('/notifications/unread-count');
       setUnreadCount(unreadRes.data.unreadCount);
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
-    } finally {
-      setNotifLoading(false);
     }
   };
 
@@ -441,17 +434,13 @@ const Navbar = () => {
     if (!displayUser) return;
     try {
       await api.put('/notifications/mark-read');
-      // update local state: mark all notifications as read
-      setNotifications(prev =>
-        prev.map(n => ({ ...n, read: true }))
-      );
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (err) {
       console.error('Failed to mark all as read:', err);
     }
   };
 
-  // Poll unread count every 30 seconds when user is logged in
   useEffect(() => {
     if (!displayUser) return;
     fetchUnreadCount();
@@ -459,14 +448,12 @@ const Navbar = () => {
     return () => clearInterval(interval);
   }, [displayUser]);
 
-  // Load notifications when panel opens
   useEffect(() => {
     if (notifOpen && displayUser) {
       fetchNotifications();
     }
   }, [notifOpen, displayUser]);
 
-  // Close panels on outside click
   useEffect(() => {
     const handleClick = e => {
       if (!e.target.closest('[data-dd]')) {
@@ -479,13 +466,13 @@ const Navbar = () => {
   }, []);
 
   if (loadingUser) {
-    return <header className="fixed top-0 left-0 right-0 z-[100] h-16 bg-bg-base/96 backdrop-blur-2xl border-b border-border" />;
+    return <header className="fixed top-0 left-0 right-0 z-[100] h-16 bg-[#080D18] border-b border-border" />;
   }
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-[100] h-16 bg-bg-base/96 backdrop-blur-2xl border-b border-border">
-        {/* Mobile layout */}
+      <header className="fixed top-0 left-0 right-0 z-[100] h-16 bg-[#080D18] border-b border-border">
+        {/* Mobile layout (no container needed – full width) */}
         <div className="flex md:hidden items-center h-full px-4 relative">
           <button onClick={() => setDrawerOpen(true)} aria-label="Open menu" className="w-10 h-10 rounded-xl flex items-center justify-center text-text-secondary hover:bg-bg-el transition-colors">
             <Menu size={22} />
@@ -524,121 +511,123 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Desktop layout */}
-        <div className="hidden md:flex items-center h-full px-6 gap-5">
-          <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 group">
-            <img src={logoUrl} alt="ViriShare logo" className="h-8 w-auto" />
-            <span className="font-display font-black text-xl text-text-primary tracking-tight group-hover:text-primary-light transition-colors">
-              ViriShare
-            </span>
-          </Link>
+        {/* Desktop layout – inner container matches main content */}
+        <div className="hidden md:flex items-center h-full">
+          <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 w-full flex items-center justify-between gap-5">
+            <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 group">
+              <img src={logoUrl} alt="ViriShare logo" className="h-8 w-auto" />
+              <span className="font-display font-black text-xl text-text-primary tracking-tight group-hover:text-primary-light transition-colors">
+                ViriShare
+              </span>
+            </Link>
 
-          <nav className="flex items-center gap-1 flex-1 justify-center">
-            {NAV_LINKS.map(({ to, label }) => (
-              <Link
-                key={to}
-                to={to}
-                className={`relative px-5 py-2.5 rounded-xl text-base font-semibold transition-all whitespace-nowrap
-                  ${location.pathname === to ? 'text-text-primary bg-bg-el' : 'text-text-secondary hover:text-text-primary hover:bg-bg-el/50'}`}
-              >
-                {label}
-                {location.pathname === to && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-primary" />}
-              </Link>
-            ))}
-          </nav>
+            <nav className="flex items-center gap-1 flex-1 justify-center">
+              {NAV_LINKS.map(({ to, label }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className={`relative px-5 py-2.5 rounded-xl text-base font-semibold transition-all whitespace-nowrap
+                    ${location.pathname === to ? 'text-text-primary bg-bg-el' : 'text-text-secondary hover:text-text-primary hover:bg-bg-el/50'}`}
+                >
+                  {label}
+                  {location.pathname === to && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-primary" />}
+                </Link>
+              ))}
+            </nav>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={() => setSearchOpen(true)} aria-label="Search" className="w-10 h-10 rounded-xl border border-border bg-bg-el text-text-secondary hover:bg-bg-hov hover:text-text-primary flex items-center justify-center transition-all">
-              <Search size={17} />
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button onClick={() => setSearchOpen(true)} aria-label="Search" className="w-10 h-10 rounded-xl border border-border bg-bg-el text-text-secondary hover:bg-bg-hov hover:text-text-primary flex items-center justify-center transition-all">
+                <Search size={17} />
+              </button>
 
-            {displayUser ? (
-              <>
-                <div className="relative" data-dd>
-                  <button
-                    onClick={() => { setNotifOpen(p => !p); setProfOpen(false); }}
-                    aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
-                    className={`relative w-10 h-10 rounded-xl border flex items-center justify-center transition-all
-                      ${notifOpen ? 'border-primary bg-primary/12 text-primary-light' : 'border-border bg-bg-el text-text-secondary hover:bg-bg-hov hover:text-text-primary'}`}
-                  >
-                    <Bell size={17} />
-                    {unreadCount > 0 && (
-                      <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-danger border-2 border-bg-base" />
+              {displayUser ? (
+                <>
+                  <div className="relative" data-dd>
+                    <button
+                      onClick={() => { setNotifOpen(p => !p); setProfOpen(false); }}
+                      aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+                      className={`relative w-10 h-10 rounded-xl border flex items-center justify-center transition-all
+                        ${notifOpen ? 'border-primary bg-primary/12 text-primary-light' : 'border-border bg-bg-el text-text-secondary hover:bg-bg-hov hover:text-text-primary'}`}
+                    >
+                      <Bell size={17} />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-danger border-2 border-bg-base" />
+                      )}
+                    </button>
+                    {notifOpen && (
+                      <NotifPanel
+                        onClose={() => setNotifOpen(false)}
+                        notifications={notifications}
+                        onMarkAllRead={markAllAsRead}
+                        unreadCount={unreadCount}
+                      />
                     )}
-                  </button>
-                  {notifOpen && (
-                    <NotifPanel
-                      onClose={() => setNotifOpen(false)}
-                      notifications={notifications}
-                      onMarkAllRead={markAllAsRead}
-                      unreadCount={unreadCount}
-                    />
+                  </div>
+
+                  {canAccessStudio(displayUser) && (
+                    <Link to="/creator" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-primary/35 bg-primary/8 text-primary-light text-sm font-semibold hover:bg-primary/15 hover:border-primary/55 transition-all">
+                      <Video size={15} /> Studio
+                    </Link>
                   )}
-                </div>
 
-                {canAccessStudio(displayUser) && (
-                  <Link to="/creator" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-primary/35 bg-primary/8 text-primary-light text-sm font-semibold hover:bg-primary/15 hover:border-primary/55 transition-all">
-                    <Video size={15} /> Studio
-                  </Link>
-                )}
-
-                <div className="relative" data-dd>
-                  <button
-                    onClick={() => { setProfOpen(p => !p); setNotifOpen(false); }}
-                    className="flex items-center gap-2.5 pl-2 pr-3.5 py-1.5 rounded-xl border border-border bg-bg-el hover:bg-bg-hov transition-all"
-                  >
-                    {displayUser.profilePicture ? (
-                      <img src={displayUser.profilePicture} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-display font-black text-sm text-white flex-shrink-0">
-                        {displayUser.username?.slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                    <span className="text-base font-semibold text-text-primary max-w-[90px] truncate">{displayUser.username?.split(' ')[0]}</span>
-                    <ChevronDown size={13} className={`text-text-muted transition-transform ${profOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {profOpen && (
-                    <div className="absolute top-[calc(100%+10px)] right-0 w-60 bg-bg-card border border-border rounded-2xl z-[149] shadow-[0_8px_40px_rgba(0,0,0,.6)] overflow-hidden">
-                      <div className="px-4 py-4 border-b border-border">
-                        <div className="flex items-center gap-3 mb-2.5">
-                          {displayUser.profilePicture ? (
-                            <img src={displayUser.profilePicture} alt="" className="w-10 h-10 rounded-full object-cover" />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center font-display font-black text-sm text-white">
-                              {displayUser.username?.slice(0, 2).toUpperCase()}
-                            </div>
-                          )}
-                          <div>
-                            <p className="font-semibold text-base text-text-primary leading-tight">{displayUser.username}</p>
-                            <p className="text-xs text-text-muted mt-0.5">{displayUser.email}</p>
-                          </div>
+                  <div className="relative" data-dd>
+                    <button
+                      onClick={() => { setProfOpen(p => !p); setNotifOpen(false); }}
+                      className="flex items-center gap-2.5 pl-2 pr-3.5 py-1.5 rounded-xl border border-border bg-bg-el hover:bg-bg-hov transition-all"
+                    >
+                      {displayUser.profilePicture ? (
+                        <img src={displayUser.profilePicture} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-display font-black text-sm text-white flex-shrink-0">
+                          {displayUser.username?.slice(0, 2).toUpperCase()}
                         </div>
-                        <Badge text={`${displayUser.role}`} type="pro" />
-                      </div>
+                      )}
+                      <span className="text-base font-semibold text-text-primary max-w-[90px] truncate">{displayUser.username?.split(' ')[0]}</span>
+                      <ChevronDown size={13} className={`text-text-muted transition-transform ${profOpen ? 'rotate-180' : ''}`} />
+                    </button>
 
-                      <div className="py-1.5 px-1.5">
-                        {PROFILE_ITEMS.map(({ icon: Icon, label, to }) => (
-                          <Link key={to} to={to} onClick={() => setProfOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-text-secondary text-base hover:bg-bg-hov hover:text-text-primary transition-colors">
-                            <Icon size={14} className="text-text-muted flex-shrink-0" /> {label}
-                          </Link>
-                        ))}
-                      </div>
+                    {profOpen && (
+                      <div className="absolute top-[calc(100%+10px)] right-0 w-60 bg-bg-card border border-border rounded-2xl z-[149] shadow-[0_8px_40px_rgba(0,0,0,.6)] overflow-hidden">
+                        <div className="px-4 py-4 border-b border-border">
+                          <div className="flex items-center gap-3 mb-2.5">
+                            {displayUser.profilePicture ? (
+                              <img src={displayUser.profilePicture} alt="" className="w-10 h-10 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center font-display font-black text-sm text-white">
+                                {displayUser.username?.slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-semibold text-base text-text-primary leading-tight">{displayUser.username}</p>
+                              <p className="text-xs text-text-muted mt-0.5">{displayUser.email}</p>
+                            </div>
+                          </div>
+                          <Badge text={`${displayUser.role}`} type="pro" />
+                        </div>
 
-                      <div className="border-t border-border py-1.5 px-1.5">
-                        <button onClick={() => { logout(); navigate('/'); setProfOpen(false); }} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-danger text-base font-semibold hover:bg-danger/8 transition-colors text-left">
-                          <LogOut size={14} /> Sign Out
-                        </button>
+                        <div className="py-1.5 px-1.5">
+                          {PROFILE_ITEMS.map(({ icon: Icon, label, to }) => (
+                            <Link key={to} to={to} onClick={() => setProfOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-text-secondary text-base hover:bg-bg-hov hover:text-text-primary transition-colors">
+                              <Icon size={14} className="text-text-muted flex-shrink-0" /> {label}
+                            </Link>
+                          ))}
+                        </div>
+
+                        <div className="border-t border-border py-1.5 px-1.5">
+                          <button onClick={() => { logout(); navigate('/'); setProfOpen(false); }} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-danger text-base font-semibold hover:bg-danger/8 transition-colors text-left">
+                            <LogOut size={14} /> Sign Out
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <Link to="/signin" className="px-5 py-2.5 rounded-xl bg-primary text-white text-base font-bold hover:bg-[#1d4ed8] transition-all shadow-[0_2px_8px_rgba(37,99,235,.35)]">
-                Sign In
-              </Link>
-            )}
+                    )}
+                  </div>
+                </>
+              ) : (
+                <Link to="/signin" className="px-5 py-2.5 rounded-xl bg-primary text-white text-base font-bold hover:bg-[#1d4ed8] transition-all shadow-[0_2px_8px_rgba(37,99,235,.35)]">
+                  Sign In
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </header>

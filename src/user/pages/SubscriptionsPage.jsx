@@ -1,3 +1,4 @@
+// src/pages/SubscriptionsPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VideoGrid from '../components/VideoGrid';
@@ -5,7 +6,6 @@ import api from '../api/Api';
 import { Lock, ArrowRight } from 'lucide-react';
 import ChannelStrip from '../components/video/ChannelStrip';
 
-// Helper functions (same as before)
 const formatNumber = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
   if (num >= 1_000) return (num / 1_000).toFixed(1) + 'K';
@@ -41,9 +41,7 @@ const SubscriptionsPage = () => {
       setLoading(false);
       return;
     }
-
     setIsLoggedIn(true);
-
     const fetchSubscribedVideos = async () => {
       try {
         const response = await api.get('/subscriptions/subscribed', {
@@ -63,7 +61,6 @@ const SubscriptionsPage = () => {
         setLoading(false);
       }
     };
-
     fetchSubscribedVideos();
   }, []);
 
@@ -72,7 +69,6 @@ const SubscriptionsPage = () => {
   };
 
   const handleChannelClick = (channel) => {
-    // Navigate to search page with channel name as query
     navigate(`/search?q=${encodeURIComponent(channel.name)}`);
   };
 
@@ -86,7 +82,7 @@ const SubscriptionsPage = () => {
 
   if (!isLoggedIn) {
     return (
-      <div className="max-w-[1760px] mx-auto px-4 sm:px-8 pb-10 pt-[68px] md:pt-[92px]">
+      <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pt-[68px] md:pt-[92px] pb-[96px] md:pb-16">
         <h1 className="text-3xl font-bold mb-6">Subscriptions</h1>
         <div className="text-center py-12">
           <p className="text-text-secondary">Please log in to see your subscribed channels and videos.</p>
@@ -99,7 +95,7 @@ const SubscriptionsPage = () => {
   const paidVideos = subscribedVideos.filter(v => v.paid);
 
   return (
-    <div className="max-w-[1760px] mx-auto px-4 sm:px-8 pb-10 pt-[68px] md:pt-[92px]">
+    <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pt-[68px] md:pt-[92px] pb-[96px] md:pb-16">
       <h1 className="text-3xl font-bold mb-6">Subscriptions</h1>
 
       <ChannelStrip onChannelClick={handleChannelClick} />
@@ -110,7 +106,6 @@ const SubscriptionsPage = () => {
         </div>
       )}
 
-      {/* Free Videos Section */}
       {freeVideos.length > 0 && (
         <div className="mb-10">
           <div className="flex justify-between items-center mb-4">
@@ -140,7 +135,6 @@ const SubscriptionsPage = () => {
         </div>
       )}
 
-      {/* Paid Videos Section */}
       {paidVideos.length > 0 && (
         <div>
           <div className="flex justify-between items-center mb-2">

@@ -11,7 +11,8 @@ const UserLayout = () => {
   return (
     <div className="min-h-screen bg-bg-base text-text-primary font-body flex flex-col">
       <Navbar />
-      <main className="flex-1 pt-16 px-4 md:px-[60px]">
+      {/* No padding here – pages control their own spacing */}
+      <main className="flex-1">
         <Outlet />
       </main>
       {!hideFooter && <Footer />}

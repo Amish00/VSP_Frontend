@@ -1,3 +1,4 @@
+// src/pages/WatchPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import VideoPlayer from '../components/video/VideoPlayer';
@@ -40,7 +41,6 @@ const WatchPage = () => {
   const [subscriberCount, setSubscriberCount] = useState(0);
   const [isSubscribed, setIsSubscribed] = useState(false);
 
-  // Fetch current video
   useEffect(() => {
     const fetchVideo = async () => {
       try {
@@ -55,7 +55,6 @@ const WatchPage = () => {
     if (id) fetchVideo();
   }, [id]);
 
-  // Fetch subscriber info when video loads
   useEffect(() => {
     if (video?.userId) {
       const fetchSubInfo = async () => {
@@ -71,7 +70,6 @@ const WatchPage = () => {
     }
   }, [video]);
 
-  // Fetch suggested videos
   useEffect(() => {
     if (!video?.id) return;
     const fetchSuggestions = async () => {
@@ -134,7 +132,7 @@ const WatchPage = () => {
   }));
 
   return (
-    <div className="max-w-[1760px] mx-auto px-4 sm:px-8 pb-10">
+    <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pt-[68px] md:pt-[92px] pb-[96px] md:pb-16">
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
         {/* Left column */}
         <div>
@@ -142,8 +140,8 @@ const WatchPage = () => {
             <VideoPlayer video={video} />
           </div>
 
-          {/* Fixed H1 style – consistent with design system */}
-          <h1 className="font-display font-bold text-2xl sm:text-3xl md:text-4xl leading-tight mb-3 text-text-primary">
+          {/* Reduced title size to match other pages */}
+          <h1 className="text-3xl font-bold leading-tight mb-3 text-text-primary">
             {video.title}
           </h1>
 

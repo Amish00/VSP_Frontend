@@ -1,3 +1,4 @@
+// src/pages/Home.jsx
 import React, { useState, useEffect } from 'react';
 import HeroCarousel from '../../user/components/HeroCarousel';
 import VideoGrid from '../../user/components/VideoGrid';
@@ -65,7 +66,6 @@ const Home = () => {
     fetchVideos();
   }, []);
 
-  // Limit to 4 free and 4 paid = 8 cards total
   const freeVideos = allVideos.filter(v => !v.paid).slice(0, 4);
   const paidVideos = allVideos.filter(v => v.paid).slice(0, 4);
 
@@ -86,54 +86,58 @@ const Home = () => {
   if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
 
   return (
-    <div>
+    <>
+      {/* Full‑width carousel */}
       <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
         <HeroCarousel />
       </div>
 
-      {/* Trending Free Section */}
-      <div className="flex flex-wrap items-center justify-between mb-4 mt-4">
-        <h1 className="text-3xl font-bold">Trending Free</h1>
-        <a href="/all-videos?type=free" className="text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1">
-          View more <ArrowRight size={16} />
-        </a>
-      </div>
-      {freeVideos.length === 0 ? (
-        <div className="text-center py-8 text-text-muted">No free videos available.</div>
-      ) : (
-        <div className="mb-10">
-          <VideoGrid videos={freeVideos.map(transformVideo)} onWatch={handleWatch} />
-        </div>
-      )}
-
-      {/* Trending Paid Section */}
-      <div className="flex flex-wrap items-center justify-between mb-2 mt-4">
-        <h1 className="text-3xl font-bold">Trending Paid</h1>
-        <div className="flex items-center gap-3">
-          {!user && (
-            <span className="flex items-center gap-1 text-sm text-text-muted">
-              <Lock size={13} /> Sign in to watch
-            </span>
-          )}
-          <a href="/all-videos?type=paid" className="text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1">
+      {/* Main content with consistent container */}
+      <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pt-6 pb-[96px] md:pb-16">
+        {/* Trending Free Section */}
+        <div className="flex flex-wrap items-center justify-between mb-4 mt-4">
+          <h1 className="text-3xl font-bold">Trending Free</h1>
+          <a href="/all-videos?type=free" className="text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1">
             View more <ArrowRight size={16} />
           </a>
         </div>
-      </div>
-      {paidVideos.length === 0 ? (
-        <div className="text-center py-8 text-text-muted">No paid videos available.</div>
-      ) : (
-        <div className="mb-10">
-          <VideoGrid videos={paidVideos.map(transformVideo)} onWatch={handleWatch} />
-        </div>
-      )}
+        {freeVideos.length === 0 ? (
+          <div className="text-center py-8 text-text-muted">No free videos available.</div>
+        ) : (
+          <div className="mb-10">
+            <VideoGrid videos={freeVideos.map(transformVideo)} onWatch={handleWatch} />
+          </div>
+        )}
 
-      <LockedModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        videoTitle={selectedVideoTitle}
-      />
-    </div>
+        {/* Trending Paid Section */}
+        <div className="flex flex-wrap items-center justify-between mb-2 mt-4">
+          <h1 className="text-3xl font-bold">Trending Paid</h1>
+          <div className="flex items-center gap-3">
+            {!user && (
+              <span className="flex items-center gap-1 text-sm text-text-muted">
+                <Lock size={13} /> Sign in to watch
+              </span>
+            )}
+            <a href="/all-videos?type=paid" className="text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1">
+              View more <ArrowRight size={16} />
+            </a>
+          </div>
+        </div>
+        {paidVideos.length === 0 ? (
+          <div className="text-center py-8 text-text-muted">No paid videos available.</div>
+        ) : (
+          <div className="mb-10">
+            <VideoGrid videos={paidVideos.map(transformVideo)} onWatch={handleWatch} />
+          </div>
+        )}
+
+        <LockedModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          videoTitle={selectedVideoTitle}
+        />
+      </div>
+    </>
   );
 };
 

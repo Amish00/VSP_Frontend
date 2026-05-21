@@ -3,27 +3,31 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/authApi';
 import AuthCard from '../components/AuthCard';
+import { useSnackbar } from 'notistack';
 
 const inp = "w-full bg-bg-el text-text-primary text-base rounded-xl border border-border px-4 py-3 placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all";
 
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
+  const { enqueueSnackbar } = useSnackbar();
   const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const send = async () => {
-    if (!email) { setError('Enter your email address.'); return; }
-    setError('');
+    if (!email) {
+      enqueueSnackbar('Enter your email address.', { variant: 'error' });
+      return;
+    }
     setLoading(true);
     try {
       await authApi.forgotPassword(email);
       setSuccess(true);
-      // Pass email to the OTP page
-      setTimeout(() => navigate('/otp', { state: { email } }), 1000);
+      enqueueSnackbar('Reset code sent! Redirecting...', { variant: 'success' });
+      setTimeout(() => navigate('/otp', { state: { email } }), 1500);
     } catch (err) {
-      setError(err.message || 'Failed to send reset code. Please try again.');
+      const msg = err.message || 'Failed to send reset code. Please try again.';
+      enqueueSnackbar(msg, { variant: 'error' });
     } finally {
       setLoading(false);
     }
@@ -45,9 +49,6 @@ const ForgotPasswordPage = () => {
           onKeyDown={e => e.key === 'Enter' && send()}
           placeholder="you@example.com" autoFocus className={inp} />
       </div>
-
-      {error && <p className="text-sm text-danger mb-3" role="alert">⚠ {error}</p>}
-      {success && <p className="text-sm text-success mb-3">✓ Reset code sent! Redirecting...</p>}
 
       <button onClick={send} disabled={loading || success}
         className="w-full bg-primary text-white font-bold text-base rounded-xl py-3 mb-5 hover:bg-[#1d4ed8] disabled:opacity-40 transition-all shadow-[0_2px_8px_rgba(37,99,235,.4)]">
