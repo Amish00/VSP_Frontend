@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useSnackbar } from 'notistack';
 import UserTable from '../components/UserTable';
 import StatCard from '../components/ui/StatCard';
 import { Users, UserCheck, UserPlus, UserX } from 'lucide-react';
 import { userApi } from '../api/userApi';
 
 const UsersPage = () => {
+  const { enqueueSnackbar } = useSnackbar();
   const [search, setSearch] = useState('');
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalCreators, setTotalCreators] = useState(0);
@@ -25,12 +27,16 @@ const UsersPage = () => {
         setActiveUsers(active);
       } catch (err) {
         console.error('Failed to fetch user stats', err);
+        enqueueSnackbar('Failed to load user statistics. Please refresh the page.', {
+          variant: 'error',
+          autoHideDuration: 5000,
+        });
       } finally {
         setLoadingStats(false);
       }
     };
     fetchStats();
-  }, []);
+  }, [enqueueSnackbar]);
 
   return (
     <div className="pb-6">

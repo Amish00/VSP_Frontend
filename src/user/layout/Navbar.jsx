@@ -1,17 +1,20 @@
-// src/layout/Navbar.jsx
+// src/user/components/Navbar.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Search, Bell, X, Menu, LogOut, User, Clock, Heart, Users,
   DollarSign, Settings, Video, ChevronDown, Home, TrendingUp,
-  CreditCard, Twitter, Youtube, Instagram, Linkedin
+  CreditCard
 } from 'lucide-react';
 import logoUrl from '../../assets/logo.svg';
 import Badge from '../components/ui/Badge';
 import { useAuth } from '../../auth/context/AuthContext';
 import api from '../api/Api';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
-// Map notification type to icon (emoji)
+// ----------------------------------------------------------------------
+// Helper functions & constants
+// ----------------------------------------------------------------------
 const getNotificationIcon = (type) => {
   const icons = {
     VIDEO_APPROVED: '✅',
@@ -51,7 +54,7 @@ const canAccessStudio = (user) => {
 };
 
 // ----------------------------------------------------------------------
-// Notification Panel (same as original)
+// Notification Panel
 // ----------------------------------------------------------------------
 const NotifPanel = ({ onClose, notifications, onMarkAllRead, unreadCount }) => {
   return (
@@ -113,7 +116,7 @@ const NotifPanel = ({ onClose, notifications, onMarkAllRead, unreadCount }) => {
 };
 
 // ----------------------------------------------------------------------
-// Search Overlay (unchanged)
+// Search Overlay
 // ----------------------------------------------------------------------
 const SearchOverlay = ({ onClose }) => {
   const [q, setQ] = useState('');
@@ -269,7 +272,7 @@ const SearchOverlay = ({ onClose }) => {
 };
 
 // ----------------------------------------------------------------------
-// Mobile Drawer (unchanged)
+// Mobile Drawer (includes LanguageSwitcher as dropdown)
 // ----------------------------------------------------------------------
 const MobileDrawer = ({ user, onClose }) => {
   const { logout } = useAuth();
@@ -292,16 +295,24 @@ const MobileDrawer = ({ user, onClose }) => {
         {user ? (
           <div className="px-4 py-4 border-b border-border">
             <div className="flex items-center gap-3 mb-3">
-              {user.profilePicture ? (
-                <img src={user.profilePicture} alt="" className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center font-display font-black text-lg text-white flex-shrink-0">
-                  {user.username?.slice(0, 2).toUpperCase()}
-                </div>
-              )}
+              {user.profilePicture?.trim() ? (
+                <img
+                  src={user.profilePicture.trim()}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                  onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                />
+              ) : null}
+              <div
+                className="w-12 h-12 rounded-full bg-primary flex items-center justify-center font-display font-black text-lg text-white flex-shrink-0"
+                style={{ display: user.profilePicture?.trim() ? 'none' : 'flex' }}
+              >
+                {user.username?.slice(0, 2).toUpperCase()}
+              </div>
               <div className="min-w-0">
-                <p className="font-semibold text-base text-text-primary truncate">{user.username}</p>
-                <p className="text-sm text-text-muted truncate">{user.email}</p>
+                <p className="font-semibold text-base text-text-primary truncate" data-no-translate>{user.username}</p>
+                <p className="text-sm text-text-muted truncate" data-no-translate>{user.email}</p>
               </div>
             </div>
             <Badge text={`${user.role}`} type="pro" />
@@ -353,6 +364,11 @@ const MobileDrawer = ({ user, onClose }) => {
           )}
         </nav>
 
+        {/* Language Switcher in mobile drawer - fully functional */}
+        <div className="px-3 py-3 border-t border-border flex-shrink-0">
+          <LanguageSwitcher variant="dropdown" />
+        </div>
+
         {user && (
           <div className="px-2 py-3 border-t border-border flex-shrink-0">
             <button
@@ -369,7 +385,7 @@ const MobileDrawer = ({ user, onClose }) => {
 };
 
 // ----------------------------------------------------------------------
-// Main Navbar (solid background, consistent container)
+// Main Navbar Component
 // ----------------------------------------------------------------------
 const Navbar = () => {
   const { user: authUser, logout } = useAuth();
@@ -381,13 +397,13 @@ const Navbar = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [realUser, setRealUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
-
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Fetch current user from API if token exists
   useEffect(() => {
     const fetchRealUser = async () => {
-      const token = localStorage.getItem('access_token');
+      const token = sessionStorage.getItem('access_token');
       if (!token) {
         setRealUser(null);
         setLoadingUser(false);
@@ -407,7 +423,19 @@ const Navbar = () => {
   }, [authUser]);
 
   const displayUser = realUser || authUser;
+  const profileImageSrc = displayUser?.profilePicture?.trim();
 
+  // Profile picture fallback handler (improved)
+  const handleProfileImageError = (e) => {
+    e.target.style.display = 'none';
+    // Find the next sibling with class 'avatar-fallback'
+    const fallback = e.target.nextElementSibling;
+    if (fallback && fallback.classList.contains('avatar-fallback')) {
+      fallback.style.display = 'flex';
+    }
+  };
+
+  // Notification fetching
   const fetchUnreadCount = async () => {
     if (!displayUser) return;
     try {
@@ -454,6 +482,7 @@ const Navbar = () => {
     }
   }, [notifOpen, displayUser]);
 
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClick = e => {
       if (!e.target.closest('[data-dd]')) {
@@ -472,7 +501,7 @@ const Navbar = () => {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-[100] h-16 bg-[#080D18] border-b border-border">
-        {/* Mobile layout (no container needed – full width) */}
+        {/* Mobile layout */}
         <div className="flex md:hidden items-center h-full px-4 relative">
           <button onClick={() => setDrawerOpen(true)} aria-label="Open menu" className="w-10 h-10 rounded-xl flex items-center justify-center text-text-secondary hover:bg-bg-el transition-colors">
             <Menu size={22} />
@@ -480,7 +509,7 @@ const Navbar = () => {
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
             <Link to="/" className="flex items-center gap-2">
               <img src={logoUrl} alt="" className="h-7 w-auto" />
-              <span className="font-display font-black text-lg text-text-primary tracking-tight">ViriShare</span>
+              <span className="font-display font-black text-lg text-text-primary tracking-tight" data-no-translate>ViriShare</span>
             </Link>
           </div>
           <div className="ml-auto flex gap-1">
@@ -511,12 +540,12 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Desktop layout – inner container matches main content */}
+        {/* Desktop layout */}
         <div className="hidden md:flex items-center h-full">
           <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 w-full flex items-center justify-between gap-5">
             <Link to="/" className="flex items-center gap-2.5 flex-shrink-0 group">
               <img src={logoUrl} alt="ViriShare logo" className="h-8 w-auto" />
-              <span className="font-display font-black text-xl text-text-primary tracking-tight group-hover:text-primary-light transition-colors">
+              <span className="font-display font-black text-xl text-text-primary tracking-tight group-hover:text-primary-light transition-colors" data-no-translate>
                 ViriShare
               </span>
             </Link>
@@ -542,6 +571,7 @@ const Navbar = () => {
 
               {displayUser ? (
                 <>
+                  {/* Notification button */}
                   <div className="relative" data-dd>
                     <button
                       onClick={() => { setNotifOpen(p => !p); setProfOpen(false); }}
@@ -564,42 +594,61 @@ const Navbar = () => {
                     )}
                   </div>
 
+                  {/* Creator Studio button for eligible users */}
                   {canAccessStudio(displayUser) && (
                     <Link to="/creator" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-primary/35 bg-primary/8 text-primary-light text-sm font-semibold hover:bg-primary/15 hover:border-primary/55 transition-all">
                       <Video size={15} /> Studio
                     </Link>
                   )}
 
+                  {/* Profile dropdown */}
                   <div className="relative" data-dd>
                     <button
                       onClick={() => { setProfOpen(p => !p); setNotifOpen(false); }}
                       className="flex items-center gap-2.5 pl-2 pr-3.5 py-1.5 rounded-xl border border-border bg-bg-el hover:bg-bg-hov transition-all"
                     >
-                      {displayUser.profilePicture ? (
-                        <img src={displayUser.profilePicture} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-display font-black text-sm text-white flex-shrink-0">
-                          {displayUser.username?.slice(0, 2).toUpperCase()}
-                        </div>
+                      {/* Profile picture with fallback */}
+                      {profileImageSrc && (
+                        <img
+                          src={profileImageSrc}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                          onError={handleProfileImageError}
+                        />
                       )}
+                      <div
+                        className="avatar-fallback w-8 h-8 rounded-full bg-primary flex items-center justify-center font-display font-black text-sm text-white flex-shrink-0"
+                        style={{ display: profileImageSrc ? 'none' : 'flex' }}
+                      >
+                        {displayUser.username?.slice(0, 2).toUpperCase()}
+                      </div>
                       <span className="text-base font-semibold text-text-primary max-w-[90px] truncate">{displayUser.username?.split(' ')[0]}</span>
                       <ChevronDown size={13} className={`text-text-muted transition-transform ${profOpen ? 'rotate-180' : ''}`} />
                     </button>
 
                     {profOpen && (
-                      <div className="absolute top-[calc(100%+10px)] right-0 w-60 bg-bg-card border border-border rounded-2xl z-[149] shadow-[0_8px_40px_rgba(0,0,0,.6)] overflow-hidden">
+                      <div className="absolute top-[calc(100%+10px)] right-0 w-60 bg-bg-card border border-border rounded-2xl z-[149] shadow-[0_8px_40px_rgba(0,0,0,.6)] overflow-visible">
                         <div className="px-4 py-4 border-b border-border">
                           <div className="flex items-center gap-3 mb-2.5">
-                            {displayUser.profilePicture ? (
-                              <img src={displayUser.profilePicture} alt="" className="w-10 h-10 rounded-full object-cover" />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center font-display font-black text-sm text-white">
-                                {displayUser.username?.slice(0, 2).toUpperCase()}
-                              </div>
+                            {profileImageSrc && (
+                              <img
+                                src={profileImageSrc}
+                                alt=""
+                                referrerPolicy="no-referrer"
+                                className="w-10 h-10 rounded-full object-cover"
+                                onError={handleProfileImageError}
+                              />
                             )}
+                            <div
+                              className="avatar-fallback w-10 h-10 rounded-full bg-primary flex items-center justify-center font-display font-black text-sm text-white"
+                              style={{ display: profileImageSrc ? 'none' : 'flex' }}
+                            >
+                              {displayUser.username?.slice(0, 2).toUpperCase()}
+                            </div>
                             <div>
-                              <p className="font-semibold text-base text-text-primary leading-tight">{displayUser.username}</p>
-                              <p className="text-xs text-text-muted mt-0.5">{displayUser.email}</p>
+                              <p className="font-semibold text-base text-text-primary leading-tight" data-no-translate>{displayUser.username}</p>
+                              <p className="text-xs text-text-muted mt-0.5" data-no-translate>{displayUser.email}</p>
                             </div>
                           </div>
                           <Badge text={`${displayUser.role}`} type="pro" />
@@ -607,14 +656,27 @@ const Navbar = () => {
 
                         <div className="py-1.5 px-1.5">
                           {PROFILE_ITEMS.map(({ icon: Icon, label, to }) => (
-                            <Link key={to} to={to} onClick={() => setProfOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-text-secondary text-base hover:bg-bg-hov hover:text-text-primary transition-colors">
+                            <Link
+                              key={to}
+                              to={to}
+                              onClick={() => setProfOpen(false)}
+                              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-text-secondary text-base hover:bg-bg-hov hover:text-text-primary transition-colors"
+                            >
                               <Icon size={14} className="text-text-muted flex-shrink-0" /> {label}
                             </Link>
                           ))}
+                          {/* Language Switcher - fully functional (clickable) inside profile dropdown */}
+                          <div className="mt-1">
+                            <LanguageSwitcher variant="dropdown" />
+                          </div>
                         </div>
 
+                        {/* Only Sign Out appears after language */}
                         <div className="border-t border-border py-1.5 px-1.5">
-                          <button onClick={() => { logout(); navigate('/'); setProfOpen(false); }} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-danger text-base font-semibold hover:bg-danger/8 transition-colors text-left">
+                          <button
+                            onClick={() => { logout(); navigate('/'); setProfOpen(false); }}
+                            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-danger text-base font-semibold hover:bg-danger/8 transition-colors text-left"
+                          >
                             <LogOut size={14} /> Sign Out
                           </button>
                         </div>
@@ -623,9 +685,16 @@ const Navbar = () => {
                   </div>
                 </>
               ) : (
-                <Link to="/signin" className="px-5 py-2.5 rounded-xl bg-primary text-white text-base font-bold hover:bg-[#1d4ed8] transition-all shadow-[0_2px_8px_rgba(37,99,235,.35)]">
-                  Sign In
-                </Link>
+                // Not authenticated: clickable language switcher (icon variant) + sign in button
+                <>
+                  <LanguageSwitcher variant="icon" />
+                  <Link
+                    to="/signin"
+                    className="px-5 py-2.5 rounded-xl bg-primary text-white text-base font-bold hover:bg-[#1d4ed8] transition-all shadow-[0_2px_8px_rgba(37,99,235,.35)]"
+                  >
+                    Sign In
+                  </Link>
+                </>
               )}
             </div>
           </div>

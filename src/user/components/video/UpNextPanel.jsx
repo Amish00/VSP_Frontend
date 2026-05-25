@@ -17,8 +17,8 @@ const UpNextPanel = ({ videos = [], onWatch }) => {
             className="flex gap-3 p-2.5 w-full text-left rounded-xl bg-bg-card border border-border shadow-[0_2px_12px_rgba(0,0,0,.18)] hover:bg-bg-hov hover:border-border/80 transition-colors focus-visible:ring-2 focus-visible:ring-primary"
           >
             <div className="relative w-28 sm:w-32 aspect-video rounded-lg overflow-hidden bg-bg-el flex-shrink-0">
-              {video.thumb ? (
-                <img src={video.thumb} alt="" className="w-full h-full object-cover" />
+              {(video.thumbnailUrl || video.thumb) ? (
+                <img src={video.thumbnailUrl || video.thumb} alt="" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-xl">{video.em}</div>
               )}

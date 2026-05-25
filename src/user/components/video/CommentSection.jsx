@@ -18,7 +18,7 @@ const CommentSection = ({ videoId }) => {
   const pageSize = 10;
 
   // Helper: check if user is logged in
-  const isLoggedIn = () => !!localStorage.getItem('access_token');
+  const isLoggedIn = () => !!sessionStorage.getItem('access_token');
 
   // Fetch comments (paginated)
   const fetchComments = useCallback(async (pageNum = 0, append = false) => {

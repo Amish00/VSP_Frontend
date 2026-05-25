@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSnackbar } from 'notistack';
 import Badge from './ui/Badge';
 import VideoDataModal from './VideoDataModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
@@ -12,9 +13,10 @@ const STATUS_META = {
     PENDING:  { color: '#F59E0B', bg: 'rgba(245,158,11,.12)', label: 'Pending' },
 };
 
-const PAGE_SIZE = 10; // items per page
+const PAGE_SIZE = 10;
 
 const VideoTable = () => {
+    const { enqueueSnackbar } = useSnackbar();
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -27,12 +29,10 @@ const VideoTable = () => {
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [pendingRejectId, setPendingRejectId] = useState(null);
     
-    // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalElements, setTotalElements] = useState(0);
 
-    // Debounced search
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const debounceTimer = useRef(null);
 
@@ -40,12 +40,11 @@ const VideoTable = () => {
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
         debounceTimer.current = setTimeout(() => {
             setDebouncedSearch(search);
-            setCurrentPage(1); // reset to first page on new search
+            setCurrentPage(1);
         }, 500);
         return () => clearTimeout(debounceTimer.current);
     }, [search]);
 
-    // Reset page when filter changes
     useEffect(() => {
         setCurrentPage(1);
     }, [statusFilter]);
@@ -64,20 +63,17 @@ const VideoTable = () => {
             setTotalElements(data.totalElements || 0);
         } catch (err) {
             console.error('Failed to fetch videos', err);
-            if (err.response?.status === 403) {
-                alert('Access denied. Make sure you are logged in as ADMIN.');
-            } else if (err.response?.status === 401) {
-                alert('Session expired. Please login again.');
-            } else {
-                alert('Failed to load videos. Check console for details.');
-            }
+            let message = 'Failed to load videos.';
+            if (err.response?.status === 403) message = 'Access denied. Make sure you are logged in as ADMIN.';
+            else if (err.response?.status === 401) message = 'Session expired. Please login again.';
+            enqueueSnackbar(message, { variant: 'error', autoHideDuration: 5000 });
             setVideos([]);
             setTotalPages(1);
             setTotalElements(0);
         } finally {
             setLoading(false);
         }
-    }, [statusFilter, debouncedSearch, currentPage]);
+    }, [statusFilter, debouncedSearch, currentPage, enqueueSnackbar]);
 
     useEffect(() => {
         fetchVideos();
@@ -86,11 +82,12 @@ const VideoTable = () => {
     const handleApprove = async (id) => {
         try {
             await videoApi.updateVideoStatus(id, 'APPROVED');
+            enqueueSnackbar('Video approved successfully!', { variant: 'success' });
             await fetchVideos();
         } catch (err) {
             console.error('Approve failed', err);
             const msg = err.response?.data?.message || err.message;
-            alert(`Approve failed: ${msg}`);
+            enqueueSnackbar(`Approve failed: ${msg}`, { variant: 'error' });
         }
     };
 
@@ -102,17 +99,18 @@ const VideoTable = () => {
 
     const confirmReject = async () => {
         if (!rejectReason.trim()) {
-            alert('Please provide a reason for rejection');
+            enqueueSnackbar('Please provide a reason for rejection', { variant: 'warning' });
             return;
         }
         try {
             await videoApi.updateVideoStatus(pendingRejectId, 'REJECTED', rejectReason);
+            enqueueSnackbar('Video rejected', { variant: 'warning' });
             setShowRejectModal(false);
             await fetchVideos();
         } catch (err) {
             console.error('Reject failed', err);
             const msg = err.response?.data?.message || err.message;
-            alert(`Reject failed: ${msg}`);
+            enqueueSnackbar(`Reject failed: ${msg}`, { variant: 'error' });
         }
     };
 
@@ -130,11 +128,13 @@ const VideoTable = () => {
         if (!videoToDelete) return;
         try {
             await videoApi.deleteVideo(videoToDelete.id);
+            enqueueSnackbar('Video deleted successfully', { variant: 'success' });
             setDeleteModalOpen(false);
             await fetchVideos();
         } catch (err) {
             console.error('Delete failed', err);
-            alert(`Delete failed: ${err.response?.data?.message || err.message}`);
+            const msg = err.response?.data?.message || err.message;
+            enqueueSnackbar(`Delete failed: ${msg}`, { variant: 'error' });
         }
     };
 
@@ -144,7 +144,7 @@ const VideoTable = () => {
 
     return (
         <div>
-            {/* Filters row */}
+            {/* Filters row (unchanged) */}
             <div className="flex gap-3 mb-4 flex-wrap items-center">
                 <div className="relative flex-1 min-w-[200px]">
                     <input
@@ -169,7 +169,7 @@ const VideoTable = () => {
                 </div>
             </div>
 
-            {/* Video Table */}
+            {/* Table (unchanged except snackbar replaces alerts) */}
             <div className="bg-bg-card border border-border rounded-xl overflow-x-auto">
                 <table className="w-full text-sm" style={{ minWidth: 720 }}>
                     <thead>
@@ -201,14 +201,13 @@ const VideoTable = () => {
                                 const isPending = video.status === 'PENDING';
                                 return (
                                     <tr key={video.id} className="border-b border-border/50 last:border-0 hover:bg-bg-hov/30 transition-colors">
+                                        {/* Video cell */}
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-14 h-8 rounded-sm bg-bg-el flex items-center justify-center text-lg flex-shrink-0 overflow-hidden">
                                                     {video.thumbnailUrl ? (
                                                         <img src={video.thumbnailUrl} alt="thumb" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        '🎬'
-                                                    )}
+                                                    ) : '🎬'}
                                                 </div>
                                                 <div className="min-w-0">
                                                     <button
@@ -221,53 +220,25 @@ const VideoTable = () => {
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-text-secondary whitespace-nowrap">{video.username}</td>
-                                        <td className="px-4 py-3">
-                                            <Badge text={video.type} type={video.type === 'SHORTS' ? 'info' : 'pro'} />
-                                        </td>
+                                        <td className="px-4 py-3"><Badge text={video.type} type={video.type === 'SHORTS' ? 'info' : 'pro'} /></td>
                                         <td className="px-4 py-3 text-text-secondary whitespace-nowrap">{video.category || '—'}</td>
                                         <td className="px-4 py-3 whitespace-nowrap">
-                                            <Badge 
-                                                text={video.paid ? 'Paid' : 'Free'} 
-                                                type={video.paid ? 'paid' : 'free'} 
-                                                small={true}
-                                            />
+                                            <Badge text={video.paid ? 'Paid' : 'Free'} type={video.paid ? 'paid' : 'free'} small={true} />
                                         </td>
                                         <td className="px-4 py-3 text-text-muted whitespace-nowrap">
                                             {new Date(video.publishedAt).toLocaleDateString()}
                                         </td>
-                                        <td className="px-4 py-3">
-                                            <Badge text={meta.label} type={video.status.toLowerCase()} />
-                                        </td>
+                                        <td className="px-4 py-3"><Badge text={meta.label} type={video.status.toLowerCase()} /></td>
                                         <td className="px-4 py-3">
                                             {isPending ? (
                                                 <div className="flex gap-1.5">
-                                                    <button
-                                                        onClick={() => handleApprove(video.id)}
-                                                        className="px-3 py-1.5 rounded-lg bg-success/10 text-success text-xs font-bold hover:bg-success/20 transition-colors"
-                                                    >
-                                                        Approve
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleRejectClick(video.id)}
-                                                        className="px-3 py-1.5 rounded-lg bg-danger/10 text-danger text-xs font-bold hover:bg-danger/20 transition-colors"
-                                                    >
-                                                        Reject
-                                                    </button>
+                                                    <button onClick={() => handleApprove(video.id)} className="px-3 py-1.5 rounded-lg bg-success/10 text-success text-xs font-bold hover:bg-success/20 transition-colors">Approve</button>
+                                                    <button onClick={() => handleRejectClick(video.id)} className="px-3 py-1.5 rounded-lg bg-danger/10 text-danger text-xs font-bold hover:bg-danger/20 transition-colors">Reject</button>
                                                 </div>
                                             ) : (
                                                 <div className="flex gap-1.5">
-                                                    <button
-                                                        onClick={() => handleEdit(video)}
-                                                        className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors"
-                                                    >
-                                                        Edit
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteClick(video)}
-                                                        className="px-3 py-1.5 rounded-lg bg-danger/10 text-danger text-xs font-bold hover:bg-danger/20 transition-colors"
-                                                    >
-                                                        Delete
-                                                    </button>
+                                                    <button onClick={() => handleEdit(video)} className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors">Edit</button>
+                                                    <button onClick={() => handleDeleteClick(video)} className="px-3 py-1.5 rounded-lg bg-danger/10 text-danger text-xs font-bold hover:bg-danger/20 transition-colors">Delete</button>
                                                 </div>
                                             )}
                                         </td>
@@ -279,70 +250,30 @@ const VideoTable = () => {
                 </table>
             </div>
 
-            {/* Pagination Component */}
+            {/* Pagination */}
             {totalPages > 1 && (
                 <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
                     <div className="text-sm text-text-muted">
                         Showing {(currentPage-1)*PAGE_SIZE+1} to {Math.min(currentPage*PAGE_SIZE, totalElements)} of {totalElements} videos
                     </div>
-                    <Pagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={setCurrentPage}
-                        siblingCount={1}
-                    />
+                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} siblingCount={1} />
                 </div>
             )}
 
-            {/* Modals */}
-            <Modal
-                open={showRejectModal}
-                onClose={() => setShowRejectModal(false)}
-                title="Reject Video"
-                maxW={480}
-            >
+            {/* Modals (unchanged) */}
+            <Modal open={showRejectModal} onClose={() => setShowRejectModal(false)} title="Reject Video" maxW={480}>
                 <div className="space-y-4">
-                    <p className="text-text-secondary">
-                        Please provide a reason for rejection:
-                    </p>
-                    <textarea
-                        value={rejectReason}
-                        onChange={(e) => setRejectReason(e.target.value)}
-                        rows="3"
-                        className="w-full p-3 rounded-xl border border-border bg-bg-el text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                        placeholder="Why is this video being rejected?"
-                    />
+                    <p className="text-text-secondary">Please provide a reason for rejection:</p>
+                    <textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} rows="3" className="w-full p-3 rounded-xl border border-border bg-bg-el text-text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Why is this video being rejected?" />
                     <div className="flex justify-end gap-3 pt-2">
-                        <button
-                            onClick={() => setShowRejectModal(false)}
-                            className="px-4 py-2 rounded-lg border border-border text-text-secondary hover:bg-bg-el transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={confirmReject}
-                            className="px-4 py-2 rounded-lg bg-danger text-white font-semibold hover:bg-danger/90 transition-colors"
-                        >
-                            Reject
-                        </button>
+                        <button onClick={() => setShowRejectModal(false)} className="px-4 py-2 rounded-lg border border-border text-text-secondary hover:bg-bg-el transition-colors">Cancel</button>
+                        <button onClick={confirmReject} className="px-4 py-2 rounded-lg bg-danger text-white font-semibold hover:bg-danger/90 transition-colors">Reject</button>
                     </div>
                 </div>
             </Modal>
 
-            <VideoDataModal
-                isOpen={modalOpen}
-                onClose={() => setModalOpen(false)}
-                video={selectedVideo}
-                onVideoUpdated={handleVideoUpdated}
-            />
-
-            <ConfirmDeleteModal
-                isOpen={deleteModalOpen}
-                onClose={() => setDeleteModalOpen(false)}
-                onConfirm={handleDeleteConfirm}
-                userName={videoToDelete?.title}
-                itemType="video"
-            />
+            <VideoDataModal isOpen={modalOpen} onClose={() => setModalOpen(false)} video={selectedVideo} onVideoUpdated={handleVideoUpdated} />
+            <ConfirmDeleteModal isOpen={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} onConfirm={handleDeleteConfirm} userName={videoToDelete?.title} itemType="video" />
         </div>
     );
 };

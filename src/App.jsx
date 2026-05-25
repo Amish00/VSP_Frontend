@@ -1,6 +1,6 @@
 // src/App.js
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/context/AuthContext';
 
 // Auth pages
@@ -41,22 +41,159 @@ import AllVideosPage from './user/pages/AllVideosPage';
 import SearchPage from './user/pages/SearchPage';
 import VideoEditor from './creator/pages/VideoEditor';
 import NotFound from './user/pages/NotFound';
+import { LanguageProvider } from './context/LanguageContext';
+import { useLanguage } from './context/LanguageContext';
+import { translateText } from './context/translationService';
+import EditorSelectionPage from './creator/pages/EditorSelectionPage';
+
+const translatedTextCache = new Map();
+const originalTextMap = new WeakMap();
+
+const shouldSkipText = (text) => {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length < 2) return true;
+  if (trimmed.includes('@')) return true;
+  if (/^https?:\/\//i.test(trimmed) || /^www\./i.test(trimmed)) return true;
+  if (/^[\d\s.,:;!?()[\]{}'"“”‘’\-+*/#%&|<>]+$/.test(trimmed)) return true;
+  return false;
+};
+
+const PageTranslator = () => {
+  const { language } = useLanguage();
+  const location = useLocation();
+  const isAuthRoute = /^\/(signin|signup|forgot-password|otp|reset-password|oauth2\/redirect)(\/|$)/.test(location.pathname);
+
+  useEffect(() => {
+    if (isAuthRoute) {
+      return undefined;
+    }
+
+    const root = document.getElementById('root');
+    if (!root) return undefined;
+
+    let cancelled = false;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+        if (parent.closest('[data-no-translate]')) return NodeFilter.FILTER_REJECT;
+        if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'INPUT'].includes(parent.tagName)) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return shouldSkipText(node.nodeValue || '') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      },
+    });
+
+    const nodes = [];
+    while (walker.nextNode()) {
+      nodes.push(walker.currentNode);
+    }
+
+    const runTranslation = async () => {
+      const originals = new Set();
+      const entries = [];
+
+      for (const node of nodes) {
+        const original = originalTextMap.get(node) ?? node.nodeValue ?? '';
+        if (!originalTextMap.has(node)) {
+          originalTextMap.set(node, original);
+        }
+        entries.push({ node, original });
+        originals.add(original);
+      }
+
+      const translatedByOriginal = new Map();
+      await Promise.all([...originals].map(async (original) => {
+        const cacheKey = `${language}::${original}`;
+        let translated = translatedTextCache.get(cacheKey);
+        if (!translated) {
+          translated = language === 'en' ? original : await translateText(original, language);
+          translatedTextCache.set(cacheKey, translated);
+        }
+        translatedByOriginal.set(original, translated);
+      }));
+
+      if (cancelled) return;
+
+      entries.forEach(({ node, original }) => {
+        node.nodeValue = translatedByOriginal.get(original) || original;
+      });
+    };
+
+    runTranslation();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [language, location.pathname, isAuthRoute]);
+
+  return null;
+};
+
+const AuthLanguageLock = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const isAuthRoute = /^\/(signin|signup|forgot-password|otp|reset-password|oauth2\/redirect)(\/|$)/.test(pathname);
+    if (isAuthRoute && localStorage.getItem('app-language') !== 'en') {
+      localStorage.setItem('app-language', 'en');
+      window.dispatchEvent(new CustomEvent('app-language-change', { detail: 'en' }));
+    }
+  }, [pathname]);
+
+  return null;
+};
+
+const getRoleHomePath = (role) => {
+  switch ((role || '').toLowerCase()) {
+    case 'admin':
+      return '/admin';
+    case 'creator':
+      return '/creator';
+    default:
+      return '/home';
+  }
+};
+
+const PublicHomeRoute = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) return <div>Loading...</div>;
+  if (user?.role) {
+    const roleHomePath = getRoleHomePath(user.role);
+    if (roleHomePath !== '/home') {
+      return <Navigate to={roleHomePath} replace />;
+    }
+  }
+
+  return <Home />;
+};
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
   if (loading) return <div>Loading...</div>;
   if (!user) return <Navigate to="/signin" replace />;
   if (allowedRoles && !allowedRoles.includes(user.role?.toLowerCase())) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={getRoleHomePath(user.role)} replace />;
   }
   return children;
+};
+
+const ProtectedFallbackRoute = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) return <div>Loading...</div>;
+  return <Navigate to={user ? getRoleHomePath(user.role) : '/home'} replace />;
 };
 
 function App() {
   return (
     <AuthProvider>
-      <SnackbarProvider maxSnack={3} autoHideDuration={3000} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
-      <Routes>
+      <LanguageProvider>
+        <PageTranslator />
+        <AuthLanguageLock />
+        <SnackbarProvider maxSnack={3} autoHideDuration={3000} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+          <Routes>
         {/* Public routes */}
         <Route path="/signin" element={<SignInPage />} />
         <Route path="/signup" element={<SignUpPage />} />
@@ -67,8 +204,8 @@ function App() {
 
         {/* Public home routes with persistent UserLayout (header + footer) */}
         <Route element={<UserLayout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/home" element={<Home />} />
+          <Route path="/" element={<PublicHomeRoute />} />
+          <Route path="/home" element={<PublicHomeRoute />} />
           <Route path="/watch/:id" element={<WatchPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/subscriptions" element={<SubscriptionsPage />} />
@@ -117,17 +254,18 @@ function App() {
           <Route path="profile" element={<ProfilePage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="videos" element={<MyVideosPage />} />
-          <Route path="video/:id" element={<VideoInfoPage />} />
-          
+          <Route path="video/:id" element={<VideoInfoPage />} />  
+          <Route path="editors" element={<EditorSelectionPage />} />
           <Route path="earnings" element={<EarningsPage />} />
 
         </Route>
-        <Route path="creator/editors" element={<ThumbnailEditor />} />
+        <Route path="creator/thumbnail-editor" element={<ThumbnailEditor />} />
         <Route path="creator/video-editor" element={<VideoEditor />} />
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-      </SnackbarProvider>
+        <Route path="*" element={<ProtectedFallbackRoute />} />
+          </Routes>
+        </SnackbarProvider>
+      </LanguageProvider>
     </AuthProvider>
   );
 }

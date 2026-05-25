@@ -113,7 +113,7 @@ const ChannelStrip = ({ onChannelClick }) => {
       <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-bg-main to-transparent pointer-events-none z-10" />
       <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-bg-main to-transparent pointer-events-none z-10" />
       
-      <div ref={scrollRef} className="flex gap-5 overflow-x-auto overflow-y-visible pb-4 scrollbar-hide snap-x">
+      <div ref={scrollRef} className="flex gap-5 overflow-x-auto overflow-y-visible px-3 py-4 pb-6 scrollbar-hide snap-x">
         {channels.map((channel) => (
           <button
             key={channel.id}
@@ -121,7 +121,7 @@ const ChannelStrip = ({ onChannelClick }) => {
             onMouseEnter={(e) => handleHoverEnter(e, channel)}
             onMouseMove={(e) => handleHoverMove(e)}
             onMouseLeave={() => handleHoverLeave()}
-            className="flex-shrink-0 flex flex-col items-center gap-2 cursor-pointer p-4 rounded-2xl border border-border bg-bg-card w-32 hover:scale-105 hover:border-primary hover:shadow-lg transition-all duration-200 snap-start z-20"
+            className="flex-shrink-0 relative z-20 flex flex-col items-center gap-2 cursor-pointer p-4 rounded-2xl border border-border bg-bg-card w-32 hover:z-50 hover:scale-105 hover:border-primary hover:shadow-lg transition-all duration-200 snap-start origin-center"
           >
             {/* Avatar - much larger and with gradient border */}
             <div className="relative">

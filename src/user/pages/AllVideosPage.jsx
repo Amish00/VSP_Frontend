@@ -34,7 +34,7 @@ const transformVideo = (video) => ({
   views: formatNumber(video.viewCount),
   likes: formatNumber(video.likesCount),
   time: formatRelativeDate(video.publishedAt),
-  thumb: video.thumbnailUrl,
+  thumbnailUrl: video.thumbnailUrl,
   username: video.username,
   profilePicture: video.profilePicture,
   em: video.thumbnailUrl ? '' : '🎬',

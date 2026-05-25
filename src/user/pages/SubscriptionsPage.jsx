@@ -35,7 +35,7 @@ const SubscriptionsPage = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     if (!token) {
       setIsLoggedIn(false);
       setLoading(false);
@@ -51,7 +51,7 @@ const SubscriptionsPage = () => {
       } catch (err) {
         console.error('Failed to fetch subscribed videos:', err);
         if (err.response?.status === 401) {
-          localStorage.removeItem('access_token');
+          sessionStorage.removeItem('access_token');
           setIsLoggedIn(false);
           setError('Session expired. Please log in again.');
         } else {
@@ -125,7 +125,7 @@ const SubscriptionsPage = () => {
               views: formatNumber(v.viewCount),
               likes: formatNumber(v.likesCount),
               time: formatRelativeDate(v.updatedAt),
-              thumb: v.thumbnailUrl,
+              thumbnailUrl: v.thumbnailUrl,
               username: v.username,
               profilePicture: v.profilePicture,
               em: v.thumbnailUrl ? '' : '🎬',
@@ -159,7 +159,7 @@ const SubscriptionsPage = () => {
               views: formatNumber(v.viewCount),
               likes: formatNumber(v.likesCount),
               time: formatRelativeDate(v.updatedAt),
-              thumb: v.thumbnailUrl,
+              thumbnailUrl: v.thumbnailUrl,
               username: v.username,
               profilePicture: v.profilePicture,
               em: v.thumbnailUrl ? '' : '🎬',

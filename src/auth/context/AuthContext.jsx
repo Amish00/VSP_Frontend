@@ -1,6 +1,7 @@
 // src/auth/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../api/authApi';
+import { setAppLanguage } from '../../context/LanguageContext';
 
 const AuthContext = createContext(null);
 
@@ -9,11 +10,16 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('access_token');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('user_role');
+
+    const storedUser = sessionStorage.getItem('user');
+    const token = sessionStorage.getItem('access_token');
     if (storedUser && token) {
       const parsedUser = JSON.parse(storedUser);
-      localStorage.setItem('user_role', parsedUser?.role || 'VIEWER');
+      sessionStorage.setItem('user_role', parsedUser?.role || 'VIEWER');
       setUser(parsedUser);
     }
     setLoading(false);
@@ -21,16 +27,17 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const data = await authApi.signIn(email, password);
-    localStorage.setItem('access_token', data.accessToken);
-    localStorage.setItem('refresh_token', data.refreshToken);
+    setAppLanguage('en');
+    sessionStorage.setItem('access_token', data.accessToken);
+    sessionStorage.setItem('refresh_token', data.refreshToken);
     const userObj = {
       username: data.username,
       email,
       role: data.role,
       plan: data.plan,
     };
-    localStorage.setItem('user', JSON.stringify(userObj));
-    localStorage.setItem('user_role', userObj.role || 'VIEWER');
+    sessionStorage.setItem('user', JSON.stringify(userObj));
+    sessionStorage.setItem('user_role', userObj.role || 'VIEWER');
     setUser(userObj);
     return userObj;
   };
@@ -46,16 +53,17 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       // ignore errors
     }
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('user_role');
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('user_role');
     setUser(null);
   };
 
   const setTokensAndUser = async (accessToken, refreshToken, userObj = null) => {
-    localStorage.setItem('access_token', accessToken);
-    localStorage.setItem('refresh_token', refreshToken);
+    setAppLanguage('en');
+    sessionStorage.setItem('access_token', accessToken);
+    sessionStorage.setItem('refresh_token', refreshToken);
     
     const payload = JSON.parse(atob(accessToken.split('.')[1]));
     const user = userObj || {
@@ -64,17 +72,17 @@ export const AuthProvider = ({ children }) => {
       role: payload.role || 'VIEWER',
       plan: payload.plan || 'FREE'
     };
-    localStorage.setItem('user', JSON.stringify(user));
-    localStorage.setItem('user_role', user.role || 'VIEWER');
+    sessionStorage.setItem('user', JSON.stringify(user));
+    sessionStorage.setItem('user_role', user.role || 'VIEWER');
     setUser(user);
   };
 
   // NEW: update user data in state and localStorage
   const updateUser = (updatedData) => {
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const currentUser = JSON.parse(sessionStorage.getItem('user') || '{}');
     const newUser = { ...currentUser, ...updatedData };
-    localStorage.setItem('user', JSON.stringify(newUser));
-    if (updatedData.role) localStorage.setItem('user_role', updatedData.role);
+    sessionStorage.setItem('user', JSON.stringify(newUser));
+    if (updatedData.role) sessionStorage.setItem('user_role', updatedData.role);
     setUser(newUser);
   };
 
