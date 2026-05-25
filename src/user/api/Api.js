@@ -10,14 +10,14 @@
 
   // Attach JWT token if available
   api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   });
 
-  export default api;;
+  export default api;
 
   // ---------- History API ----------
   export const getHistory = (page = 0, size = 20) => {
@@ -52,3 +52,4 @@ export const markAllNotificationsAsRead = () =>
 
 export const getUnreadNotificationCount = () => 
     api.get('/notifications/unread-count');
+

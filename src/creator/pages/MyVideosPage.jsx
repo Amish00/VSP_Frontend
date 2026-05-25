@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSnackbar } from 'notistack';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
@@ -20,6 +21,7 @@ const STATUS_META = {
 };
 
 const MyVideosPage = ({ onNav }) => {
+  const { enqueueSnackbar } = useSnackbar();
   const navigate = useNavigate();
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,10 +49,12 @@ const MyVideosPage = ({ onNav }) => {
       setVideos(response.data.content || []);
     } catch (err) {
       console.error('Failed to fetch videos', err);
+      enqueueSnackbar('Failed to load videos. Please refresh the page.', { variant: 'error' });
+      setVideos([]);
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, debouncedSearch]);
+  }, [statusFilter, debouncedSearch, enqueueSnackbar]);
 
   useEffect(() => {
     fetchVideos();
@@ -69,11 +73,13 @@ const MyVideosPage = ({ onNav }) => {
     if (!videoToDelete) return;
     try {
       await creatorApi.deleteVideo(videoToDelete.id);
+      enqueueSnackbar('Video deleted successfully', { variant: 'success' });
       setDeleteModalOpen(false);
       await fetchVideos();
     } catch (err) {
       console.error('Delete failed', err);
-      alert(`Delete failed: ${err.response?.data?.message || err.message}`);
+      const msg = err.response?.data?.message || err.message;
+      enqueueSnackbar(`Delete failed: ${msg}`, { variant: 'error' });
     }
   };
 
@@ -118,7 +124,7 @@ const MyVideosPage = ({ onNav }) => {
         </div>
       </div>
 
-      {/* Video Table with new columns */}
+      {/* Video Table */}
       <div className="bg-bg-card border border-border rounded-xl overflow-x-auto">
         <table className="w-full text-sm" style={{ minWidth: 880 }}>
           <thead>
@@ -153,15 +159,12 @@ const MyVideosPage = ({ onNav }) => {
                 const meta = STATUS_META[video.status] || { label: video.status, type: 'pending' };
                 return (
                   <tr key={video.id} className="border-b border-border/50 last:border-0 hover:bg-bg-hov/30">
-                    {/* Video thumbnail + title */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-14 h-8 rounded-sm bg-bg-el flex items-center justify-center text-lg flex-shrink-0 overflow-hidden">
                           {video.thumbnailUrl ? (
                             <img src={video.thumbnailUrl} alt="thumb" className="w-full h-full object-cover" />
-                          ) : (
-                            '🎬'
-                          )}
+                          ) : '🎬'}
                         </div>
                         <button
                           onClick={() => handleTitleClick(video)}
@@ -171,74 +174,29 @@ const MyVideosPage = ({ onNav }) => {
                         </button>
                       </div>
                     </td>
-
-                    {/* Type */}
-                    <td className="px-4 py-3">
-                      <Badge text={video.type || 'VIDEO'} type={video.type === 'SHORTS' ? 'info' : 'pro'} />
-                    </td>
-
-                    {/* Paid status with icon */}
+                    <td className="px-4 py-3"><Badge text={video.type || 'VIDEO'} type={video.type === 'SHORTS' ? 'info' : 'pro'} /></td>
                     <td className="px-4 py-3">
                       {video.paid ? (
-                        <span className="flex items-center gap-1 text-amber-500">
-                          <Lock size={14} /> Paid
-                        </span>
+                        <span className="flex items-center gap-1 text-amber-500"><Lock size={14} /> Paid</span>
                       ) : (
-                        <span className="flex items-center gap-1 text-success">
-                          <Unlock size={14} /> Free
-                        </span>
+                        <span className="flex items-center gap-1 text-success"><Unlock size={14} /> Free</span>
                       )}
                     </td>
-
-                    {/* Status */}
-                    <td className="px-4 py-3">
-                      <Badge text={meta.label} type={meta.type} />
-                    </td>
-
-                    {/* Views */}
+                    <td className="px-4 py-3"><Badge text={meta.label} type={meta.type} /></td>
                     <td className="px-4 py-3 text-text-secondary tabular-nums whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <Eye size={14} className="text-text-muted" />
-                        {formatNumber(video.viewCount)}
-                      </div>
+                      <div className="flex items-center gap-1"><Eye size={14} className="text-text-muted" />{formatNumber(video.viewCount)}</div>
                     </td>
-
-                    {/* Likes */}
                     <td className="px-4 py-3 text-text-secondary tabular-nums whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <Heart size={14} className="text-text-muted" />
-                        {formatNumber(video.likesCount)}
-                      </div>
+                      <div className="flex items-center gap-1"><Heart size={14} className="text-text-muted" />{formatNumber(video.likesCount)}</div>
                     </td>
-
-                    {/* Comments */}
                     <td className="px-4 py-3 text-text-secondary tabular-nums whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <MessageCircle size={14} className="text-text-muted" />
-                        {formatNumber(video.commentCount)}
-                      </div>
+                      <div className="flex items-center gap-1"><MessageCircle size={14} className="text-text-muted" />{formatNumber(video.commentCount)}</div>
                     </td>
-
-                    {/* Upload Date */}
-                    <td className="px-4 py-3 text-text-muted whitespace-nowrap">
-                      {new Date(video.publishedAt).toLocaleDateString()}
-                    </td>
-
-                    {/* Actions */}
+                    <td className="px-4 py-3 text-text-muted whitespace-nowrap">{new Date(video.publishedAt).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1.5">
-                        <button
-                          onClick={() => handleEdit(video)}
-                          className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary-light text-xs font-bold hover:bg-primary/20 transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClick(video)}
-                          className="px-3 py-1.5 rounded-lg bg-danger/10 text-danger text-xs font-bold hover:bg-danger/20 transition-colors"
-                        >
-                          Delete
-                        </button>
+                        <button onClick={() => handleEdit(video)} className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary-light text-xs font-bold hover:bg-primary/20">Edit</button>
+                        <button onClick={() => handleDeleteClick(video)} className="px-3 py-1.5 rounded-lg bg-danger/10 text-danger text-xs font-bold hover:bg-danger/20">Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -249,7 +207,6 @@ const MyVideosPage = ({ onNav }) => {
         </table>
       </div>
 
-      {/* Delete confirmation modal */}
       <ConfirmDeleteModal
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}

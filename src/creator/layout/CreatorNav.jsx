@@ -19,6 +19,7 @@ import logoUrl from '../../assets/logo.svg';
 import Badge from '../components/ui/Badge';
 import api from '../../user/api/Api';
 import { useNavigate, useLocation } from 'react-router-dom';
+import LanguageSwitcher from '../../user/components/LanguageSwitcher';
 
 // Map notification type to an icon (emoji)
 const getNotificationIcon = (type) => {
@@ -71,7 +72,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
   // Fetch real user data
   useEffect(() => {
     const fetchUser = async () => {
-      const token = localStorage.getItem('access_token');
+      const token = sessionStorage.getItem('access_token');
       if (!token) {
         navigate('/');
         return;
@@ -81,8 +82,8 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
         setUser(response.data);
       } catch (err) {
         console.error('Failed to fetch user:', err);
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
+        sessionStorage.removeItem('access_token');
+        sessionStorage.removeItem('refresh_token');
         navigate('/signin');
       } finally {
         setLoading(false);
@@ -144,8 +145,8 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
   }, [notifOpen, user]);
 
   const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('refresh_token');
     if (onLogout) onLogout();
     navigate('/');
   };
@@ -322,7 +323,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
               <div className="fixed inset-0 z-[148]" onClick={() => setProfOpen(false)} />
               <div
                 role="menu"
-                className="absolute top-[calc(100%+8px)] right-0 w-52 bg-bg-card border border-border rounded-2xl z-[149] shadow-drop overflow-hidden"
+                className="absolute top-[calc(100%+8px)] right-0 w-52 bg-bg-card border border-border rounded-2xl z-[149] shadow-drop overflow-visible"
               >
                 <div className="px-4 py-3.5 border-b border-border">
                   <div className="flex items-center gap-2.5 mb-2">
@@ -360,6 +361,9 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     <Settings size={13} className="text-text-muted" />
                     Settings
                   </button>
+                  <div className="mt-1">
+                    <LanguageSwitcher variant="dropdown" />
+                  </div>
                   <button
                     role="menuitem"
                     onClick={() => {

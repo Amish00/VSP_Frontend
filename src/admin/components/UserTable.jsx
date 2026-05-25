@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSnackbar } from 'notistack';
 import Badge from './ui/Badge';
 import UserDataModal from './UserDataModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
@@ -8,6 +9,7 @@ import { userApi } from '../api/userApi';
 const PAGE_SIZE = 10;
 
 const UserTable = () => {
+  const { enqueueSnackbar } = useSnackbar();
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
@@ -32,19 +34,18 @@ const UserTable = () => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
       setDebouncedSearch(search);
-      setCurrentPage(1); // reset to first page on new search
+      setCurrentPage(1);
     }, 500);
     return () => clearTimeout(debounceTimer.current);
   }, [search]);
 
-  // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [filter]);
 
   // Fetch current user role and id
   useEffect(() => {
-    const role = localStorage.getItem('user_role');
+    const role = sessionStorage.getItem('user_role');
     setCurrentUserRole(role || 'VIEWER');
     const fetchCurrentUser = async () => {
       try {
@@ -52,10 +53,11 @@ const UserTable = () => {
         setCurrentUserId(me.id);
       } catch (err) {
         console.error('Failed to get current user', err);
+        enqueueSnackbar('Could not fetch current user info', { variant: 'error' });
       }
     };
     fetchCurrentUser();
-  }, []);
+  }, [enqueueSnackbar]);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -80,13 +82,14 @@ const UserTable = () => {
       }
     } catch (err) {
       console.error('Failed to fetch users', err);
+      enqueueSnackbar('Failed to load users. Please try again.', { variant: 'error' });
       setUsers([]);
       setTotalPages(1);
       setTotalElements(0);
     } finally {
       setLoading(false);
     }
-  }, [filter, debouncedSearch, currentPage]);
+  }, [filter, debouncedSearch, currentPage, enqueueSnackbar]);
 
   useEffect(() => {
     fetchUsers();
@@ -106,16 +109,18 @@ const UserTable = () => {
     if (!userToDelete) return;
     try {
       await userApi.deleteUser(userToDelete.id);
-      await fetchUsers(); // refresh current page after delete
+      enqueueSnackbar('User deleted successfully', { variant: 'success' });
+      await fetchUsers(); // refresh current page
       setDeleteModalOpen(false);
       setUserToDelete(null);
     } catch (err) {
       console.error('Delete failed', err);
+      const msg = err.response?.data?.message || err.message;
+      enqueueSnackbar(`Delete failed: ${msg}`, { variant: 'error' });
     }
   };
 
-  const handleUserUpdated = (updatedUser) => {
-    // Refresh current page to reflect updated data
+  const handleUserUpdated = () => {
     fetchUsers();
   };
 

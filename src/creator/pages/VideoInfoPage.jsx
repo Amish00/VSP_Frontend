@@ -1,14 +1,13 @@
-// src/creator/pages/VideoInfoPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { useSnackbar } from 'notistack';
 import { Upload, X, Edit, Save, Eye, Heart, MessageCircle, ThumbsUp, ArrowLeft } from 'lucide-react';
 import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
-import StatCard from '../components/ui/StatCard';          // ✅ imported StatCard
+import StatCard from '../components/ui/StatCard';
 import { creatorApi } from '../api/creatorApi';
 import axios from 'axios';
 
-// Reusable styles (unchanged)
 const inp = "w-full bg-bg-el text-text-primary text-base rounded-xl border border-border px-4 py-3 placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all";
 const sel = `${inp} appearance-none`;
 const area = `${inp} resize-none`;
@@ -18,6 +17,7 @@ const CATS = ['Technology', 'Design', 'Music', 'Gaming', 'Lifestyle', 'Business'
 const VIDEO_TYPES = ['VIDEO', 'SHORTS'];
 
 const VideoInfoPage = () => {
+  const { enqueueSnackbar } = useSnackbar();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') || 'view';
@@ -37,7 +37,6 @@ const VideoInfoPage = () => {
   const thumbInputRef = useRef();
   const videoInputRef = useRef();
 
-  // Fetch video (unchanged)
   useEffect(() => {
     const fetchVideo = async () => {
       try {
@@ -54,16 +53,15 @@ const VideoInfoPage = () => {
         setThumbPreview(res.data.thumbnailUrl);
       } catch (err) {
         console.error(err);
-        alert('Failed to load video');
+        enqueueSnackbar('Failed to load video details', { variant: 'error' });
         navigate('/creator/videos');
       } finally {
         setLoading(false);
       }
     };
     fetchVideo();
-  }, [id, navigate]);
+  }, [id, navigate, enqueueSnackbar]);
 
-  // Fetch comments (unchanged)
   const fetchComments = async () => {
     setCommentsLoading(true);
     try {
@@ -71,6 +69,7 @@ const VideoInfoPage = () => {
       setComments(res.data.content || []);
     } catch (err) {
       console.error('Failed to load comments', err);
+      enqueueSnackbar('Could not load comments', { variant: 'error' });
     } finally {
       setCommentsLoading(false);
     }
@@ -93,10 +92,7 @@ const VideoInfoPage = () => {
     }
   };
 
-  const confirmThumbnailReplace = () => {
-    setShowThumbConfirm(false);
-  };
-
+  const confirmThumbnailReplace = () => setShowThumbConfirm(false);
   const cancelThumbnailReplace = () => {
     setThumbFile(null);
     setThumbPreview(video?.thumbnailUrl);
@@ -111,10 +107,7 @@ const VideoInfoPage = () => {
     }
   };
 
-  const confirmVideoReplace = () => {
-    setShowVideoConfirm(false);
-  };
-
+  const confirmVideoReplace = () => setShowVideoConfirm(false);
   const cancelVideoReplace = () => {
     setVideoFile(null);
     if (videoInputRef.current) videoInputRef.current.value = '';
@@ -122,7 +115,7 @@ const VideoInfoPage = () => {
 
   const handleSave = async () => {
     if (!editData.title.trim()) {
-      alert('Title is required');
+      enqueueSnackbar('Title is required', { variant: 'warning' });
       return;
     }
     setSaving(true);
@@ -155,19 +148,18 @@ const VideoInfoPage = () => {
       setThumbFile(null);
       setVideoFile(null);
       setThumbPreview(refreshed.data.thumbnailUrl);
-      alert('Video updated successfully');
+      enqueueSnackbar('Video updated successfully', { variant: 'success' });
       navigate(`/creator/video/${id}?mode=view`, { replace: true });
     } catch (err) {
       console.error(err);
-      alert('Update failed: ' + (err.response?.data?.message || err.message));
+      const msg = err.response?.data?.message || err.message;
+      enqueueSnackbar(`Update failed: ${msg}`, { variant: 'error' });
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
-    return <div className="p-8 text-center text-text-muted">Loading video details...</div>;
-  }
+  if (loading) return <div className="p-8 text-center text-text-muted">Loading video details...</div>;
   if (!video) return null;
 
   const isEditMode = mode === 'edit';
@@ -182,14 +174,10 @@ const VideoInfoPage = () => {
 
   return (
     <div className="w-full px-4 sm:px-6 pb-8">
-      {/* Header (unchanged) */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3">
           {isEditMode && (
-            <button
-              onClick={() => navigate(`/creator/video/${id}?mode=view`)}
-              className="p-2 rounded-lg bg-bg-el border border-border text-text-secondary hover:text-text-primary transition"
-            >
+            <button onClick={() => navigate(`/creator/video/${id}?mode=view`)} className="p-2 rounded-lg bg-bg-el border border-border text-text-secondary hover:text-text-primary transition">
               <ArrowLeft size={20} />
             </button>
           )}
@@ -198,79 +186,37 @@ const VideoInfoPage = () => {
           </h1>
         </div>
         {!isEditMode && (
-          <button
-            onClick={() => navigate(`/creator/video/${id}?mode=edit`)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary-light text-sm font-semibold hover:bg-primary/20 transition"
-          >
+          <button onClick={() => navigate(`/creator/video/${id}?mode=edit`)} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary-light text-sm font-semibold hover:bg-primary/20 transition">
             <Edit size={16} /> Edit Video
           </button>
         )}
       </div>
 
-      {/* ✅ STATS ROW – replaced with StatCard components */}
+      {/* Stats Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <StatCard
-          icon={<Eye size={24} />}
-          label="Views"
-          value={video.viewCount?.toLocaleString() || 0}
-        />
-        <StatCard
-          icon={<Heart size={24} />}
-          label="Likes"
-          value={video.likesCount?.toLocaleString() || 0}
-        />
-        <StatCard
-          icon={<MessageCircle size={24} />}
-          label="Comments"
-          value={video.commentCount?.toLocaleString() || 0}
-        />
-        <StatCard
-            icon={
-              video.status === 'APPROVED' ? (
-                <ThumbsUp size={24} className="text-green-500" />
-              ) : (
-                <div className="w-6 h-6 rounded-full" style={{ backgroundColor: status.color }} />
-              )
-            }
-            label="Status"
-            value={status.label}
-            color={status.color}
-          />
+        <StatCard icon={<Eye size={24} />} label="Views" value={video.viewCount?.toLocaleString() || 0} />
+        <StatCard icon={<Heart size={24} />} label="Likes" value={video.likesCount?.toLocaleString() || 0} />
+        <StatCard icon={<MessageCircle size={24} />} label="Comments" value={video.commentCount?.toLocaleString() || 0} />
+        <StatCard icon={video.status === 'APPROVED' ? <ThumbsUp size={24} className="text-green-500" /> : <div className="w-6 h-6 rounded-full" style={{ backgroundColor: status.color }} />} label="Status" value={status.label} color={status.color} />
       </div>
 
-      {/* Main content – 2 columns (rest of the component unchanged) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* LEFT COLUMN: Video & Thumbnail */}
+        {/* LEFT: Video & Thumbnail */}
         <div className="space-y-6">
-          {/* Video preview */}
           <div className="bg-bg-card border border-border rounded-2xl p-4">
             <label className="block text-sm font-semibold text-text-secondary mb-2">Video Preview</label>
             <div className="aspect-video rounded-xl overflow-hidden bg-black">
-              <video
-                key={video.videoUrl}
-                src={videoFile ? URL.createObjectURL(videoFile) : video.videoUrl}
-                controls
-                className="w-full h-full object-contain"
-              />
+              <video key={video.videoUrl} src={videoFile ? URL.createObjectURL(videoFile) : video.videoUrl} controls className="w-full h-full object-contain" />
             </div>
             {videoFile && <p className="text-xs text-primary mt-2">New video selected: {videoFile.name}</p>}
           </div>
-
-          {/* Thumbnail */}
           <div className="bg-bg-card border border-border rounded-2xl p-4">
             <label className="block text-sm font-semibold text-text-secondary mb-2">Thumbnail</label>
             <div className="relative w-full max-w-md mx-auto aspect-video rounded-xl overflow-hidden border border-border bg-bg-el flex items-center justify-center">
-              {thumbPreview ? (
-                <img src={thumbPreview} alt="Thumbnail" className="w-full h-full object-cover" />
-              ) : (
-                <div className="text-4xl">🎬</div>
-              )}
+              {thumbPreview ? <img src={thumbPreview} alt="Thumbnail" className="w-full h-full object-cover" /> : <div className="text-4xl">🎬</div>}
               {isEditMode && (
                 <>
-                  <button
-                    onClick={() => thumbInputRef.current.click()}
-                    className="absolute bottom-2 right-2 bg-black/70 text-white p-2 rounded-full hover:bg-black/90 transition"
-                  >
+                  <button onClick={() => thumbInputRef.current.click()} className="absolute bottom-2 right-2 bg-black/70 text-white p-2 rounded-full hover:bg-black/90 transition">
                     <Upload size={16} />
                   </button>
                   <input ref={thumbInputRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailChange} />
@@ -280,11 +226,9 @@ const VideoInfoPage = () => {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Metadata + Comments (unchanged) */}
+        {/* RIGHT: Metadata + Comments */}
         <div className="space-y-6">
-          {/* Metadata card */}
           <div className="bg-bg-card border border-border rounded-2xl p-6 space-y-5">
-            {/* Title */}
             <div>
               <label className="block text-sm font-semibold text-text-secondary mb-1">Title *</label>
               {isEditMode ? (
@@ -293,8 +237,6 @@ const VideoInfoPage = () => {
                 <div className={valueCard}>{video.title}</div>
               )}
             </div>
-
-            {/* Description */}
             <div>
               <label className="block text-sm font-semibold text-text-secondary mb-1">Description</label>
               {isEditMode ? (
@@ -303,8 +245,6 @@ const VideoInfoPage = () => {
                 <div className={valueCard + ' whitespace-pre-wrap'}>{video.description || '—'}</div>
               )}
             </div>
-
-            {/* Category & Type */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-text-secondary mb-1">Category</label>
@@ -327,26 +267,18 @@ const VideoInfoPage = () => {
                 )}
               </div>
             </div>
-
-            {/* Tags */}
             <div>
               <label className="block text-sm font-semibold text-text-secondary mb-1">Tags</label>
               {isEditMode ? (
                 <input value={editData.tags} onChange={(e) => handleEditChange('tags', e.target.value)} placeholder="react, tutorial, web development" className={inp} />
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {tagsArray.length > 0 ? (
-                    tagsArray.map((tag, idx) => (
-                      <span key={idx} className="px-2 py-1 rounded-full bg-primary/10 text-primary-light text-xs font-medium">#{tag}</span>
-                    ))
-                  ) : (
-                    <span className="text-text-muted text-sm">—</span>
-                  )}
+                  {tagsArray.length > 0 ? tagsArray.map((tag, idx) => (
+                    <span key={idx} className="px-2 py-1 rounded-full bg-primary/10 text-primary-light text-xs font-medium">#{tag}</span>
+                  )) : <span className="text-text-muted text-sm">—</span>}
                 </div>
               )}
             </div>
-
-            {/* Paid Content */}
             <div>
               <label className="block text-sm font-semibold text-text-secondary mb-1">Paid Content</label>
               {isEditMode ? (
@@ -355,41 +287,25 @@ const VideoInfoPage = () => {
                   <button type="button" onClick={() => handleEditChange('paid', false)} className={`px-4 py-2 rounded-lg ${!editData.paid ? 'bg-primary text-white' : 'bg-bg-el text-text-secondary'}`}>No</button>
                 </div>
               ) : (
-                <div className={valueCard}>
-                  <Badge text={video.paid ? 'Paid' : 'Free'} type={video.paid ? 'paid' : 'free'} />
-                </div>
+                <div className={valueCard}><Badge text={video.paid ? 'Paid' : 'Free'} type={video.paid ? 'paid' : 'free'} /></div>
               )}
             </div>
-
-            {/* Replace video file (edit only) */}
             {isEditMode && (
               <div>
                 <label className="block text-sm font-semibold text-text-secondary mb-1">Replace Video File (optional)</label>
                 <input ref={videoInputRef} type="file" accept="video/*" className="block w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary-light hover:file:bg-primary/20" onChange={handleVideoChange} />
               </div>
             )}
-
-            {/* Action buttons (Save / Cancel) */}
             {isEditMode && (
               <div className="flex justify-end gap-3 pt-4">
-                <button
-                  onClick={() => navigate(`/creator/video/${id}?mode=view`)}
-                  className="px-6 py-2.5 rounded-xl border border-border text-text-secondary font-semibold hover:bg-bg-el transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 disabled:opacity-50 transition"
-                >
+                <button onClick={() => navigate(`/creator/video/${id}?mode=view`)} className="px-6 py-2.5 rounded-xl border border-border text-text-secondary font-semibold hover:bg-bg-el transition">Cancel</button>
+                <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 disabled:opacity-50 transition">
                   {saving ? 'Saving...' : <><Save size={18} /> Save Changes</>}
                 </button>
               </div>
             )}
           </div>
 
-          {/* Comments section (only in view mode) */}
           {!isEditMode && (
             <div className="bg-bg-card border border-border rounded-2xl p-6 space-y-4">
               <h3 className="font-display font-bold text-lg text-text-primary flex items-center gap-2">
@@ -425,7 +341,7 @@ const VideoInfoPage = () => {
         </div>
       </div>
 
-      {/* Modals (unchanged) */}
+      {/* Modals */}
       <Modal open={showThumbConfirm} onClose={cancelThumbnailReplace} title="Replace Thumbnail">
         <p className="text-text-secondary mb-4">Are you sure you want to replace the current thumbnail with the new image?</p>
         <div className="flex justify-end gap-3">

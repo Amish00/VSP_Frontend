@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { setAppLanguage } from '../../context/LanguageContext';
 
 const OAuth2RedirectHandler = () => {
   const navigate = useNavigate();
@@ -13,9 +14,10 @@ const OAuth2RedirectHandler = () => {
     const refreshToken = params.get('refresh_token');
 
     if (accessToken && refreshToken) {
+      setAppLanguage('en');
       // Store tokens
-      localStorage.setItem('access_token', accessToken);
-      localStorage.setItem('refresh_token', refreshToken);
+      sessionStorage.setItem('access_token', accessToken);
+      sessionStorage.setItem('refresh_token', refreshToken);
       // Decode JWT to get user info (optional – you can also call a /me endpoint)
       const payload = JSON.parse(atob(accessToken.split('.')[1]));
       const user = {
@@ -24,7 +26,7 @@ const OAuth2RedirectHandler = () => {
         role: payload.role || 'VIEWER',
         plan: payload.plan || 'FREE'
       };
-      localStorage.setItem('user', JSON.stringify(user));
+      sessionStorage.setItem('user', JSON.stringify(user));
       setTokensAndUser(accessToken, refreshToken, user);
       
       // Redirect based on role

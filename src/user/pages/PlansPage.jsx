@@ -49,7 +49,7 @@ const PlansPage = () => {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const token = localStorage.getItem('access_token');
+      const token = sessionStorage.getItem('access_token');
       if (!token) {
         setLoading(false);
         return;
@@ -72,7 +72,7 @@ const PlansPage = () => {
   const hidePopularBadge = !!user;
 
   const handleSelect = async (plan) => {
-    const token = localStorage.getItem('access_token');
+    const token = sessionStorage.getItem('access_token');
     if (!token) {
       enqueueSnackbar('Please sign in to subscribe to a plan.', { variant: 'warning' });
       navigate('/signin', { state: { from: '/plans' } });

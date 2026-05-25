@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSnackbar } from 'notistack';
 import { videoApi } from '../api/videoApi';
 import Badge from './ui/Badge';
-import { Eye, ThumbsUp, MessageCircle } from 'lucide-react'; // optional icons
+import { Eye, ThumbsUp, MessageCircle } from 'lucide-react';
 
 const Field = ({ label, children }) => (
     <div className="space-y-1.5">
@@ -11,6 +12,7 @@ const Field = ({ label, children }) => (
 );
 
 const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
+    const { enqueueSnackbar } = useSnackbar();
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -54,17 +56,19 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
         setLoading(true);
         try {
             await videoApi.updateVideo(video.id, formData);
+            enqueueSnackbar('Video updated successfully!', { variant: 'success' });
             if (onVideoUpdated) onVideoUpdated();
             setEditMode(false);
             onClose();
         } catch (err) {
             console.error('Update failed', err);
+            const msg = err.response?.data?.message || err.message;
+            enqueueSnackbar(`Update failed: ${msg}`, { variant: 'error' });
         } finally {
             setLoading(false);
         }
     };
 
-    // Helper to format numbers (e.g., 1234 -> 1.2K)
     const formatNumber = (num) => {
         if (num === undefined || num === null) return '0';
         if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -115,20 +119,14 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
                         </div>
                     </div>
 
-                    {/* Details Section */}
+                    {/* Details Form */}
                     <form onSubmit={handleSubmit}>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                             {/* Title */}
                             <div className="md:col-span-2">
                                 <Field label="Title">
                                     {editMode ? (
-                                        <input
-                                            name="title"
-                                            value={formData.title}
-                                            onChange={handleChange}
-                                            required
-                                            className="w-full p-2.5 rounded-xl border border-border bg-bg-el text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                                        />
+                                        <input name="title" value={formData.title} onChange={handleChange} required className="w-full p-2.5 rounded-xl border border-border bg-bg-el text-text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary" />
                                     ) : (
                                         <div className="bg-bg-el/30 p-2.5 rounded-xl border border-border/50">
                                             <p className="text-text-primary font-medium">{video.title}</p>
@@ -141,13 +139,7 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
                             <div className="md:col-span-2">
                                 <Field label="Description">
                                     {editMode ? (
-                                        <textarea
-                                            name="description"
-                                            value={formData.description}
-                                            onChange={handleChange}
-                                            rows="3"
-                                            className="w-full p-2.5 rounded-xl border border-border bg-bg-el text-text-primary focus:border-primary focus:outline-none"
-                                        />
+                                        <textarea name="description" value={formData.description} onChange={handleChange} rows="3" className="w-full p-2.5 rounded-xl border border-border bg-bg-el text-text-primary focus:border-primary focus:outline-none" />
                                     ) : (
                                         <div className="bg-bg-el/30 p-2.5 rounded-xl border border-border/50 min-h-[80px] whitespace-pre-wrap">
                                             <p className="text-text-secondary">{video.description || 'No description provided.'}</p>
@@ -156,32 +148,19 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
                                 </Field>
                             </div>
 
-                            {/* Tags - Fixed visibility */}
+                            {/* Tags */}
                             <Field label="Tags">
                                 {editMode ? (
-                                    <input
-                                        name="tags"
-                                        value={formData.tags}
-                                        onChange={handleChange}
-                                        placeholder="e.g. react, tutorial, webdev"
-                                        className="w-full p-2.5 rounded-xl border border-border bg-bg-el text-text-primary"
-                                    />
+                                    <input name="tags" value={formData.tags} onChange={handleChange} placeholder="e.g. react, tutorial, webdev" className="w-full p-2.5 rounded-xl border border-border bg-bg-el text-text-primary" />
                                 ) : (
                                     <div className="bg-bg-el/30 p-2.5 rounded-xl border border-border/50 min-h-[42px]">
                                         {video.tags ? (
                                             <div className="flex flex-wrap gap-1">
                                                 {video.tags.split(',').map((tag, idx) => (
-                                                    <span 
-                                                        key={idx} 
-                                                        className="px-2 py-0.5 rounded-full bg-primary/20 text-primary-light text-xs font-medium"
-                                                    >
-                                                        #{tag.trim()}
-                                                    </span>
+                                                    <span key={idx} className="px-2 py-0.5 rounded-full bg-primary/20 text-primary-light text-xs font-medium">#{tag.trim()}</span>
                                                 ))}
                                             </div>
-                                        ) : (
-                                            <span className="text-text-muted text-sm">—</span>
-                                        )}
+                                        ) : <span className="text-text-muted text-sm">—</span>}
                                     </div>
                                 )}
                             </Field>
@@ -189,12 +168,7 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
                             {/* Category */}
                             <Field label="Category">
                                 {editMode ? (
-                                    <input
-                                        name="category"
-                                        value={formData.category}
-                                        onChange={handleChange}
-                                        className="w-full p-2.5 rounded-xl border border-border bg-bg-el text-text-primary"
-                                    />
+                                    <input name="category" value={formData.category} onChange={handleChange} className="w-full p-2.5 rounded-xl border border-border bg-bg-el text-text-primary" />
                                 ) : (
                                     <div className="bg-bg-el/30 p-2.5 rounded-xl border border-border/50">
                                         <p className="text-text-primary">{video.category || '—'}</p>
@@ -202,45 +176,28 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
                                 )}
                             </Field>
 
-                            {/* Paid + Type */}
+                            {/* Paid & Type */}
                             {editMode ? (
                                 <>
                                     <div className="flex items-center gap-4">
                                         <label className="flex items-center gap-2">
-                                            <input
-                                                type="checkbox"
-                                                name="paid"
-                                                checked={formData.paid}
-                                                onChange={handleChange}
-                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
-                                            />
+                                            <input type="checkbox" name="paid" checked={formData.paid} onChange={handleChange} className="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
                                             <span className="text-sm text-text-primary">Paid Video</span>
                                         </label>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1.5">Type</label>
-                                        <div className="relative">
-                                            <select
-                                                name="type"
-                                                value={formData.type}
-                                                onChange={handleChange}
-                                                className="w-full appearance-none bg-bg-el border border-border text-text-primary rounded-xl p-2.5 pr-10 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                                            >
-                                                <option value="VIDEO">VIDEO</option>
-                                                <option value="SHORTS">SHORTS</option>
-                                            </select>
-                                        </div>
+                                        <select name="type" value={formData.type} onChange={handleChange} className="w-full appearance-none bg-bg-el border border-border text-text-primary rounded-xl p-2.5 pr-10 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                                            <option value="VIDEO">VIDEO</option>
+                                            <option value="SHORTS">SHORTS</option>
+                                        </select>
                                     </div>
                                 </>
                             ) : (
                                 <>
                                     <Field label="Paid">
                                         <div className="bg-bg-el/30 p-2.5 rounded-xl border border-border/50">
-                                            <Badge 
-                                                text={video.paid ? 'Paid' : 'Free'} 
-                                                type={video.paid ? 'paid' : 'free'} 
-                                                small={false}
-                                            />
+                                            <Badge text={video.paid ? 'Paid' : 'Free'} type={video.paid ? 'paid' : 'free'} small={false} />
                                         </div>
                                     </Field>
                                     <Field label="Type">
@@ -272,30 +229,21 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
                                 </div>
                             </Field>
 
-                            {/* ===== NEW ENGAGEMENT SECTION ===== */}
+                            {/* Engagement Section */}
                             <div className="md:col-span-2">
                                 <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-3 mt-2">Engagement</h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <div className="bg-bg-el/30 p-3 rounded-xl border border-border/50 flex items-center gap-3">
                                         <Eye size={20} className="text-text-muted" />
-                                        <div>
-                                            <p className="text-xs text-text-muted">Views</p>
-                                            <p className="text-lg font-semibold text-text-primary">{formatNumber(video.viewCount)}</p>
-                                        </div>
+                                        <div><p className="text-xs text-text-muted">Views</p><p className="text-lg font-semibold text-text-primary">{formatNumber(video.viewCount)}</p></div>
                                     </div>
                                     <div className="bg-bg-el/30 p-3 rounded-xl border border-border/50 flex items-center gap-3">
                                         <ThumbsUp size={20} className="text-text-muted" />
-                                        <div>
-                                            <p className="text-xs text-text-muted">Likes</p>
-                                            <p className="text-lg font-semibold text-text-primary">{formatNumber(video.likesCount)}</p>
-                                        </div>
+                                        <div><p className="text-xs text-text-muted">Likes</p><p className="text-lg font-semibold text-text-primary">{formatNumber(video.likesCount)}</p></div>
                                     </div>
                                     <div className="bg-bg-el/30 p-3 rounded-xl border border-border/50 flex items-center gap-3">
                                         <MessageCircle size={20} className="text-text-muted" />
-                                        <div>
-                                            <p className="text-xs text-text-muted">Comments</p>
-                                            <p className="text-lg font-semibold text-text-primary">{formatNumber(video.commentCount)}</p>
-                                        </div>
+                                        <div><p className="text-xs text-text-muted">Comments</p><p className="text-lg font-semibold text-text-primary">{formatNumber(video.commentCount)}</p></div>
                                     </div>
                                 </div>
                             </div>
@@ -314,9 +262,7 @@ const VideoDataModal = ({ isOpen, onClose, video, onVideoUpdated }) => {
 
                         {editMode && (
                             <div className="flex justify-end gap-3 pt-6 mt-6 border-t border-border">
-                                <button type="button" onClick={() => setEditMode(false)} className="px-5 py-2 rounded-xl border border-border text-text-secondary hover:bg-bg-el transition">
-                                    Cancel
-                                </button>
+                                <button type="button" onClick={() => setEditMode(false)} className="px-5 py-2 rounded-xl border border-border text-text-secondary hover:bg-bg-el transition">Cancel</button>
                                 <button type="submit" disabled={loading} className="px-5 py-2 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 transition disabled:opacity-50">
                                     {loading ? 'Saving...' : 'Save Changes'}
                                 </button>

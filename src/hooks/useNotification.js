@@ -1,9 +1,9 @@
-import { useSnackbar, VariantType } from 'notistack';
+import { useSnackbar } from 'notistack';
 
 export const useNotification = () => {
   const { enqueueSnackbar } = useSnackbar();
 
-  const showNotification = (message: string, variant: VariantType = 'default') => {
+  const showNotification = (message, variant = 'default') => {
     enqueueSnackbar(message, {
       variant,
       autoHideDuration: 3000,
@@ -12,9 +12,9 @@ export const useNotification = () => {
   };
 
   return {
-    showSuccess: (msg: string) => showNotification(msg, 'success'),
-    showError: (msg: string) => showNotification(msg, 'error'),
-    showInfo: (msg: string) => showNotification(msg, 'info'),
-    showWarning: (msg: string) => showNotification(msg, 'warning'),
+    showSuccess: (msg) => showNotification(msg, 'success'),
+    showError: (msg) => showNotification(msg, 'error'),
+    showInfo: (msg) => showNotification(msg, 'info'),
+    showWarning: (msg) => showNotification(msg, 'warning'),
   };
 };
