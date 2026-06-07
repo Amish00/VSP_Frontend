@@ -6,7 +6,7 @@ import { earningsApi } from '../api/creatorApi';
 const getMonthName = (monthYear) => {
     const [year, month] = monthYear.split('-');
     const date = new Date(parseInt(year), parseInt(month) - 1, 1);
-    return date.toLocaleString('default', { month: 'short' }); // "Jan", "Feb", etc.
+    return date.toLocaleString('default', { month: 'short' });
 };
 
 const EarningsChart = ({ range }) => {
@@ -16,11 +16,8 @@ const EarningsChart = ({ range }) => {
     useEffect(() => {
         earningsApi.getHistory()
             .then(res => {
-                // res.data is array of MonthlyEarnings [{monthYear, earningsAmount}]
                 let earnings = res.data || [];
-                // Sort by monthYear ascending (oldest first) for proper chart order
                 earnings.sort((a, b) => a.monthYear.localeCompare(b.monthYear));
-                // Take last 12 months
                 const last12 = earnings.slice(-12);
                 const formatted = last12.map(item => ({
                     m: getMonthName(item.monthYear),
@@ -61,7 +58,18 @@ const EarningsChart = ({ range }) => {
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(26,43,66,.6)" />
                     <XAxis dataKey="m" tick={{ fill: '#4A6080', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: '#4A6080', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `Rs.${v}`} />
-                    <Tooltip cursor={{ fill: 'rgba(15,23,36,0.6)' }} contentStyle={{ background: '#0F1724', border: '1px solid #1A2B42', borderRadius: '12px', color: '#ECF0FB' }} formatter={v => [`Rs.${v}`, 'Earnings']} />
+                    <Tooltip 
+                        cursor={{ fill: 'rgba(15,23,36,0.6)' }} 
+                        contentStyle={{ 
+                            background: '#0F1724', 
+                            border: '1px solid #1A2B42', 
+                            borderRadius: '12px', 
+                            color: '#ECF0FB' 
+                        }}
+                        itemStyle={{ color: '#ECF0FB' }}
+                        labelStyle={{ color: '#ECF0FB', fontWeight: 'bold' }}
+                        formatter={v => [`Rs.${v}`, 'Earnings']} 
+                    />
                     <Bar dataKey="e" radius={[4, 4, 0, 0]}>
                         {data.map((_, i) => <Cell key={i} fill={i === data.length - 1 ? '#10B981' : '#2563EB'} fillOpacity={i === data.length - 1 ? 1 : .75} />)}
                     </Bar>

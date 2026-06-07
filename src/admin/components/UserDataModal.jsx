@@ -13,7 +13,12 @@ const UserDataModal = ({ isOpen, onClose, user, onUserUpdated, currentUserRole, 
   const [selectedFile, setSelectedFile] = useState(null);
   const isAdmin = currentUserRole === 'ADMIN';
 
-  // Reset form when user changes
+  // Snackbar options (top-right)
+  const snackbarOptions = {
+    anchorOrigin: { vertical: 'top', horizontal: 'right' },
+    autoHideDuration: 3000,
+  };
+
   useEffect(() => {
     if (user) {
       setFormData({
@@ -29,7 +34,6 @@ const UserDataModal = ({ isOpen, onClose, user, onUserUpdated, currentUserRole, 
     }
   }, [user]);
 
-  // Clean up object URL to avoid memory leaks
   useEffect(() => {
     return () => {
       if (profilePreview && profilePreview.startsWith('blob:')) {
@@ -60,7 +64,6 @@ const UserDataModal = ({ isOpen, onClose, user, onUserUpdated, currentUserRole, 
     setError('');
     
     try {
-      // 1. If a new picture was selected, upload it first
       if (selectedFile) {
         setUploading(true);
         const isEditingSelf = currentUserId === user.id;
@@ -70,20 +73,18 @@ const UserDataModal = ({ isOpen, onClose, user, onUserUpdated, currentUserRole, 
           await userApi.uploadProfilePicture(selectedFile);
         }
         setUploading(false);
-        enqueueSnackbar('Profile picture updated', { variant: 'success' });
+        enqueueSnackbar('Profile picture updated', { variant: 'success', ...snackbarOptions });
       }
       
-      // 2. Update user details
       const updated = await userApi.updateUser(user.id, formData);
-      enqueueSnackbar('User updated successfully', { variant: 'success' });
+      enqueueSnackbar('User updated successfully', { variant: 'success', ...snackbarOptions });
       
-      // 3. Notify parent and close modal
       onUserUpdated(updated);
       onClose();
     } catch (err) {
       const msg = err.response?.data?.message || err.response?.data?.error || 'Update failed';
       setError(msg);
-      enqueueSnackbar(msg, { variant: 'error' });
+      enqueueSnackbar(msg, { variant: 'error', ...snackbarOptions });
     } finally {
       setLoading(false);
       setUploading(false);

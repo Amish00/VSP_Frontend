@@ -27,6 +27,11 @@ const formatRelativeDate = (isoDate) => {
   return 'Just now';
 };
 
+// Filter out shorts
+const filterOutShorts = (videos) => {
+  return videos.filter(v => v.type !== 'SHORT' && v.type !== 'SHORTS' && !v.isShort);
+};
+
 const transformVideo = (video) => ({
   id: video.id,
   title: video.title,
@@ -59,8 +64,10 @@ const AllVideosPage = () => {
   const fetchVideos = useCallback(async (pageNum, append = false) => {
     const params = { page: pageNum, size: 12, sort: 'publishedAt,desc' };
     const response = await api.get('/videos', { params });
-    const all = response.data.content;
-    // Filter by paid status
+    let all = response.data.content;
+    // Filter out shorts first
+    all = filterOutShorts(all);
+    // Then filter by paid status
     const filtered = all.filter(v => v.paid === isPaid);
     const newVideos = filtered;
     if (append) {
@@ -72,7 +79,6 @@ const AllVideosPage = () => {
     return newVideos;
   }, [isPaid]);
 
-  // Initial load
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -154,7 +160,7 @@ const AllVideosPage = () => {
         <div className="text-center py-12 text-text-secondary">No videos found.</div>
       ) : (
         <>
-          <VideoGrid videos={videos.map(transformVideo)} onWatch={handleWatch} />
+          <VideoGrid videos={videos.map(transformVideo)} onWatch={handleWatch} hideShorts={true} />
           {hasMore && (
             <div className="flex justify-center mt-8">
               <button

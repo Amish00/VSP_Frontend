@@ -36,6 +36,14 @@ const VideoTable = ({ videos = [], onEdit, onDelete: externalOnDelete }) => {
     return <div className="bg-bg-card border border-border rounded-xl p-8 text-center text-text-secondary">No videos found.</div>;
   }
 
+  const toCamelCase = (str) => {
+    return str
+      .toLowerCase()
+      .split(" ")
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
   return (
     <>
       <div className="bg-bg-card border border-border rounded-xl overflow-x-auto">
@@ -59,7 +67,7 @@ const VideoTable = ({ videos = [], onEdit, onDelete: externalOnDelete }) => {
                       <div className="w-14 h-8 rounded-lg bg-bg-el overflow-hidden flex items-center justify-center text-lg flex-shrink-0">
                         {video.thumbnailUrl ? <img src={video.thumbnailUrl} alt="thumb" className="w-full h-full object-cover" /> : '🎬'}
                       </div>
-                      <span className="font-medium text-text-primary line-clamp-1 max-w-[200px]">{video.title}</span>
+                      <span className="font-medium text-text-primary line-clamp-1 max-w-[200px]">{toCamelCase(video.title)}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3"><Badge text={video.status} type={statusType} /></td>

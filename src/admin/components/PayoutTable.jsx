@@ -1,30 +1,60 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Badge from '../components/ui/Badge';
-import Pagination from './Pagination'; 
+import Pagination from './Pagination';
 
 const PAGE_SIZE = 5;
 
-const PayoutTable = ({ rows, onProcess, onReject, isAdmin = false }) => {
-  const payoutRows = useMemo(() => {
-    const arr = Array.isArray(rows) ? rows : rows?.content ?? rows?.data ?? [];
-    return arr;
+const PayoutTable = ({ rows, onProcess, onReject, isAdmin = false, onPageChange }) => {
+  const { data, totalPages: apiTotalPages } = useMemo(() => {
+    if (Array.isArray(rows)) {
+      return { data: rows, totalPages: null };
+    }
+    const content = rows?.content ?? rows?.data ?? [];
+    const total = rows?.totalPages ?? rows?.total ?? null;
+    return { data: content, totalPages: total };
   }, [rows]);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.ceil(payoutRows.length / PAGE_SIZE);
 
-  React.useEffect(() => {
+  const isServerPagination = apiTotalPages !== null && typeof onPageChange === 'function';
+
+  useEffect(() => {
     setCurrentPage(1);
   }, [rows]);
 
-  const startIndex = (currentPage - 1) * PAGE_SIZE;
-  const currentRows = payoutRows.slice(startIndex, startIndex + PAGE_SIZE);
+  const currentRows = useMemo(() => {
+    if (isServerPagination) {
+      return data;
+    }
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return data.slice(start, start + PAGE_SIZE);
+  }, [data, currentPage, isServerPagination]);
 
-  if (payoutRows.length === 0) {
-    return <div className="bg-bg-card border border-border rounded-xl p-6 text-center text-text-secondary">No payout records</div>;
+  const totalPages = isServerPagination
+    ? apiTotalPages
+    : Math.ceil(data.length / PAGE_SIZE);
+
+  const handlePageChange = (page) => {
+    if (isServerPagination) {
+      onPageChange(page);
+    } else {
+      setCurrentPage(page);
+    }
+  };
+
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const showingFrom = isServerPagination ? '?' : startIndex + 1;
+  const showingTo = isServerPagination ? '?' : Math.min(startIndex + PAGE_SIZE, data.length);
+
+  if (data.length === 0) {
+    return (
+      <div className="bg-bg-card border border-border rounded-xl p-6 text-center text-text-secondary">
+        No payout records
+      </div>
+    );
   }
 
-  const columns = isAdmin 
+  const columns = isAdmin
     ? ['Creator', 'Amount', 'Method', 'Account', 'Date', 'Status', 'Action']
     : ['Date', 'Amount', 'Method', 'Status', 'Reference'];
 
@@ -34,7 +64,7 @@ const PayoutTable = ({ rows, onProcess, onReject, isAdmin = false }) => {
         <table className="w-full text-sm" style={{ minWidth: isAdmin ? 800 : 480 }}>
           <thead>
             <tr className="border-b border-border bg-bg-el">
-              {columns.map(h => (
+              {columns.map((h) => (
                 <th key={h} className="px-4 py-3 text-left text-xs font-bold text-text-muted uppercase tracking-wider">
                   {h}
                 </th>
@@ -42,32 +72,40 @@ const PayoutTable = ({ rows, onProcess, onReject, isAdmin = false }) => {
             </tr>
           </thead>
           <tbody>
-            {currentRows.map(row => (
+            {currentRows.map((row) => (
               <tr key={row.id} className="border-b border-border/50 last:border-0">
                 {isAdmin ? (
                   <>
-                    <td className="px-4 py-3 font-medium text-text-primary">{row.creator?.username || row.creatorId}</td>
+                    <td className="px-4 py-3 font-medium text-text-primary">
+                      {row.creator?.username || row.creatorId}
+                    </td>
                     <td className="px-4 py-3 font-semibold text-text-primary">${row.amount}</td>
                     <td className="px-4 py-3 text-text-secondary">{row.withdrawalMethod}</td>
                     <td className="px-4 py-3 text-text-secondary truncate max-w-[150px]">{row.accountDetails}</td>
                     <td className="px-4 py-3 text-text-muted">{new Date(row.requestedAt).toLocaleDateString()}</td>
                     <td className="px-4 py-3">
-                      <Badge 
-                        text={row.status} 
-                        type={row.status === 'PROCESSED' ? 'approved' : row.status === 'REJECTED' ? 'rejected' : 'pending'} 
+                      <Badge
+                        text={row.status}
+                        type={
+                          row.status === 'PROCESSED'
+                            ? 'approved'
+                            : row.status === 'REJECTED'
+                            ? 'rejected'
+                            : 'pending'
+                        }
                       />
                     </td>
                     <td className="px-4 py-3">
                       {row.status === 'PENDING' && (
                         <div className="flex gap-2">
-                          <button 
-                            onClick={() => onProcess?.(row.id)} 
+                          <button
+                            onClick={() => onProcess?.(row.id)}
                             className="px-2.5 py-1 rounded-lg bg-success/10 text-success text-xs font-semibold hover:bg-success/20"
                           >
                             Process
                           </button>
-                          <button 
-                            onClick={() => onReject?.(row.id)} 
+                          <button
+                            onClick={() => onReject?.(row.id)}
                             className="px-2.5 py-1 rounded-lg bg-danger/10 text-danger text-xs font-semibold hover:bg-danger/20"
                           >
                             Reject
@@ -83,9 +121,9 @@ const PayoutTable = ({ rows, onProcess, onReject, isAdmin = false }) => {
                     <td className="px-4 py-3 font-semibold text-text-primary">${row.amount}</td>
                     <td className="px-4 py-3 text-text-secondary">{row.withdrawalMethod}</td>
                     <td className="px-4 py-3">
-                      <Badge 
-                        text={row.status} 
-                        type={row.status === 'PROCESSED' ? 'approved' : 'pending'} 
+                      <Badge
+                        text={row.status}
+                        type={row.status === 'PROCESSED' ? 'approved' : 'pending'}
                       />
                     </td>
                     <td className="px-4 py-3 text-text-muted font-mono text-xs">PAY-{row.id}</td>
@@ -100,13 +138,15 @@ const PayoutTable = ({ rows, onProcess, onReject, isAdmin = false }) => {
       {/* Pagination controls */}
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
-          <div className="text-sm text-text-muted">
-            Showing {startIndex + 1} to {Math.min(startIndex + PAGE_SIZE, payoutRows.length)} of {payoutRows.length} payouts
-          </div>
+          {!isServerPagination && (
+            <div className="text-sm text-text-muted">
+              Showing {showingFrom} to {showingTo} of {data.length} payouts
+            </div>
+          )}
           <Pagination
-            currentPage={currentPage}
+            currentPage={isServerPagination ? rows?.pageNumber ?? currentPage : currentPage}
             totalPages={totalPages}
-            onPageChange={setCurrentPage}
+            onPageChange={handlePageChange}
             siblingCount={1}
           />
         </div>

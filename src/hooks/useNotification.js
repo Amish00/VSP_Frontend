@@ -7,7 +7,7 @@ export const useNotification = () => {
     enqueueSnackbar(message, {
       variant,
       autoHideDuration: 3000,
-      anchorOrigin: { vertical: 'bottom', horizontal: 'center' },
+      anchorOrigin: { vertical: 'top', horizontal: 'right' },
     });
   };
 

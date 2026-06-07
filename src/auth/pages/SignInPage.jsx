@@ -64,8 +64,7 @@ const SignInPage = () => {
   };
 
   const handleOAuth = (provider) => {
-    const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-    window.location.href = `${backendUrl}/oauth2/authorization/${provider.toLowerCase()}`;
+    window.location.href = `/oauth2/authorization/${provider.toLowerCase()}`;
   };
 
   return (
@@ -88,6 +87,7 @@ const SignInPage = () => {
       <div className="mb-4">
         <label className="block text-sm font-semibold text-text-secondary mb-1.5">Email</label>
         <input
+          id='email'
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -102,6 +102,7 @@ const SignInPage = () => {
       <div className="mb-2 relative">
         <label className="block text-sm font-semibold text-text-secondary mb-1.5">Password</label>
         <input
+          id='password'
           type={show ? 'text' : 'password'}
           value={pw}
           onChange={(e) => setPw(e.target.value)}
@@ -129,6 +130,7 @@ const SignInPage = () => {
       </div>
 
       <button
+        type="submit"
         onClick={handleLogin}
         disabled={loading}
         className="w-full bg-primary text-white font-bold text-base rounded-xl py-3 mb-5 hover:bg-[#1d4ed8] active:bg-[#1e40af] disabled:opacity-40 transition-all shadow-[0_2px_8px_rgba(37,99,235,.4)]"

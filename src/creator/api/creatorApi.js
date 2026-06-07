@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE = 'http://localhost:8080'
+const API_BASE = '/'
 
 const axiosInstance = axios.create({
   baseURL: API_BASE,
@@ -28,12 +28,26 @@ export const creatorApi = {
   updateChannel: (data) => axiosInstance.put('/api/creator/channel', data),
   getAnalytics: (range) => axiosInstance.get(`/api/creator/analytics?range=${range}`),
   
-  getVideos: (status, search = '', size = 10, page = 0) => {
-  let url = `/api/creator/videos?size=${size}&page=${page}`;
-  if (status && status !== 'All') url += `&status=${status}`;
-  if (search) url += `&search=${encodeURIComponent(search)}`;
-  return axiosInstance.get(url);
-},
+  getVideos: (status, search = '', typeOrSize = 10, sizeOrPage = 0, pageArg = 0) => {
+    let type = null;
+    let size = 10;
+    let page = 0;
+
+    if (typeof typeOrSize === 'string') {
+      type = typeOrSize;
+      size = typeof sizeOrPage === 'number' ? sizeOrPage : 10;
+      page = typeof pageArg === 'number' ? pageArg : 0;
+    } else {
+      size = typeof typeOrSize === 'number' ? typeOrSize : 10;
+      page = typeof sizeOrPage === 'number' ? sizeOrPage : 0;
+    }
+
+    let url = `/api/creator/videos?size=${size}&page=${page}`;
+    if (status && status !== 'All') url += `&status=${status}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (type) url += `&type=${type}`;
+    return axiosInstance.get(url);
+  },
   
   uploadVideo: (formData, onProgress) => {
     return axiosInstance.post('/api/videos', formData, {

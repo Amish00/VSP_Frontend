@@ -6,10 +6,12 @@ import PayoutTable from '../components/PayoutTable';
 import { adminRevenueApi } from '../../creator/api/creatorApi';
 import { DollarSign, CreditCard, TrendingUp, Users, Wallet } from 'lucide-react';
 import RevenueRecordsTable from '../components/RevenueRecordsTable';
+import { useNotification } from '../../hooks/useNotification';
 
 const RANGES = ['30 days', '90 days', '1 year', 'All time'];
 
 const RevenuePage = () => {
+    const { showSuccess, showError } = useNotification();
     const [range, setRange] = useState('30 days');
     const [monthlyData, setMonthlyData] = useState([]);
     const [pendingPayouts, setPendingPayouts] = useState([]);
@@ -27,40 +29,46 @@ const RevenuePage = () => {
             const pendingRes = await adminRevenueApi.getPendingPayouts();
             setPendingPayouts(pendingRes.data);
 
-            // For total stats, calculate over selected range (simplified - use last 30 days from now)
-            const end = new Date();
-            const start = new Date();
-            start.setDate(start.getDate() - (range === '30 days' ? 30 : range === '90 days' ? 90 : 365));
-            // Call total endpoint if needed or derive from monthly data
             const totalRevenue = monthlyRes.data.reduce((sum, m) => sum + m.total, 0);
             const platformFee = monthlyRes.data.reduce((sum, m) => sum + m.platformFee, 0);
             const creatorPool = monthlyRes.data.reduce((sum, m) => sum + m.creatorPool, 0);
             setTotalStats({ totalRevenue, platformFee, creatorPool });
         } catch (err) {
             console.error(err);
+            showError('Failed to load revenue data');
         }
     };
 
     const handleProcess = async (payoutId) => {
-        if (window.confirm('Mark this payout as processed?')) {
+        if (!window.confirm('Mark this payout as processed?')) return;
+        try {
             await adminRevenueApi.processPayout(payoutId);
-            fetchData();
+            showSuccess('Payout processed successfully');
+            fetchData(); // refresh the list
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Failed to process payout';
+            showError(msg);
         }
     };
 
     const handleReject = async (payoutId) => {
         const reason = prompt('Rejection reason:');
-        if (reason) {
+        if (!reason) return;
+        try {
             await adminRevenueApi.rejectPayout(payoutId, reason);
+            showSuccess('Payout rejected successfully');
             fetchData();
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Failed to reject payout';
+            showError(msg);
         }
     };
 
     const stats = [
-        { icon: <DollarSign size={24} />, label: 'Total Revenue', value: `Rs.${(totalStats.totalRevenue).toFixed(0)}`, change: '+22%', color: '#10B981' },
-        { icon: <CreditCard size={24} />, label: 'Subscriptions', value: `Rs.${(totalStats.totalRevenue).toFixed(0)}`, change: '+18%', color: '#60A5FA' },
-        { icon: <TrendingUp size={24} />, label: 'Platform Fee (30%)', value: `Rs.${(totalStats.platformFee).toFixed(0)}`, change: '+12%', color: '#F59E0B' },
-        { icon: <Wallet size={24} />, label: 'Creator Pool', value: `Rs.${(totalStats.creatorPool).toFixed(0)}`, change: '+8%', color: '#0EA5E9' },
+        { icon: <DollarSign size={24} />, label: 'Total Revenue', value: `Rs.${totalStats.totalRevenue.toFixed(0)}`, change: '+22%', color: '#10B981' },
+        { icon: <CreditCard size={24} />, label: 'Subscriptions', value: `Rs.${totalStats.totalRevenue.toFixed(0)}`, change: '+18%', color: '#60A5FA' },
+        { icon: <TrendingUp size={24} />, label: 'Platform Fee (30%)', value: `Rs.${totalStats.platformFee.toFixed(0)}`, change: '+12%', color: '#F59E0B' },
+        { icon: <Wallet size={24} />, label: 'Creator Pool', value: `Rs.${totalStats.creatorPool.toFixed(0)}`, change: '+8%', color: '#0EA5E9' },
     ];
 
     return (
@@ -86,11 +94,16 @@ const RevenuePage = () => {
             </div>
 
             <h2 className="font-display font-bold text-lg mb-3 text-text-primary">Pending Payouts</h2>
-            <PayoutTable rows={pendingPayouts} onProcess={handleProcess} onReject={handleReject} isAdmin={true} />
+            <PayoutTable 
+                rows={pendingPayouts} 
+                onProcess={handleProcess} 
+                onReject={handleReject} 
+                isAdmin={true} 
+            />
 
             <div className="mt-8">
-              <h2 className="font-display font-bold text-lg mb-3 text-text-primary">All Payment Records</h2>
-              <RevenueRecordsTable />
+                <h2 className="font-display font-bold text-lg mb-3 text-text-primary">All Payment Records</h2>
+                <RevenueRecordsTable />
             </div>
         </div>
     );

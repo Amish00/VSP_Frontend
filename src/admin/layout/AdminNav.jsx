@@ -129,10 +129,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
   }, [notifOpen, user]);
 
   const handleLogout = () => {
-    sessionStorage.removeItem('access_token');
-    sessionStorage.removeItem('refresh_token');
     if (onLogout) onLogout();
-    navigate('/');
   };
 
   if (loading) {
@@ -292,9 +289,9 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                         {user.username?.slice(0, 2).toUpperCase()}
                       </div>
                     )}
-                    <div>
-                      <p className="font-semibold text-sm text-text-primary">{user.username}</p>
-                      <p className="text-xs text-text-muted">{user.email}</p>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm text-text-primary truncate">{user.username}</p>
+                      <p className="text-xs text-text-muted break-all leading-snug">{user.email}</p>
                     </div>
                   </div>
                   <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger/10 text-danger text-xs font-semibold">

@@ -50,7 +50,7 @@ const PROFILE_ITEMS = [
 
 const canAccessStudio = (user) => {
   if (!user) return false;
-  return user.role === 'CREATOR' || user.plan === 'CREATE' || user.role === 'ADMIN';
+  return user.role === 'CREATOR' || user.plan === 'CREATE';
 };
 
 // ----------------------------------------------------------------------
@@ -131,7 +131,7 @@ const SearchOverlay = ({ onClose }) => {
         const response = await api.get('/videos', {
           params: { page: 0, size: 50, sort: 'publishedAt,desc' }
         });
-        setAllVideos(response.data.content);
+        setAllVideos(response.data.content || response.data || []);
       } catch (err) {
         console.error('Failed to fetch videos for search:', err);
       } finally {
@@ -168,6 +168,8 @@ const SearchOverlay = ({ onClose }) => {
     return 'Just now';
   };
 
+  const isShort = (video) => video.type === 'SHORT' || video.type === 'SHORTS' || video.isShort;
+
   const filteredVideos = q.length > 1
     ? allVideos.filter(v =>
         v.title?.toLowerCase().includes(q.toLowerCase()) ||
@@ -178,7 +180,11 @@ const SearchOverlay = ({ onClose }) => {
     : [];
 
   const handleSelect = (video) => {
-    navigate(`/watch/${video.id}`);
+    if (isShort(video)) {
+      navigate(`/shorts?play=${video.id}`);
+    } else {
+      navigate(`/watch/${video.id}`);
+    }
     onClose();
   };
 
@@ -238,14 +244,19 @@ const SearchOverlay = ({ onClose }) => {
                     {v.thumbnailUrl ? <img src={v.thumbnailUrl} alt="" className="w-full h-full object-cover" /> : '🎬'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-text-primary truncate">{v.title}</p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="text-sm font-semibold text-text-primary truncate">{v.title}</p>
+                      <Badge text={isShort(v) ? 'SHORTS' : 'VIDEO'} type={isShort(v) ? 'info' : 'pro'} small />
+                    </div>
                     <p className="text-xs text-text-muted flex gap-2">
                       <span>{v.username}</span>
                       <span>{formatRelativeDate(v.publishedAt)}</span>
                       <span>{formatNumber(v.viewCount)} views</span>
                     </p>
                   </div>
-                  <Badge text={v.paid ? 'PAID' : 'FREE'} type={v.paid ? 'paid' : 'free'} />
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge text={v.paid ? 'PAID' : 'FREE'} type={v.paid ? 'paid' : 'free'} />
+                  </div>
                 </div>
               ))}
             </div>

@@ -1,12 +1,17 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import api from '../../api/Api';
 import {
   Play, Pause, Volume2, VolumeX, Maximize2, Download, PictureInPicture, Gauge,
   SkipBack, SkipForward
 } from 'lucide-react';
 
-const VideoPlayer = ({ video }) => {
+const VideoPlayer = ({ video, onViewRecorded }) => {
   const videoRef = useRef(null);
   const controlsTimeoutRef = useRef(null);
+  const watchStartTimeRef = useRef(null);  
+  const viewRecordedRef = useRef(false);       
+  const VIEW_THRESHOLD = 30;                  
+
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -42,6 +47,58 @@ const VideoPlayer = ({ video }) => {
     resetControlsTimeout();
   };
 
+  const recordViewOnce = useCallback(async () => {
+    if (viewRecordedRef.current) return;
+    viewRecordedRef.current = true;
+    try {
+      await api.post('/engagement/view', { videoId: video.id });
+      onViewRecorded?.();
+      console.log('View recorded for video', video.id);
+    } catch (err) {
+      console.error('Failed to record view', err);
+    }
+  }, [video.id, onViewRecorded]);
+
+  useEffect(() => {
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
+
+    const handleTimeUpdate = () => {
+      if (playing && !viewRecordedRef.current) {
+        if (watchStartTimeRef.current === null) {
+          watchStartTimeRef.current = videoEl.currentTime;
+        }
+        const elapsed = videoEl.currentTime - watchStartTimeRef.current;
+        if (elapsed >= VIEW_THRESHOLD || videoEl.currentTime >= videoEl.duration - 0.5) {
+          recordViewOnce();
+        }
+      } else if (!playing) {
+        watchStartTimeRef.current = null;
+      }
+    };
+
+    const handleEnded = () => {
+      if (!viewRecordedRef.current) {
+        recordViewOnce();
+      }
+      setPlaying(false);
+    };
+
+    videoEl.addEventListener('timeupdate', handleTimeUpdate);
+    videoEl.addEventListener('ended', handleEnded);
+
+    return () => {
+      videoEl.removeEventListener('timeupdate', handleTimeUpdate);
+      videoEl.removeEventListener('ended', handleEnded);
+    };
+  }, [playing, recordViewOnce]);
+
+  useEffect(() => {
+    viewRecordedRef.current = false;
+    watchStartTimeRef.current = null;
+  }, [video.id]);
+
+
   useEffect(() => {
     const videoEl = videoRef.current;
     if (!videoEl) return;
@@ -56,20 +113,17 @@ const VideoPlayer = ({ video }) => {
 
     const handleBuffering = () => setBuffering(videoEl.readyState < 3);
     const handleCanPlay = () => setBuffering(false);
-    const handleEnded = () => setPlaying(false);
 
     videoEl.addEventListener('timeupdate', updateProgress);
     videoEl.addEventListener('loadedmetadata', updateProgress);
     videoEl.addEventListener('waiting', handleBuffering);
     videoEl.addEventListener('canplay', handleCanPlay);
-    videoEl.addEventListener('ended', handleEnded);
 
     return () => {
       videoEl.removeEventListener('timeupdate', updateProgress);
       videoEl.removeEventListener('loadedmetadata', updateProgress);
       videoEl.removeEventListener('waiting', handleBuffering);
       videoEl.removeEventListener('canplay', handleCanPlay);
-      videoEl.removeEventListener('ended', handleEnded);
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     };
   }, []);
@@ -212,6 +266,7 @@ const VideoPlayer = ({ video }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [volume, togglePlay, handleFullscreen, handlePictureInPicture]);
 
+  // ----- Render (unchanged) -----
   return (
     <div
       className="relative rounded-xl overflow-hidden bg-black group"
@@ -331,4 +386,4 @@ const VideoPlayer = ({ video }) => {
   );
 };
 
-export default VideoPlayer;   
+export default VideoPlayer;

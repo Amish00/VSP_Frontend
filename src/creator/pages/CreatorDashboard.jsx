@@ -61,7 +61,7 @@ const DashboardPage = ({ user }) => {
           <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-text-primary mb-0.5">Dashboard</h1>
           <p className="text-sm text-text-secondary">Welcome back, <span className="text-primary-light font-semibold">{user?.name?.split(' ')[0] || 'Creator'}</span></p>
         </div>
-        <div className="text-sm text-text-muted bg-bg-el border border-border rounded-xl px-4 py-2">Revenue share: <span className="text-success font-bold">60%</span> to you</div>
+        <div className="text-sm text-text-muted bg-bg-el border border-border rounded-xl px-4 py-2">Revenue share: <span className="text-success font-bold">70%</span> to you</div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">

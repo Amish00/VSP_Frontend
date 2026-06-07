@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = '/api';
 
 const getAuthHeader = () => {
     const token = sessionStorage.getItem('access_token');
@@ -8,11 +8,11 @@ const getAuthHeader = () => {
 };
 
 export const videoApi = {
-    // Admin endpoints
-    getAllVideos: async (status = null, search = '', page = 0, size = 10) => {
+    getAllVideos: async (status = null, search = '', page = 0, size = 20, type = null) => {
         const params = new URLSearchParams();
         if (status && status !== 'All') params.append('status', status);
         if (search) params.append('search', search);
+            if (type) params.append('type', type);
         params.append('page', page);
         params.append('size', size);
         const response = await axios.get(`${API_BASE_URL}/admin/videos?${params.toString()}`, {

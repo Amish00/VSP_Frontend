@@ -10,9 +10,9 @@ const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const onLogout = () => {
-    logout();
-    navigate('/signin');
+  const onLogout = async () => {
+    await logout();
+    navigate('/', { replace: true });
   };
 
   const onGoHome = () => {

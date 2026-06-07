@@ -1,19 +1,22 @@
-// EarningsPage.jsx
 import React, { useState, useEffect } from 'react';
 import StatCard from '../components/ui/StatCard';
 import EarningsChart from '../components/EarningsChart';
 import PayoutTable from '../components/PayoutTable';
+import MonthlyEarningsTable from '../components/MonthlyEarningsTable';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { earningsApi } from '../api/creatorApi';
-import { DollarSign, Clock, CheckCircle, TrendingUp, Wallet } from 'lucide-react';
+import { DollarSign, Clock, CheckCircle, TrendingUp, Calendar } from 'lucide-react';
+import { useNotification } from '../../hooks/useNotification';
 
 const RANGES = ['30 days', '90 days', '1 year', 'All time'];
 
 const EarningsPage = () => {
+    const { showSuccess, showError } = useNotification();
     const [range, setRange] = useState('30 days');
     const [summary, setSummary] = useState({ totalEarned: 0, paidOut: 0, pending: 0 });
     const [payouts, setPayouts] = useState([]);
+    const [monthlyEarnings, setMonthlyEarnings] = useState([]);
     const [showPayoutModal, setShowPayoutModal] = useState(false);
     const [payoutAmount, setPayoutAmount] = useState('');
     const [payoutMethod, setPayoutMethod] = useState('eSewa');
@@ -26,36 +29,40 @@ const EarningsPage = () => {
 
     const fetchData = async () => {
         try {
-            const [summaryRes, payoutsRes] = await Promise.all([
+            const [summaryRes, payoutsRes, historyRes] = await Promise.all([
                 earningsApi.getSummary(),
-                earningsApi.getPayouts()
+                earningsApi.getPayouts(),
+                earningsApi.getHistory()
             ]);
             setSummary(summaryRes.data);
             setPayouts(payoutsRes.data);
+            setMonthlyEarnings(historyRes.data || []);
         } catch (err) {
             console.error(err);
+            showError('Failed to load earnings data');
         }
     };
 
     const handleRequestPayout = async () => {
         if (!payoutAmount || parseFloat(payoutAmount) <= 0) {
-            alert('Please enter a valid amount');
+            showError('Please enter a valid amount');
             return;
         }
         if (parseFloat(payoutAmount) > summary.pending) {
-            alert('Amount exceeds pending balance');
+            showError('Amount exceeds pending balance');
             return;
         }
         setLoading(true);
         try {
             await earningsApi.requestPayout(payoutAmount, payoutMethod, accountDetails);
-            alert('Payout request submitted!');
+            showSuccess('Payout request submitted successfully!');
             setShowPayoutModal(false);
             setPayoutAmount('');
             setAccountDetails('');
-            fetchData(); // refresh
+            fetchData();
         } catch (err) {
-            alert(err.response?.data?.message || 'Request failed');
+            const msg = err.response?.data?.message || 'Request failed';
+            showError(msg);
         } finally {
             setLoading(false);
         }
@@ -65,7 +72,7 @@ const EarningsPage = () => {
         { icon: <DollarSign size={24} />, label: 'Total Earned', value: `Rs.${summary.totalEarned.toFixed(2)}`, change: '+12%', color: '#10B981' },
         { icon: <Clock size={24} />, label: 'Pending', value: `Rs.${summary.pending.toFixed(2)}`, color: '#F59E0B' },
         { icon: <CheckCircle size={24} />, label: 'Paid Out', value: `Rs.${summary.paidOut.toFixed(2)}`, color: '#60A5FA' },
-        { icon: <TrendingUp size={24} />, label: 'Rev Share', value: '70%', color: '#0EA5E9' }, // 70% of pool goes to creator
+        { icon: <TrendingUp size={24} />, label: 'Rev Share', value: '70%', color: '#0EA5E9' },
     ];
 
     return (
@@ -88,20 +95,32 @@ const EarningsPage = () => {
 
             <div className="mb-6"><EarningsChart range={range} /></div>
 
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="font-display font-bold text-lg text-text-primary">Payout History</h2>
-                <Button size="sm" onClick={() => setShowPayoutModal(true)}>Request Payout</Button>
+            <div className="mb-8">
+                <div className="flex items-center gap-2 mb-4">
+                    <Calendar size={20} className="text-primary" />
+                    <h2 className="font-display font-bold text-lg text-text-primary">Monthly Earnings Breakdown</h2>
+                </div>
+                <MonthlyEarningsTable monthlyEarnings={monthlyEarnings} />
             </div>
-            <PayoutTable rows={payouts} />
 
-            {/* Payout Request Modal */}
+            <div className="mt-8">
+                <PayoutTable 
+                    rows={payouts} 
+                    extraActions={
+                        <Button size="sm" onClick={() => setShowPayoutModal(true)}>
+                            Request Payout
+                        </Button>
+                    }
+                />
+            </div>
+
             <Modal open={showPayoutModal} onClose={() => setShowPayoutModal(false)} title="Request Payout">
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-text-secondary mb-1">Amount (Rs.)</label>
                         <input type="number" step="0.01" value={payoutAmount} onChange={e => setPayoutAmount(e.target.value)}
                             className="w-full px-3 py-2 bg-bg-el border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary" />
-                        <p className="text-xs text-text-muted mt-1">Available: ${summary.pending.toFixed(2)}</p>
+                        <p className="text-xs text-text-muted mt-1">Available: Rs.{summary.pending.toFixed(2)}</p>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-text-secondary mb-1">Withdrawal Method</label>

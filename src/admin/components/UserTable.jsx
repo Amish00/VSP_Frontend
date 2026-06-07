@@ -10,7 +10,8 @@ const PAGE_SIZE = 10;
 
 const UserTable = () => {
   const { enqueueSnackbar } = useSnackbar();
-  const [users, setUsers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);         // all fetched users
+  const [filteredUsers, setFilteredUsers] = useState([]); // after search+filter
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [loading, setLoading] = useState(true);
@@ -30,6 +31,13 @@ const UserTable = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const debounceTimer = useRef(null);
 
+  // Snackbar options (top‑right)
+  const snackbarOptions = {
+    anchorOrigin: { vertical: 'top', horizontal: 'right' },
+    autoHideDuration: 3000,
+  };
+
+  // Debounce search input
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
@@ -39,9 +47,10 @@ const UserTable = () => {
     return () => clearTimeout(debounceTimer.current);
   }, [search]);
 
+  // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter]);
+  }, [filter, debouncedSearch]);
 
   // Fetch current user role and id
   useEffect(() => {
@@ -53,47 +62,75 @@ const UserTable = () => {
         setCurrentUserId(me.id);
       } catch (err) {
         console.error('Failed to get current user', err);
-        enqueueSnackbar('Could not fetch current user info', { variant: 'error' });
+        enqueueSnackbar('Could not fetch current user info', { variant: 'error', ...snackbarOptions });
       }
     };
     fetchCurrentUser();
   }, [enqueueSnackbar]);
 
-  const fetchUsers = useCallback(async () => {
+  // Fetch all users (no pagination params)
+  const fetchAllUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await userApi.getAllUsers(
-        filter === 'All' ? null : filter,
-        debouncedSearch,
-        currentPage - 1,
-        PAGE_SIZE
-      );
-
-      if (Array.isArray(data)) {
-        const start = (currentPage - 1) * PAGE_SIZE;
-        const pageUsers = data.slice(start, start + PAGE_SIZE);
-        setUsers(pageUsers);
-        setTotalElements(data.length);
-        setTotalPages(Math.max(1, Math.ceil(data.length / PAGE_SIZE)));
-      } else {
-        setUsers(data.content || []);
-        setTotalPages(data.totalPages || 1);
-        setTotalElements(data.totalElements || data.content?.length || 0);
-      }
+      const data = await userApi.getAllUsers(); // returns full array
+      setAllUsers(Array.isArray(data) ? data : data.content || []);
     } catch (err) {
       console.error('Failed to fetch users', err);
-      enqueueSnackbar('Failed to load users. Please try again.', { variant: 'error' });
-      setUsers([]);
-      setTotalPages(1);
-      setTotalElements(0);
+      enqueueSnackbar('Failed to load users. Please refresh the page.', { variant: 'error', ...snackbarOptions });
+      setAllUsers([]);
     } finally {
       setLoading(false);
     }
-  }, [filter, debouncedSearch, currentPage, enqueueSnackbar]);
+  }, [enqueueSnackbar]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    fetchAllUsers();
+  }, [fetchAllUsers]);
+
+  // Apply search and filter client‑side
+  useEffect(() => {
+    if (!allUsers.length) {
+      setFilteredUsers([]);
+      setTotalPages(1);
+      setTotalElements(0);
+      return;
+    }
+
+    let result = [...allUsers];
+
+    // 1. Search by name or email
+    if (debouncedSearch.trim()) {
+      const term = debouncedSearch.toLowerCase();
+      result = result.filter(
+        u =>
+          (u.username?.toLowerCase().includes(term)) ||
+          (u.fullName?.toLowerCase().includes(term)) ||
+          (u.email?.toLowerCase().includes(term))
+      );
+    }
+
+    // 2. Apply filter (role or status)
+    if (filter !== 'All') {
+      if (filter === 'CREATOR' || filter === 'VIEWER') {
+        // filter by role
+        result = result.filter(u => u.role === filter);
+      } else if (filter === 'Blocked') {
+        result = result.filter(u => u.status === 'BLOCKED');
+      } else if (filter === 'Suspended') {
+        result = result.filter(u => u.status === 'SUSPENDED');
+      }
+    }
+
+    setFilteredUsers(result);
+    setTotalElements(result.length);
+    setTotalPages(Math.max(1, Math.ceil(result.length / PAGE_SIZE)));
+  }, [allUsers, debouncedSearch, filter]);
+
+  // Paginate the filtered users
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   const openEditModal = (user) => {
     setSelectedUser(user);
@@ -109,22 +146,22 @@ const UserTable = () => {
     if (!userToDelete) return;
     try {
       await userApi.deleteUser(userToDelete.id);
-      enqueueSnackbar('User deleted successfully', { variant: 'success' });
-      await fetchUsers(); // refresh current page
+      enqueueSnackbar('User deleted successfully', { variant: 'success', ...snackbarOptions });
+      await fetchAllUsers(); // refresh full list
       setDeleteModalOpen(false);
       setUserToDelete(null);
     } catch (err) {
       console.error('Delete failed', err);
       const msg = err.response?.data?.message || err.message;
-      enqueueSnackbar(`Delete failed: ${msg}`, { variant: 'error' });
+      enqueueSnackbar(`Delete failed: ${msg}`, { variant: 'error', ...snackbarOptions });
     }
   };
 
   const handleUserUpdated = () => {
-    fetchUsers();
+    fetchAllUsers(); // refresh after edit
   };
 
-  // Helper to map role to badge type
+  // Badge helpers
   const getRoleBadgeType = (role) => {
     switch (role) {
       case 'ADMIN': return 'admin';
@@ -150,13 +187,13 @@ const UserTable = () => {
     }
   };
 
-  if (loading && users.length === 0) {
+  if (loading && allUsers.length === 0) {
     return <div className="text-center py-10 text-text-secondary">Loading users...</div>;
   }
 
   return (
     <div>
-      {/* Filters row */}
+      {/* Filter bar */}
       <div className="flex gap-3 mb-4 flex-wrap items-center">
         <div className="relative flex-1 min-w-[200px]">
           <input
@@ -194,7 +231,7 @@ const UserTable = () => {
             </tr>
           </thead>
           <tbody>
-            {users.map(u => {
+            {paginatedUsers.map(u => {
               const displayName = u.fullName || u.username;
               const avatarUrl = u.profilePicture;
               const isBlockedOrSuspended = u.status === 'BLOCKED' || u.status === 'SUSPENDED';
@@ -216,7 +253,7 @@ const UserTable = () => {
                         />
                       ) : (
                         <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold font-display flex-shrink-0">
-                          {displayName.slice(0, 2).toUpperCase()}
+                          {displayName?.slice(0, 2).toUpperCase() || 'U'}
                         </div>
                       )}
                       <div>
@@ -233,7 +270,7 @@ const UserTable = () => {
                   </td>
                   <td className="px-4 py-3">
                     <div>
-                      <span className="text-text-secondary tabular-nums">{u.videos}</span>
+                      <span className="text-text-secondary tabular-nums">{u.videos || 0}</span>
                       {u.videos > 0 && (
                         <div className="w-12 h-1 bg-bg-el rounded-full mt-1 overflow-hidden">
                           <div
@@ -244,7 +281,7 @@ const UserTable = () => {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-text-muted whitespace-nowrap">{u.joined}</td>
+                  <td className="px-4 py-3 text-text-muted whitespace-nowrap">{u.joined || '—'}</td>
                   <td className="px-4 py-3">
                     <Badge text={u.status} type={getStatusBadgeType(u.status)} small />
                   </td>
@@ -267,14 +304,14 @@ const UserTable = () => {
                 </tr>
               );
             })}
-            {users.length === 0 && !loading && (
+            {filteredUsers.length === 0 && !loading && (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-text-muted">
                   No users match your search.
                 </td>
               </tr>
             )}
-            {loading && users.length === 0 && (
+            {loading && allUsers.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-text-muted">
                   Loading...
@@ -289,7 +326,8 @@ const UserTable = () => {
       {totalPages > 1 && (
         <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
           <div className="text-sm text-text-muted">
-            Showing {(currentPage-1)*PAGE_SIZE+1} to {Math.min(currentPage*PAGE_SIZE, totalElements)} of {totalElements} users
+            Showing {(currentPage - 1) * PAGE_SIZE + 1} to{' '}
+            {Math.min(currentPage * PAGE_SIZE, totalElements)} of {totalElements} users
           </div>
           <Pagination
             currentPage={currentPage}
