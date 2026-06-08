@@ -1,17 +1,16 @@
+import axios from 'axios';
+import { getSessionId } from '../components/utils/session';
 
-  import axios from 'axios';
-  import { getSessionId } from '../components/utils/session';
+const API_BASE_URL = '/api';
 
-  const API_BASE_URL = '/api';
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: { 'Content-Type': 'application/json' },
+});
 
-  const api = axios.create({
-    baseURL: API_BASE_URL,
-    headers: { 'Content-Type': 'application/json' },
-  });
+const publicPaths = ['/auth/', '/payment/callback/', '/youtube/'];
 
-  const publicPaths = ['/auth/', '/payment/callback/', '/youtube/'];
-
-  api.interceptors.request.use((config) => {
+api.interceptors.request.use((config) => {
   const isPublic = publicPaths.some(path => config.url.includes(path));
   
   if (!isPublic) {
@@ -27,26 +26,26 @@
   return config;
 });
 
-  export default api;
+export default api;
 
-  // ---------- History API ----------
-  export const getHistory = (page = 0, size = 20) => {
-    return api.get('/history', { params: { page, size } });
-  };
+// ---------- History API ----------
+export const getHistory = (page = 0, size = 20) => {
+  return api.get('/history', { params: { page, size } });
+};
 
-  export const clearHistory = () => {
-    return api.delete('/history');
-  };
+export const clearHistory = () => {
+  return api.delete('/history');
+};
 
-  export const getCurrentUser = async () => {
-      const response = await api.get('/users/me');
-      return response.data;
-  };
+export const getCurrentUser = async () => {
+  const response = await api.get('/users/me');
+  return response.data;
+};
 
-  export const upgradeToFreePlan = async () => {
-      const response = await api.post('/payment/upgrade-free');
-      return response.data;
-  };
+export const upgradeToFreePlan = async () => {
+  const response = await api.post('/payment/upgrade-free');
+  return response.data;
+};
 
 export const canWatchPaidVideo = (user) => {
   if (!user) return false; // not logged in
@@ -54,12 +53,16 @@ export const canWatchPaidVideo = (user) => {
   return user.plan && user.plan !== 'FREE';
 };
 
+// ---------- Notification API ----------
 export const getNotifications = (page = 0, size = 20) => 
-    api.get('/notifications', { params: { page, size } });
+  api.get('/notifications', { params: { page, size } });
 
 export const markAllNotificationsAsRead = () => 
-    api.put('/notifications/mark-read');
+  api.put('/notifications/mark-read');
 
 export const getUnreadNotificationCount = () => 
-    api.get('/notifications/unread-count');
+  api.get('/notifications/unread-count');
 
+// NEW: mark a single notification as read
+export const markNotificationAsRead = (notificationId) => 
+  api.put(`/notifications/${notificationId}/read`);
