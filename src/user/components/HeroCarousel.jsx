@@ -55,14 +55,17 @@ const HeroCarousel = ({ videos = [], onWatch, loading = false }) => {
   const video = videos[idx];
   if (!video) return null;
 
-  // Prepare channel object for Avatar component
-  // Avatar expects a 'channel' prop with 'avatar' (emoji or URL) and 'name'
+
   const channelForAvatar = {
     name: video.username || 'Creator',
     avatar: video.profilePicture || (video.username ? video.username.charAt(0).toUpperCase() : '🎬'),
     profilePicture: video.profilePicture, // some Avatar components use this
   };
 
+  const toTitleCase = (str) => {
+    if (!str) return '';
+    return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+  };
   return (
     <section
       aria-label="Featured videos"
@@ -123,9 +126,9 @@ const HeroCarousel = ({ videos = [], onWatch, loading = false }) => {
 
           <h1
             className="font-display font-black text-white leading-tight mb-2 sm:mb-4 line-clamp-2 drop-shadow-md"
-            style={{ fontSize: 'clamp(18px, 3.5vw, 40px)' }}
+            style={{ fontSize: 'clamp(16px, 3vw, 35px)' }}
           >
-            {video.title}
+            {toTitleCase(video.title)}
           </h1>
 
           <div className="hidden sm:flex items-center gap-3 mb-3 flex-wrap">

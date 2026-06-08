@@ -14,7 +14,14 @@ import {
   Upload,
   Scissors,
   DollarSign,
-  Youtube, // added YouTube icon
+  Youtube,
+  CheckCircle,
+  XCircle,
+  VideoIcon,
+  BarChart,
+  MessageCircle,
+  Heart,
+  UserPlus,
 } from 'lucide-react';
 import logoUrl from '../../assets/logo.svg';
 import Badge from '../components/ui/Badge';
@@ -25,17 +32,18 @@ import LanguageSwitcher from '../../user/components/LanguageSwitcher';
 // Map notification type to an icon (emoji)
 const getNotificationIcon = (type) => {
   const icons = {
-    VIDEO_APPROVED: '✅',
-    VIDEO_REJECTED: '❌',
-    NEW_VIDEO_UPLOAD: '📹',
-    PAYOUT_REQUEST: '💰',
-    MONTHLY_EARNINGS: '📊',
-    MONTHLY_REVENUE_REPORT: '📈',
-    SUBSCRIPTION: '👥',
-    COMMENT: '💬',
-    LIKE: '❤️',
+    VIDEO_APPROVED: <CheckCircle className="text-green-500" size={20} />,
+    VIDEO_REJECTED: <XCircle className="text-red-500" size={20} />,
+    NEW_VIDEO_UPLOAD: <VideoIcon className="text-blue-500" size={20} />,
+    PAYOUT_REQUEST: <DollarSign className="text-amber-500" size={20} />,
+    MONTHLY_EARNINGS: <BarChart className="text-purple-500" size={20} />,
+    MONTHLY_REVENUE_REPORT: <BarChart className="text-pink-500" size={20} />,
+    NEW_SUBSCRIBER: <User className="text-teal-500" size={20} />,
+    NEW_COMMENT: <MessageCircle className="text-indigo-500" size={20} />,
+    VIDEO_LIKE: <Heart className="text-rose-500" size={20} />,
+    NEW_USER_REGISTRATION: <UserPlus className="text-lime-500" size={20} />,
   };
-  return icons[type] || '🔔';
+  return icons[type] || <Bell className="text-gray-500" size={20} />;
 };
 
 const NAV = [
@@ -109,7 +117,12 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     setNotifLoading(true);
     try {
       const res = await api.get('/notifications', { params: { page: 0, size: 20 } });
-      setNotifications(res.data.content);
+      // Sort: unread first, then by createdAt desc
+      const sorted = [...res.data.content].sort((a, b) => {
+        if (a.read !== b.read) return a.read ? 1 : -1; // unread (false) first
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+      setNotifications(sorted);
       await fetchUnreadCount();
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
@@ -118,11 +131,35 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     }
   };
 
+  // Mark single notification as read
+  const markAsRead = async (id) => {
+    try {
+      await api.put(`/notifications/${id}/read`);
+      // Update local state
+      setNotifications(prev => {
+        const updated = prev.map(n =>
+          n.id === id ? { ...n, read: true } : n
+        );
+        // Re-sort: unread first
+        return updated.sort((a, b) => {
+          if (a.read !== b.read) return a.read ? 1 : -1;
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        });
+      });
+      setUnreadCount(prev => Math.max(prev - 1, 0));
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
+
   const markAllAsRead = async () => {
     if (!user) return;
     try {
       await api.put('/notifications/mark-read');
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setNotifications(prev => {
+        const marked = prev.map(n => ({ ...n, read: true }));
+        return marked.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      });
       setUnreadCount(0);
     } catch (err) {
       console.error('Failed to mark all as read:', err);
@@ -250,7 +287,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     <X size={14} />
                   </button>
                 </div>
-                <div className="max-h-86 overflow-y-auto">
+                <div className="overflow-y-auto" style={{ maxHeight: '480px' }}>
                   {notifLoading ? (
                     <div className="px-4 py-8 text-center text-text-muted">Loading...</div>
                   ) : notifications.length === 0 ? (
@@ -259,7 +296,8 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     notifications.map(n => (
                       <div
                         key={n.id}
-                        className={`flex gap-3 px-4 py-3.5 hover:bg-bg-hov border-b border-border/50 last:border-0 ${
+                        onClick={() => !n.read && markAsRead(n.id)}
+                        className={`flex gap-3 px-4 py-3.5 hover:bg-bg-hov border-b border-border/50 last:border-0 cursor-pointer transition-colors ${
                           !n.read ? 'border-l-2 border-l-primary' : 'border-l-2 border-l-transparent'
                         }`}
                       >
@@ -354,8 +392,8 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     <User size={13} className="text-text-muted" />
                     My Profile
                   </button>
-                  
-                  {/* NEW: YouTube option */}
+
+                  {/* YouTube option */}
                   <button
                     role="menuitem"
                     onClick={() => {
@@ -367,7 +405,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     <Youtube size={13} className="text-text-muted" />
                     YouTube
                   </button>
-                  
+
                   <button
                     role="menuitem"
                     onClick={() => setProfOpen(false)}
@@ -379,7 +417,6 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                   <div className="mt-1">
                     <LanguageSwitcher variant="dropdown" />
                   </div>
-                  {/* "Back to Home" button removed as requested */}
                 </div>
                 <div className="border-t border-border py-1.5 px-1.5">
                   <button

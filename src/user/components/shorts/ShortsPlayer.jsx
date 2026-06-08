@@ -4,6 +4,7 @@ import { X, Heart, MessageCircle, Share2, ChevronUp, ChevronDown, MoreHorizontal
 import api from '../../api/Api';
 import CommentSection from '../video/CommentSection';
 import ShareModal from '../ShareModal';
+import { useNotification } from '../../../hooks/useNotification'; 
 
 const ShortsModal = ({ isOpen, onClose, title, children }) => {
   useEffect(() => {
@@ -46,6 +47,7 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const touchY = useRef(null);
   const videoRef = useRef(null);
+  const { showWarning } = useNotification(); // use snackbar instead of alert
 
   const current = shorts[index];
   if (!current) return null;
@@ -112,7 +114,12 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
       }
     } catch (err) {
       console.error('Like/unlike failed', err);
-      if (err.response?.status === 401) alert('Please login to like videos');
+      if (err.response?.status === 401) {
+        // Replace alert with snackbar notification
+        showWarning('Please login to like videos');
+      } else {
+        showWarning('Something went wrong. Please try again.');
+      }
     }
   };
 

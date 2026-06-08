@@ -4,12 +4,15 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Search, Bell, X, Menu, LogOut, User, Clock, Heart, Users,
   DollarSign, Settings, Video, ChevronDown, Home, TrendingUp,
-  CreditCard
+  CreditCard, CheckCircle, XCircle, BarChart, 
+  MessageCircle,  UserPlus,
+  VideoIcon
 } from 'lucide-react';
+
 import logoUrl from '../../assets/logo.svg';
 import Badge from '../components/ui/Badge';
 import { useAuth } from '../../auth/context/AuthContext';
-import api from '../api/Api';
+import api, { markNotificationAsRead } from '../api/Api';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 // ----------------------------------------------------------------------
@@ -17,17 +20,18 @@ import LanguageSwitcher from '../components/LanguageSwitcher';
 // ----------------------------------------------------------------------
 const getNotificationIcon = (type) => {
   const icons = {
-    VIDEO_APPROVED: '✅',
-    VIDEO_REJECTED: '❌',
-    NEW_VIDEO_UPLOAD: '📹',
-    PAYOUT_REQUEST: '💰',
-    MONTHLY_EARNINGS: '📊',
-    MONTHLY_REVENUE_REPORT: '📈',
-    SUBSCRIPTION: '👥',
-    COMMENT: '💬',
-    LIKE: '❤️',
+    VIDEO_APPROVED: <CheckCircle className="text-green-500" size={20} />,
+    VIDEO_REJECTED: <XCircle className="text-red-500" size={20} />,
+    NEW_VIDEO_UPLOAD: <VideoIcon className="text-blue-500" size={20} />,
+    PAYOUT_REQUEST: <DollarSign className="text-amber-500" size={20} />,
+    MONTHLY_EARNINGS: <BarChart className="text-purple-500" size={20} />,
+    MONTHLY_REVENUE_REPORT: <BarChart className="text-pink-500" size={20} />,
+    NEW_SUBSCRIBER: <Users className="text-teal-500" size={20} />,
+    NEW_COMMENT: <MessageCircle className="text-indigo-500" size={20} />,
+    VIDEO_LIKE: <Heart className="text-rose-500" size={20} />,
+    NEW_USER_REGISTRATION: <UserPlus className="text-lime-500" size={20} />,
   };
-  return icons[type] || '🔔';
+  return icons[type] || <Bell className="text-gray-500" size={20} />;
 };
 
 const inp = "w-full bg-bg-el text-text-primary text-base rounded-xl border border-border px-4 py-3 placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all";
@@ -42,7 +46,6 @@ const NAV_LINKS = [
 const PROFILE_ITEMS = [
   { icon: User, label: 'Profile', to: '/profile' },
   { icon: Clock, label: 'Watch History', to: '/history' },
-  { icon: Heart, label: 'Liked Videos', to: '/liked' },
   { icon: Users, label: 'Subscriptions', to: '/subscriptions' },
   { icon: DollarSign, label: 'Subscription Plan', to: '/plans' },
   { icon: Settings, label: 'Settings', to: '/settings' },
@@ -54,9 +57,36 @@ const canAccessStudio = (user) => {
 };
 
 // ----------------------------------------------------------------------
-// Notification Panel
+// Notification Panel (updated with single-read and sorting)
 // ----------------------------------------------------------------------
-const NotifPanel = ({ onClose, notifications, onMarkAllRead, unreadCount }) => {
+const NotifPanel = ({ onClose, notifications: initialNotifs, onMarkAllRead, unreadCount, onNotificationClick }) => {
+  const [notifications, setNotifications] = useState(initialNotifs);
+
+  // Sort: unread first, then newest first
+  const sortNotifications = (list) => {
+    return [...list].sort((a, b) => {
+      if (a.read !== b.read) return a.read ? 1 : -1; // unread first
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+  };
+
+  useEffect(() => {
+    setNotifications(sortNotifications(initialNotifs));
+  }, [initialNotifs]);
+
+  const handleMarkAsRead = async (id) => {
+    try {
+      await markNotificationAsRead(id);
+      const updated = notifications.map(n =>
+        n.id === id ? { ...n, read: true } : n
+      );
+      setNotifications(sortNotifications(updated));
+      if (onNotificationClick) onNotificationClick(); // to refresh unread count
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
+
   return (
     <>
       <div className="fixed inset-0 z-[148]" onClick={onClose} />
@@ -72,14 +102,15 @@ const NotifPanel = ({ onClose, notifications, onMarkAllRead, unreadCount }) => {
             <X size={14} />
           </button>
         </div>
-        <div className="max-h-86 overflow-y-auto">
+        <div className="overflow-y-auto" style={{ maxHeight: '480px' }}>
           {notifications.length === 0 ? (
             <div className="px-4 py-8 text-center text-text-muted text-sm">No notifications yet</div>
           ) : (
             notifications.map((n) => (
               <div
                 key={n.id}
-                className={`flex gap-3 px-4 py-3.5 hover:bg-bg-hov border-b border-border/50 last:border-0 ${
+                onClick={() => !n.read && handleMarkAsRead(n.id)}
+                className={`flex gap-3 px-4 py-3.5 hover:bg-bg-hov border-b border-border/50 last:border-0 cursor-pointer transition-colors ${
                   !n.read ? 'border-l-2 border-l-primary' : 'border-l-2 border-l-transparent'
                 }`}
               >
@@ -116,7 +147,7 @@ const NotifPanel = ({ onClose, notifications, onMarkAllRead, unreadCount }) => {
 };
 
 // ----------------------------------------------------------------------
-// Search Overlay
+// Search Overlay (unchanged)
 // ----------------------------------------------------------------------
 const SearchOverlay = ({ onClose }) => {
   const [q, setQ] = useState('');
@@ -283,7 +314,7 @@ const SearchOverlay = ({ onClose }) => {
 };
 
 // ----------------------------------------------------------------------
-// Mobile Drawer (includes LanguageSwitcher as dropdown)
+// Mobile Drawer (unchanged)
 // ----------------------------------------------------------------------
 const MobileDrawer = ({ user, onClose }) => {
   const { logout } = useAuth();
@@ -375,7 +406,7 @@ const MobileDrawer = ({ user, onClose }) => {
           )}
         </nav>
 
-        {/* Language Switcher in mobile drawer - fully functional */}
+        {/* Language Switcher in mobile drawer */}
         <div className="px-3 py-3 border-t border-border flex-shrink-0">
           <LanguageSwitcher variant="dropdown" />
         </div>
@@ -436,17 +467,16 @@ const Navbar = () => {
   const displayUser = realUser || authUser;
   const profileImageSrc = displayUser?.profilePicture?.trim();
 
-  // Profile picture fallback handler (improved)
+  // Profile picture fallback handler
   const handleProfileImageError = (e) => {
     e.target.style.display = 'none';
-    // Find the next sibling with class 'avatar-fallback'
     const fallback = e.target.nextElementSibling;
     if (fallback && fallback.classList.contains('avatar-fallback')) {
       fallback.style.display = 'flex';
     }
   };
 
-  // Notification fetching
+  // Notification fetching functions
   const fetchUnreadCount = async () => {
     if (!displayUser) return;
     try {
@@ -462,8 +492,7 @@ const Navbar = () => {
     try {
       const res = await api.get('/notifications', { params: { page: 0, size: 20 } });
       setNotifications(res.data.content);
-      const unreadRes = await api.get('/notifications/unread-count');
-      setUnreadCount(unreadRes.data.unreadCount);
+      await fetchUnreadCount();
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
     }
@@ -478,6 +507,11 @@ const Navbar = () => {
     } catch (err) {
       console.error('Failed to mark all as read:', err);
     }
+  };
+
+  // Refresh unread count after marking a single notification as read
+  const refreshUnreadCount = async () => {
+    await fetchUnreadCount();
   };
 
   useEffect(() => {
@@ -544,6 +578,7 @@ const Navbar = () => {
                     notifications={notifications}
                     onMarkAllRead={markAllAsRead}
                     unreadCount={unreadCount}
+                    onNotificationClick={refreshUnreadCount}
                   />
                 )}
               </div>
@@ -601,11 +636,12 @@ const Navbar = () => {
                         notifications={notifications}
                         onMarkAllRead={markAllAsRead}
                         unreadCount={unreadCount}
+                        onNotificationClick={refreshUnreadCount}
                       />
                     )}
                   </div>
 
-                  {/* Creator Studio button for eligible users */}
+                  {/* Creator Studio button */}
                   {canAccessStudio(displayUser) && (
                     <Link to="/creator" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-primary/35 bg-primary/8 text-primary-light text-sm font-semibold hover:bg-primary/15 hover:border-primary/55 transition-all">
                       <Video size={15} /> Studio
@@ -618,7 +654,6 @@ const Navbar = () => {
                       onClick={() => { setProfOpen(p => !p); setNotifOpen(false); }}
                       className="flex items-center gap-2.5 pl-2 pr-3.5 py-1.5 rounded-xl border border-border bg-bg-el hover:bg-bg-hov transition-all"
                     >
-                      {/* Profile picture with fallback */}
                       {profileImageSrc && (
                         <img
                           src={profileImageSrc}
@@ -676,13 +711,11 @@ const Navbar = () => {
                               <Icon size={14} className="text-text-muted flex-shrink-0" /> {label}
                             </Link>
                           ))}
-                          {/* Language Switcher - fully functional (clickable) inside profile dropdown */}
                           <div className="mt-1">
                             <LanguageSwitcher variant="dropdown" />
                           </div>
                         </div>
 
-                        {/* Only Sign Out appears after language */}
                         <div className="border-t border-border py-1.5 px-1.5">
                           <button
                             onClick={() => { logout(); navigate('/'); setProfOpen(false); }}
@@ -696,7 +729,6 @@ const Navbar = () => {
                   </div>
                 </>
               ) : (
-                // Not authenticated: clickable language switcher (icon variant) + sign in button
                 <>
                   <LanguageSwitcher variant="icon" />
                   <Link
