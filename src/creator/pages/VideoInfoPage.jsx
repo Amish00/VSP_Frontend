@@ -65,7 +65,7 @@ const VideoInfoPage = () => {
   const fetchComments = async () => {
     setCommentsLoading(true);
     try {
-      const res = await axios.get(`http://localhost:8080/api/comments/video/${id}?size=50`);
+      const res = await axios.get(`/api/comments/video/${id}?size=50`);
       setComments(res.data.content || []);
     } catch (err) {
       console.error('Failed to load comments', err);

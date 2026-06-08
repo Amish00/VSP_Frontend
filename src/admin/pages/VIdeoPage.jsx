@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useSnackbar } from 'notistack';
 import VideoTable from '../components/VideoTable';
 import StatCard from '../components/ui/StatCard';
-import { Video, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Video, Clock, CheckCircle, XCircle, Film, Smartphone } from 'lucide-react';
 import { videoApi } from '../api/videoApi';
 
 const VideosPage = () => {
   const { enqueueSnackbar } = useSnackbar();
   const [search, setSearch] = useState('');
+  const [contentType, setContentType] = useState('VIDEO'); // 'VIDEO' or 'SHORTS'
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
 
+  // Fetch statistics (overall counts, not filtered by type)
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -38,12 +40,43 @@ const VideosPage = () => {
     fetchStats();
   }, [enqueueSnackbar]);
 
+  const handleTypeChange = (type) => {
+    setContentType(type);
+    setSearch(''); // optional: reset search when switching type
+  };
+
   return (
     <div className="pb-6">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-text-primary">
           Video Management
         </h1>
+
+        {/* Toggle Switch */}
+        <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1">
+          <button
+            onClick={() => handleTypeChange('VIDEO')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              contentType === 'VIDEO'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
+            }`}
+          >
+            <Film size={16} />
+            Videos
+          </button>
+          <button
+            onClick={() => handleTypeChange('SHORTS')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              contentType === 'SHORTS'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
+            }`}
+          >
+            <Smartphone size={16} />
+            Shorts
+          </button>
+        </div>
       </div>
 
       {/* Stat Cards Row */}
@@ -76,7 +109,12 @@ const VideosPage = () => {
         </div>
       )}
 
-      <VideoTable search={search} setSearch={setSearch} />
+      {/* Pass the selected type to VideoTable */}
+      <VideoTable
+        search={search}
+        setSearch={setSearch}
+        type={contentType}
+      />
     </div>
   );
 };

@@ -25,7 +25,6 @@ const SignUpPage = () => {
   const navigate = useNavigate()
   const { enqueueSnackbar } = useSnackbar()
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [showConfirmPw, setShowConfirmPw] = useState(false)
   const [confirmTouched, setConfirmTouched] = useState(false)
@@ -35,10 +34,14 @@ const SignUpPage = () => {
   const strength = getPasswordStrength(f.password)
   const bars = Math.ceil(f.password.length / 3)
 
+  // Updated validate function with email format check
   const validate = () => {
-    if (!f.name.trim())     return 'Full name is required.'
-    if (!f.email.trim())    return 'Email is required.'
-    if (!f.password)        return 'Password is required.'
+    if (!f.name.trim()) return 'Full name is required.'
+    if (!f.email.trim()) return 'Email is required.'
+    // Simple email regex: local@domain.tld
+    const emailRegex = /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/
+    if (!emailRegex.test(f.email)) return 'Please enter a valid email address.'
+    if (!f.password) return 'Password is required.'
     if (f.password.length < 8) return 'Password must be at least 8 characters.'
     if (f.password !== f.confirm) return "Passwords don't match."
     return null
@@ -49,10 +52,8 @@ const SignUpPage = () => {
     const err = validate()
     if (err) {
       enqueueSnackbar(err, { variant: 'error' })
-      setError(err)
       return
     }
-    setError('')
     setLoading(true)
     try {
       const user = await signupAndLogin(f.name, f.email, f.password)
@@ -64,14 +65,9 @@ const SignUpPage = () => {
     } catch (err) {
       const msg = err.message || 'Signup failed. Email or username may already exist.'
       enqueueSnackbar(msg, { variant: 'error' })
-      setError(msg)
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleOAuth = (provider) => {
-    enqueueSnackbar(`${provider} login will be available soon.`, { variant: 'info' })
   }
 
   return (
@@ -91,6 +87,7 @@ const SignUpPage = () => {
       <div className="mb-4">
         <label className="block text-sm font-semibold text-text-secondary mb-1.5">Username *</label>
         <input
+          id='name'
           value={f.name}
           onChange={e => upd('name', e.target.value)}
           placeholder="Your display name"
@@ -103,6 +100,7 @@ const SignUpPage = () => {
       <div className="mb-4">
         <label className="block text-sm font-semibold text-text-secondary mb-1.5">Email *</label>
         <input
+          id='email'
           type="email"
           value={f.email}
           onChange={e => upd('email', e.target.value)}
@@ -115,6 +113,7 @@ const SignUpPage = () => {
       <div className="mb-3 relative">
         <label className="block text-sm font-semibold text-text-secondary mb-1.5">Password *</label>
         <input
+          id='password'
           type={showPw ? 'text' : 'password'}
           value={f.password}
           onChange={e => upd('password', e.target.value)}
@@ -146,6 +145,7 @@ const SignUpPage = () => {
         <label className="block text-sm font-semibold text-text-secondary mb-1.5">Confirm Password *</label>
         <div className="relative">
           <input
+            id='confirmPassword'
             type={showConfirmPw ? 'text' : 'password'}
             value={f.confirm}
             onChange={e => upd('confirm', e.target.value)}
@@ -162,10 +162,8 @@ const SignUpPage = () => {
         </div>
       </div>
 
-      {error && <p className="text-sm text-danger mb-3" role="alert">⚠ {error}</p>}
-
-      {/* Submit */}
-      <button onClick={submit} disabled={loading}
+      {/* Submit button */}
+      <button type="submit" onClick={submit} disabled={loading}
         className="w-full bg-primary text-white font-bold text-base rounded-xl py-3 mb-2 hover:bg-[#1d4ed8] disabled:opacity-40 transition-all shadow-[0_2px_8px_rgba(37,99,235,.4)]">
         {loading ? 'Creating account…' : 'Create Account'}
       </button>

@@ -14,6 +14,7 @@ import {
   Upload,
   Scissors,
   DollarSign,
+  Youtube, // added YouTube icon
 } from 'lucide-react';
 import logoUrl from '../../assets/logo.svg';
 import Badge from '../components/ui/Badge';
@@ -109,7 +110,6 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     try {
       const res = await api.get('/notifications', { params: { page: 0, size: 20 } });
       setNotifications(res.data.content);
-      // also refresh unread count
       await fetchUnreadCount();
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
@@ -204,6 +204,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
 
         <div className="flex-1" />
 
+        {/* Keep the Home button in header */}
         <button
           onClick={onGoHome}
           className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border bg-bg-el text-text-secondary text-sm font-medium hover:bg-bg-hov hover:text-text-primary transition-all"
@@ -294,7 +295,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
           )}
         </div>
 
-        {/* Profile dropdown (unchanged except using real user data) */}
+        {/* Profile dropdown */}
         <div className="relative">
           <button
             onClick={() => {
@@ -334,9 +335,9 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                         {user.username?.slice(0, 2).toUpperCase()}
                       </div>
                     )}
-                    <div>
-                      <p className="font-semibold text-sm text-text-primary">{user.username}</p>
-                      <p className="text-xs text-text-muted">{user.email}</p>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm text-text-primary truncate">{user.username}</p>
+                      <p className="text-xs text-text-muted break-all leading-snug">{user.email}</p>
                     </div>
                   </div>
                   <Badge text={`${user.role}`} type="pro" />
@@ -353,6 +354,20 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     <User size={13} className="text-text-muted" />
                     My Profile
                   </button>
+                  
+                  {/* NEW: YouTube option */}
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      navigate('/youtube');
+                      setProfOpen(false);
+                    }}
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-text-secondary text-sm hover:bg-bg-hov transition-colors"
+                  >
+                    <Youtube size={13} className="text-text-muted" />
+                    YouTube
+                  </button>
+                  
                   <button
                     role="menuitem"
                     onClick={() => setProfOpen(false)}
@@ -364,17 +379,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                   <div className="mt-1">
                     <LanguageSwitcher variant="dropdown" />
                   </div>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      onGoHome();
-                      setProfOpen(false);
-                    }}
-                    className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-text-secondary text-sm hover:bg-bg-hov transition-colors"
-                  >
-                    <Home size={13} className="text-text-muted" />
-                    Back to Home
-                  </button>
+                  {/* "Back to Home" button removed as requested */}
                 </div>
                 <div className="border-t border-border py-1.5 px-1.5">
                   <button
@@ -392,7 +397,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
         </div>
       </header>
 
-      {/* Mobile drawer (unchanged except using real user) */}
+      {/* Mobile drawer */}
       {drawerOpen && (
         <>
           <div className="fixed inset-0 z-[149] bg-black/60 md:hidden" onClick={() => setDrawerOpen(false)} />

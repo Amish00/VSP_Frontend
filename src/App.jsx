@@ -45,6 +45,10 @@ import { LanguageProvider } from './context/LanguageContext';
 import { useLanguage } from './context/LanguageContext';
 import { translateText } from './context/translationService';
 import EditorSelectionPage from './creator/pages/EditorSelectionPage';
+import ShortsFeed from './user/pages/ShortsFeed';
+import MyShortsPage from './creator/pages/MyShortsPage';
+import YouTubePage from './user/pages/YouTubePage';
+import YouTubeWatchPage from './user/pages/YouTubeWatchPage';
 
 const translatedTextCache = new Map();
 const originalTextMap = new WeakMap();
@@ -61,7 +65,7 @@ const shouldSkipText = (text) => {
 const PageTranslator = () => {
   const { language } = useLanguage();
   const location = useLocation();
-  const isAuthRoute = /^\/(signin|signup|forgot-password|otp|reset-password|oauth2\/redirect)(\/|$)/.test(location.pathname);
+  const isAuthRoute = /^\/(signin|signup|login|forgot-password|otp|reset-password|oauth2\/redirect)(\/|$)/.test(location.pathname);
 
   useEffect(() => {
     if (isAuthRoute) {
@@ -134,7 +138,7 @@ const AuthLanguageLock = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    const isAuthRoute = /^\/(signin|signup|forgot-password|otp|reset-password|oauth2\/redirect)(\/|$)/.test(pathname);
+    const isAuthRoute = /^\/(signin|signup|login|forgot-password|otp|reset-password|oauth2\/redirect)(\/|$)/.test(pathname);
     if (isAuthRoute && localStorage.getItem('app-language') !== 'en') {
       localStorage.setItem('app-language', 'en');
       window.dispatchEvent(new CustomEvent('app-language-change', { detail: 'en' }));
@@ -151,19 +155,27 @@ const getRoleHomePath = (role) => {
     case 'creator':
       return '/creator';
     default:
-      return '/home';
+      return '/';
   }
+};
+
+const PublicPortalRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return <div>Loading...</div>;
+  if (user?.role?.toLowerCase() === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
+
+  return children;
 };
 
 const PublicHomeRoute = () => {
   const { user, loading } = useAuth();
 
   if (loading) return <div>Loading...</div>;
-  if (user?.role) {
-    const roleHomePath = getRoleHomePath(user.role);
-    if (roleHomePath !== '/home') {
-      return <Navigate to={roleHomePath} replace />;
-    }
+  if (user?.role?.toLowerCase() === 'admin') {
+    return <Navigate to="/admin" replace />;
   }
 
   return <Home />;
@@ -183,7 +195,7 @@ const ProtectedFallbackRoute = () => {
   const { user, loading } = useAuth();
 
   if (loading) return <div>Loading...</div>;
-  return <Navigate to={user ? getRoleHomePath(user.role) : '/home'} replace />;
+  return <Navigate to={user ? getRoleHomePath(user.role) : '/'} replace />;
 };
 
 function App() {
@@ -195,6 +207,7 @@ function App() {
         <SnackbarProvider maxSnack={3} autoHideDuration={3000} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
           <Routes>
         {/* Public routes */}
+        <Route path="/login" element={<Navigate to="/signin?error=oauth_failed" replace />} />
         <Route path="/signin" element={<SignInPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -203,7 +216,13 @@ function App() {
         <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
 
         {/* Public home routes with persistent UserLayout (header + footer) */}
-        <Route element={<UserLayout />}>
+        <Route
+          element={
+            <PublicPortalRoute>
+              <UserLayout />
+            </PublicPortalRoute>
+          }
+        >
           <Route path="/" element={<PublicHomeRoute />} />
           <Route path="/home" element={<PublicHomeRoute />} />
           <Route path="/watch/:id" element={<WatchPage />} />
@@ -218,6 +237,9 @@ function App() {
           <Route path="/all-videos" element={<AllVideosPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/not-found" element={<NotFound />} />
+          <Route path="/shorts" element={<ShortsFeed />} />
+          <Route path="/youtube" element={<YouTubePage />} />
+          <Route path="/watch/youtube/:videoId" element={<YouTubeWatchPage />} />
           
 
         </Route>
@@ -257,6 +279,7 @@ function App() {
           <Route path="video/:id" element={<VideoInfoPage />} />  
           <Route path="editors" element={<EditorSelectionPage />} />
           <Route path="earnings" element={<EarningsPage />} />
+          <Route path="shorts" element={<MyShortsPage />} />
 
         </Route>
         <Route path="creator/thumbnail-editor" element={<ThumbnailEditor />} />

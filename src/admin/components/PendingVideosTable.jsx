@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSnackbar } from 'notistack';
 import Badge from './ui/Badge';
 import VideoDataModal from './VideoDataModal';
 import Modal from '../components/ui/Modal';
@@ -8,6 +9,7 @@ import { videoApi } from '../api/videoApi';
 const PAGE_SIZE = 10;
 
 const PendingVideosTable = () => {
+    const { enqueueSnackbar } = useSnackbar();
     const [videos, setVideos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedVideo, setSelectedVideo] = useState(null);
@@ -21,6 +23,20 @@ const PendingVideosTable = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [totalElements, setTotalElements] = useState(0);
 
+    const snackbarOptions = {
+        anchorOrigin: { vertical: 'top', horizontal: 'right' },
+        autoHideDuration: 3000,
+    };
+
+    const getErrorMessage = (err, fallbackMessage) => {
+        return err?.response?.data?.message || err?.message || fallbackMessage;
+    };
+
+    const isAuthError = (err) => {
+        const status = err?.response?.status;
+        return status === 401 || status === 403;
+    };
+
     const fetchPendingVideos = useCallback(async () => {
         setLoading(true);
         const offset = (currentPage - 1) * PAGE_SIZE;
@@ -31,14 +47,19 @@ const PendingVideosTable = () => {
             setTotalElements(data.totalElements || 0);
         } catch (err) {
             console.error('Failed to fetch pending videos', err);
-            alert('Could not load pending videos');
+            if (!isAuthError(err)) {
+                enqueueSnackbar('Could not load pending videos', {
+                    variant: 'error',
+                    ...snackbarOptions,
+                });
+            }
             setVideos([]);
             setTotalPages(1);
             setTotalElements(0);
         } finally {
             setLoading(false);
         }
-    }, [currentPage]);
+    }, [currentPage, enqueueSnackbar]);
 
     useEffect(() => {
         fetchPendingVideos();
@@ -50,7 +71,10 @@ const PendingVideosTable = () => {
             // Refresh current page after approve
             await fetchPendingVideos();
         } catch (err) {
-            alert('Approve failed: ' + (err.response?.data?.message || err.message));
+            enqueueSnackbar(`Approve failed: ${getErrorMessage(err, 'Unknown error')}`, {
+                variant: 'error',
+                ...snackbarOptions,
+            });
         }
     };
 
@@ -60,9 +84,20 @@ const PendingVideosTable = () => {
         setShowRejectModal(true);
     };
 
+    const toCamelCase = (str) => {
+        return str
+            .toLowerCase()
+            .split(" ")
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+        };
+
     const confirmReject = async () => {
         if (!rejectReason.trim()) {
-            alert('Please provide a reason for rejection');
+            enqueueSnackbar('Please provide a reason for rejection', {
+                variant: 'warning',
+                ...snackbarOptions,
+            });
             return;
         }
         try {
@@ -70,7 +105,10 @@ const PendingVideosTable = () => {
             setShowRejectModal(false);
             await fetchPendingVideos();
         } catch (err) {
-            alert('Reject failed: ' + (err.response?.data?.message || err.message));
+            enqueueSnackbar(`Reject failed: ${getErrorMessage(err, 'Unknown error')}`, {
+                variant: 'error',
+                ...snackbarOptions,
+            });
         }
     };
 
@@ -113,7 +151,7 @@ const PendingVideosTable = () => {
                                             ) : '🎬'}
                                         </div>
                                         <button onClick={() => handleEdit(video)} className="font-medium text-text-primary hover:text-primary transition text-left">
-                                            {video.title}
+                                            {toCamelCase(video.title)}
                                         </button>
                                     </div>
                                 </td>

@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VideoGrid from '../components/VideoGrid';
+import ShortsCard from '../components/shorts/ShortsCard';
 import api from '../api/Api';
-import { Lock, ArrowRight } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import ChannelStrip from '../components/video/ChannelStrip';
 
 const formatNumber = (num) => {
@@ -26,6 +27,8 @@ const formatRelativeDate = (isoDate) => {
   if (diffMin >= 1) return `${Math.floor(diffMin)} minutes ago`;
   return 'Just now';
 };
+
+const isShort = (video) => video.type === 'SHORT' || video.type === 'SHORTS' || video.isShort;
 
 const SubscriptionsPage = () => {
   const navigate = useNavigate();
@@ -68,6 +71,10 @@ const SubscriptionsPage = () => {
     navigate(`/watch/${video.id}`);
   };
 
+  const handleShortPlay = (short) => {
+    navigate(`/shorts?play=${short.id}`);
+  };
+
   const handleChannelClick = (channel) => {
     navigate(`/search?q=${encodeURIComponent(channel.name)}`);
   };
@@ -91,8 +98,21 @@ const SubscriptionsPage = () => {
     );
   }
 
-  const freeVideos = subscribedVideos.filter(v => !v.paid);
-  const paidVideos = subscribedVideos.filter(v => v.paid);
+  const videos = subscribedVideos.filter(v => !isShort(v));
+  const shorts = subscribedVideos.filter(isShort);
+
+  const transformVideo = (video) => ({
+    id: video.id,
+    title: video.title,
+    paid: video.paid,
+    views: formatNumber(video.viewCount),
+    likes: formatNumber(video.likesCount),
+    time: formatRelativeDate(video.updatedAt),
+    thumbnailUrl: video.thumbnailUrl,
+    username: video.username,
+    profilePicture: video.profilePicture,
+    em: video.thumbnailUrl ? '' : '🎬',
+  });
 
   return (
     <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pt-[68px] md:pt-[92px] pb-[96px] md:pb-16">
@@ -106,66 +126,34 @@ const SubscriptionsPage = () => {
         </div>
       )}
 
-      {freeVideos.length > 0 && (
+      {videos.length === 0 && shorts.length === 0 ? null : (
         <div className="mb-10">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-3xl font-bold">Latest Free</h2>
-            <a
-              href="/subscribed-videos?type=free"
-              className="text-blue-500 hover:text-blue-600 flex items-center gap-1 text-sm font-semibold"
-            >
-              View all free <ArrowRight size={16} />
-            </a>
-          </div>
-          <VideoGrid
-            videos={freeVideos.map(v => ({
-              id: v.id,
-              title: v.title,
-              paid: v.paid,
-              views: formatNumber(v.viewCount),
-              likes: formatNumber(v.likesCount),
-              time: formatRelativeDate(v.updatedAt),
-              thumbnailUrl: v.thumbnailUrl,
-              username: v.username,
-              profilePicture: v.profilePicture,
-              em: v.thumbnailUrl ? '' : '🎬',
-            }))}
-            onWatch={handleWatch}
-          />
-        </div>
-      )}
-
-      {paidVideos.length > 0 && (
-        <div>
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-3xl font-bold">Latest Paid</h2>
-            <a
-              href="/subscribed-videos?type=paid"
-              className="text-blue-500 hover:text-blue-600 flex items-center gap-1 text-sm font-semibold"
-            >
-              View all paid <ArrowRight size={16} />
-            </a>
-          </div>
-          {!isLoggedIn && (
-            <p className="flex items-center gap-1.5 text-sm text-text-muted mb-3">
-              <Lock size={13} /> Log in to watch paid videos
-            </p>
+          {shorts.length > 0 && (
+            <div className="mb-10">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-3xl font-bold">Shorts</h2>
+                <span className="text-sm text-text-muted">{shorts.length}</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {shorts.map((short) => (
+                  <ShortsCard key={short.id} short={short} onPlay={handleShortPlay} />
+                ))}
+              </div>
+            </div>
           )}
-          <VideoGrid
-            videos={paidVideos.map(v => ({
-              id: v.id,
-              title: v.title,
-              paid: v.paid,
-              views: formatNumber(v.viewCount),
-              likes: formatNumber(v.likesCount),
-              time: formatRelativeDate(v.updatedAt),
-              thumbnailUrl: v.thumbnailUrl,
-              username: v.username,
-              profilePicture: v.profilePicture,
-              em: v.thumbnailUrl ? '' : '🎬',
-            }))}
-            onWatch={handleWatch}
-          />
+
+          {videos.length > 0 && (
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-3xl font-bold">Videos</h2>
+                <span className="text-sm text-text-muted">{videos.length}</span>
+              </div>
+              <VideoGrid
+                videos={videos.map(transformVideo)}
+                onWatch={handleWatch}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

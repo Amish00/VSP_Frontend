@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import VideoGrid from '../components/VideoGrid';
+import ShortsCard from '../components/shorts/ShortsCard';
 import api,{ canWatchPaidVideo } from '../api/Api';
 import { useAuth } from '../../auth/context/AuthContext';
 import LockedModal from '../components/LockedModal';
@@ -40,11 +41,14 @@ const transformVideo = (video) => ({
   em: video.thumbnailUrl ? '' : '🎬',
 });
 
+const isShort = (video) => video.type === 'SHORT' || video.type === 'SHORTS' || video.isShort;
+
 const SearchPage = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
   const [allVideos, setAllVideos] = useState([]);
   const [filteredVideos, setFilteredVideos] = useState([]);
+  const [filteredShorts, setFilteredShorts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -66,7 +70,7 @@ const SearchPage = () => {
           const response = await api.get('/videos', {
             params: { page, size: 50, sort: 'publishedAt,desc' }
           });
-          const content = response.data.content;
+          const content = response.data.content || response.data || [];
           if (content.length === 0) {
             hasMore = false;
           } else {
@@ -91,6 +95,7 @@ const SearchPage = () => {
   useEffect(() => {
     if (!query.trim()) {
       setFilteredVideos([]);
+      setFilteredShorts([]);
       return;
     }
 
@@ -102,7 +107,8 @@ const SearchPage = () => {
       const categoryMatch = video.category?.toLowerCase().includes(lowerQuery);
       return titleMatch || usernameMatch || tagsMatch || categoryMatch;
     });
-    setFilteredVideos(filtered);
+    setFilteredVideos(filtered.filter(video => !isShort(video)));
+    setFilteredShorts(filtered.filter(isShort));
   }, [query, allVideos]);
 
   const handleWatch = (video) => {
@@ -116,6 +122,10 @@ const SearchPage = () => {
     } else {
       navigate(`/watch/${video.id}`);
     }
+  };
+
+  const handleShortPlay = (short) => {
+    navigate(`/shorts?play=${short.id}`);
   };
 
   if (loading) {
@@ -151,16 +161,40 @@ const SearchPage = () => {
           Search Results for "{query}"
         </h1>
         <p className="text-text-muted mt-1">
-          {filteredVideos.length} video(s) found
+          {filteredVideos.length} video(s) and {filteredShorts.length} short(s) found
         </p>
       </div>
 
-      {filteredVideos.length === 0 ? (
+      {filteredVideos.length === 0 && filteredShorts.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-text-secondary">No videos match your search.</p>
+          <p className="text-text-secondary">No results match your search.</p>
         </div>
       ) : (
-        <VideoGrid videos={filteredVideos.map(transformVideo)} onWatch={handleWatch} />
+        <div className="space-y-10">
+          {filteredVideos.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold">Videos</h2>
+                <span className="text-sm text-text-muted">{filteredVideos.length}</span>
+              </div>
+              <VideoGrid videos={filteredVideos.map(transformVideo)} onWatch={handleWatch} />
+            </section>
+          )}
+
+          {filteredShorts.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold">Shorts</h2>
+                <span className="text-sm text-text-muted">{filteredShorts.length}</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {filteredShorts.map((short) => (
+                  <ShortsCard key={short.id} short={short} onPlay={handleShortPlay} />
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
       )}
 
       <LockedModal

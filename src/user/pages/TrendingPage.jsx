@@ -44,6 +44,8 @@ const transformVideo = (video) => ({
   category: video.category,
 });
 
+const filterOutShorts = (videos) => videos.filter(v => v.type !== 'SHORT' && v.type !== 'SHORTS' && !v.isShort);
+
 const TrendingPage = () => {
   const [freeVideos, setFreeVideos] = useState([]);
   const [paidVideos, setPaidVideos] = useState([]);
@@ -64,7 +66,7 @@ const TrendingPage = () => {
   const fetchVideos = async (page, isPaid) => {
     const params = { page, size: 12, sort: 'publishedAt,desc' };
     const response = await api.get('/videos', { params });
-    const all = response.data.content;
+    const all = filterOutShorts(response.data.content || []);
     return all.filter(v => v.paid === isPaid);
   };
 

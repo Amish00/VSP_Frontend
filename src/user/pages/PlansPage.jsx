@@ -26,7 +26,7 @@ export const PLANS = {
   ],
 };
 
-const PAYMENT_METHODS = ['eSewa', 'Khalti', 'Connect IPS', 'Credit Card', 'Debit Card'];
+const PAYMENT_METHODS = ['eSewa', 'Khalti', 'Stripe', 'Connect IPS', 'Credit Card', 'Debit Card'];
 const CONTENT_CATEGORIES = [
   'Technology', 'Design', 'Music', 'Gaming', 'Lifestyle', 'Business',
   'Education', 'Sports', 'Finance', 'Comedy', 'Travel', 'Food',
@@ -130,6 +130,8 @@ const PlansPage = () => {
         form.submit();
       } else if (data.gateway === 'khalti') {
         window.location.href = data.payment_url;
+      } else if (data.gateway === 'stripe') {
+          window.location.href = data.url;
       }
     } catch (err) {
       console.error(err);

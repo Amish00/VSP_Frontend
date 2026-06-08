@@ -14,6 +14,12 @@ const UsersPage = () => {
   const [activeUsers, setActiveUsers] = useState(0);
   const [loadingStats, setLoadingStats] = useState(true);
 
+  // Snackbar options (top-right)
+  const snackbarOptions = {
+    anchorOrigin: { vertical: 'top', horizontal: 'right' },
+    autoHideDuration: 3000,
+  };
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -29,7 +35,7 @@ const UsersPage = () => {
         console.error('Failed to fetch user stats', err);
         enqueueSnackbar('Failed to load user statistics. Please refresh the page.', {
           variant: 'error',
-          autoHideDuration: 5000,
+          ...snackbarOptions,
         });
       } finally {
         setLoadingStats(false);
@@ -46,29 +52,12 @@ const UsersPage = () => {
         </h1>
       </div>
 
-      {/* Stat Cards Row */}
       {!loadingStats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatCard
-            icon={<Users size={24} />}
-            label="Total Users"
-            value={totalUsers.toLocaleString()}
-          />
-          <StatCard
-            icon={<UserPlus size={24} />}
-            label="Creators"
-            value={totalCreators.toLocaleString()}
-          />
-          <StatCard
-            icon={<Users size={24} />}
-            label="Viewers"
-            value={totalViewers.toLocaleString()}
-          />
-          <StatCard
-            icon={<UserCheck size={24} />}
-            label="Active Users"
-            value={activeUsers.toLocaleString()}
-          />
+          <StatCard icon={<Users size={24} />} label="Total Users" value={totalUsers.toLocaleString()} />
+          <StatCard icon={<UserPlus size={24} />} label="Creators" value={totalCreators.toLocaleString()} />
+          <StatCard icon={<Users size={24} />} label="Viewers" value={totalViewers.toLocaleString()} />
+          <StatCard icon={<UserCheck size={24} />} label="Active Users" value={activeUsers.toLocaleString()} />
         </div>
       )}
 

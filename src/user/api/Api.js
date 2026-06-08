@@ -1,21 +1,31 @@
 
   import axios from 'axios';
+  import { getSessionId } from '../components/utils/session';
 
-  const API_BASE_URL = 'http://localhost:8080/api';
+  const API_BASE_URL = '/api';
 
   const api = axios.create({
     baseURL: API_BASE_URL,
     headers: { 'Content-Type': 'application/json' },
   });
 
-  // Attach JWT token if available
+  const publicPaths = ['/auth/', '/payment/callback/', '/youtube/'];
+
   api.interceptors.request.use((config) => {
+  const isPublic = publicPaths.some(path => config.url.includes(path));
+  
+  if (!isPublic) {
     const token = sessionStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    return config;
-  });
+  }
+  
+  const sessionId = getSessionId();
+  config.headers['X-Session-ID'] = sessionId;
+  
+  return config;
+});
 
   export default api;
 

@@ -12,12 +12,14 @@ import {
   Scissors,
   DollarSign,
   Clapperboard,
+  Smartphone,
 } from 'lucide-react';
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/creator/dashboard' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/creator/analytics' },
   { id: 'videos', label: 'My Videos', icon: Video, path: '/creator/videos' },
+  { id: 'shorts', label: 'My Shorts', icon: Smartphone, path: '/creator/shorts' },  
   { id: 'upload', label: 'Upload', icon: Upload, path: '/creator/upload' },
   { id: 'editors', label: 'Editors', icon: Scissors, path: '/creator/editors' },
   { id: 'earnings', label: 'Earnings', icon: DollarSign, path: '/creator/earnings' },

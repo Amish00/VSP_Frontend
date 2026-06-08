@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { setAppLanguage } from '../../context/LanguageContext';
+import api from '../api/authApi';
 
 const OAuth2RedirectHandler = () => {
   const navigate = useNavigate();
@@ -14,26 +14,51 @@ const OAuth2RedirectHandler = () => {
     const refreshToken = params.get('refresh_token');
 
     if (accessToken && refreshToken) {
-      setAppLanguage('en');
-      // Store tokens
+      // Store tokens immediately
       sessionStorage.setItem('access_token', accessToken);
       sessionStorage.setItem('refresh_token', refreshToken);
-      // Decode JWT to get user info (optional – you can also call a /me endpoint)
-      const payload = JSON.parse(atob(accessToken.split('.')[1]));
-      const user = {
-        username: payload.sub.split('@')[0],
-        email: payload.sub,
-        role: payload.role || 'VIEWER',
-        plan: payload.plan || 'FREE'
-      };
-      sessionStorage.setItem('user', JSON.stringify(user));
-      setTokensAndUser(accessToken, refreshToken, user);
-      
-      // Redirect based on role
-      const role = user.role?.toLowerCase();
-      if (role === 'admin') navigate('/admin');
-      else if (role === 'creator') navigate('/creator');
-      else navigate('/home');
+
+      // Fetch current user to get correct role/plan
+      api.get('/api/users/me')
+        .then(userData => {
+          const user = {
+            id: userData.id,
+            username: userData.username,
+            email: userData.email,
+            role: userData.role,
+            plan: userData.plan,
+            profilePicture: userData.profilePicture
+          };
+          sessionStorage.setItem('user', JSON.stringify(user));
+          sessionStorage.setItem('user_role', user.role);
+          setTokensAndUser(accessToken, refreshToken, user);
+
+          const role = user.role?.toLowerCase();
+          if (role === 'admin') navigate('/admin');
+          else if (role === 'creator') navigate('/creator');
+          else navigate('/home');
+        })
+        .catch(() => {
+          // Fallback: decode JWT
+          try {
+            const payload = JSON.parse(atob(accessToken.split('.')[1]));
+            const user = {
+              username: payload.sub.split('@')[0],
+              email: payload.sub,
+              role: payload.role || 'VIEWER',
+              plan: payload.plan || 'FREE'
+            };
+            sessionStorage.setItem('user', JSON.stringify(user));
+            sessionStorage.setItem('user_role', user.role);
+            setTokensAndUser(accessToken, refreshToken, user);
+            const role = user.role?.toLowerCase();
+            if (role === 'admin') navigate('/admin');
+            else if (role === 'creator') navigate('/creator');
+            else navigate('/home');
+          } catch (e) {
+            navigate('/signin?error=oauth_failed');
+          }
+        });
     } else {
       navigate('/signin?error=oauth_failed');
     }

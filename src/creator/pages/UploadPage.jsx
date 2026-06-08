@@ -247,6 +247,19 @@ const UploadPage = () => {
                 </select>
               </div>
             </div>
+            <div className="mt-4">
+              <label className="block text-sm font-semibold text-text-secondary mb-1.5">Content Type</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="type" value="VIDEO" checked={form.type === 'VIDEO'} onChange={() => upd('type', 'VIDEO')} className="w-4 h-4 text-primary" />
+                  <span className="text-text-primary">Video</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="type" value="SHORTS" checked={form.type === 'SHORTS'} onChange={() => upd('type', 'SHORTS')} className="w-4 h-4 text-primary" />
+                  <span className="text-text-primary">Short</span>
+                </label>
+              </div>
+            </div>
           </div>
 
           <div className="bg-bg-card border border-border rounded-2xl p-6">
