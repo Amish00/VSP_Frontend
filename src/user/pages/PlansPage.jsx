@@ -27,12 +27,6 @@ export const PLANS = {
 };
 
 const PAYMENT_METHODS = ['eSewa', 'Khalti', 'Stripe', 'Connect IPS', 'Credit Card', 'Debit Card'];
-const CONTENT_CATEGORIES = [
-  'Technology', 'Design', 'Music', 'Gaming', 'Lifestyle', 'Business',
-  'Education', 'Sports', 'Finance', 'Comedy', 'Travel', 'Food',
-  'Learning', 'Entertainment', 'News', 'Tutorials', 'Vlogs',
-  'Reviews', 'Live Streams', 'Shorts', 'Podcasts'
-];
 
 const PlansPage = () => {
   const navigate = useNavigate();
@@ -40,9 +34,7 @@ const PlansPage = () => {
   const [billing, setBilling] = useState('monthly');
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
-  const [step, setStep] = useState(0);
   const [purchasing, setPurchasing] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('eSewa');
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -105,8 +97,6 @@ const PlansPage = () => {
       return;
     }
     setSelectedPlan(plan);
-    setStep(0);
-    setSelectedCategories([]);
     setModalOpen(true);
   };
 
@@ -141,7 +131,11 @@ const PlansPage = () => {
     }
   };
 
-  const formatPrice = (price) => `Rs.${price.toLocaleString('en-IN')}`;
+  // Safe formatting: handle undefined/null/0
+  const formatPrice = (price) => {
+    const safePrice = typeof price === 'number' ? price : 0;
+    return `Rs.${safePrice.toLocaleString('en-IN')}`;
+  };
 
   if (loading) {
     return <div className="text-center py-20 text-text-muted">Loading your account...</div>;
@@ -186,102 +180,57 @@ const PlansPage = () => {
         </div>
       </div>
 
-      {/* Payment Modal */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={`Subscribe to ${selectedPlan?.name}`} maxW={560}>
-        <div className="flex gap-1 mb-6">
-          {['Content Preferences', 'Payment & Bill'].map((s, i) => (
-            <div key={s} className="flex-1 flex flex-col items-center gap-1">
-              <div className={`h-1 w-full rounded-full transition-all ${i <= step ? 'bg-primary' : 'bg-bg-el'}`} />
-              <span className={`text-xs font-medium ${i <= step ? 'text-primary-light' : 'text-text-muted'}`}>{s}</span>
-            </div>
+      {/* Payment Modal - Content Preferences removed */}
+      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={`Subscribe to ${selectedPlan?.name || ''}`} maxW={560}>
+        <div className="bg-bg-el border border-border rounded-xl p-4 mb-5">
+          <div className="flex justify-between border-b border-border pb-3 mb-3">
+            <span className="text-text-secondary text-sm">Plan</span>
+            <span className="font-semibold text-text-primary">{selectedPlan?.name || '—'}</span>
+          </div>
+          <div className="flex justify-between border-b border-border pb-3 mb-3">
+            <span className="text-text-secondary text-sm">Billing cycle</span>
+            <span className="font-semibold text-text-primary">
+              {billing === 'monthly' ? 'Monthly' : billing === 'half' ? 'Every 6 months' : 'Yearly'}
+            </span>
+          </div>
+          <div className="flex justify-between pt-2">
+            <span className="font-bold text-text-primary">Total amount</span>
+            <span className="font-black text-lg text-primary-light">{formatPrice(selectedPlan?.price)}</span>
+          </div>
+        </div>
+
+        <p className="text-sm font-semibold text-text-secondary mb-2">Payment Method</p>
+        <div className="flex gap-2 flex-wrap mb-5">
+          {PAYMENT_METHODS.map(m => (
+            <button
+              key={m}
+              onClick={() => setPaymentMethod(m)}
+              className={`px-3.5 py-2 rounded-xl border text-sm font-semibold transition-all ${
+                paymentMethod === m
+                  ? 'border-primary bg-primary/12 text-primary-light'
+                  : 'border-border bg-bg-el text-text-secondary hover:border-border-light'
+              }`}
+            >
+              {m}
+            </button>
           ))}
         </div>
 
-        {step === 0 && (
-          <>
-            <p className="text-sm font-semibold text-text-secondary mb-3">
-              What type of content do you enjoy? (Select all that apply)
-            </p>
-            <div className="flex flex-wrap gap-2 mb-5 max-h-48 overflow-y-auto">
-              {CONTENT_CATEGORIES.map(cat => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setSelectedCategories(prev =>
-                    prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
-                  )}
-                  className={`px-3.5 py-1.5 rounded-full border text-sm transition-all ${
-                    selectedCategories.includes(cat)
-                      ? 'border-primary bg-primary/12 text-primary-light font-semibold'
-                      : 'border-border bg-bg-el text-text-secondary hover:border-border-light'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setStep(1)}
-              className="w-full bg-primary text-white font-bold text-base rounded-xl py-3 hover:bg-[#1d4ed8] transition-all"
-            >
-              Continue →
-            </button>
-          </>
-        )}
-
-        {step === 1 && (
-          <>
-            <div className="bg-bg-el border border-border rounded-xl p-4 mb-5">
-              <div className="flex justify-between border-b border-border pb-3 mb-3">
-                <span className="text-text-secondary text-sm">Plan</span>
-                <span className="font-semibold text-text-primary">{selectedPlan?.name}</span>
-              </div>
-              <div className="flex justify-between border-b border-border pb-3 mb-3">
-                <span className="text-text-secondary text-sm">Billing cycle</span>
-                <span className="font-semibold text-text-primary">
-                  {billing === 'monthly' ? 'Monthly' : billing === 'half' ? 'Every 6 months' : 'Yearly'}
-                </span>
-              </div>
-              <div className="flex justify-between pt-2">
-                <span className="font-bold text-text-primary">Total amount</span>
-                <span className="font-black text-lg text-primary-light">{formatPrice(selectedPlan?.price)}</span>
-              </div>
-            </div>
-
-            <p className="text-sm font-semibold text-text-secondary mb-2">Payment Method</p>
-            <div className="flex gap-2 flex-wrap mb-5">
-              {PAYMENT_METHODS.map(m => (
-                <button
-                  key={m}
-                  onClick={() => setPaymentMethod(m)}
-                  className={`px-3.5 py-2 rounded-xl border text-sm font-semibold transition-all ${
-                    paymentMethod === m
-                      ? 'border-primary bg-primary/12 text-primary-light'
-                      : 'border-border bg-bg-el text-text-secondary hover:border-border-light'
-                  }`}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setStep(0)}
-                className="flex-1 bg-bg-el text-text-secondary border border-border font-semibold text-base rounded-xl py-3 hover:bg-bg-hov transition-all"
-              >
-                ← Back
-              </button>
-              <button
-                onClick={handlePurchase}
-                disabled={purchasing}
-                className="flex-[2] bg-primary text-white font-bold text-base rounded-xl py-3 hover:bg-[#1d4ed8] disabled:opacity-50 transition-all"
-              >
-                {purchasing ? 'Processing…' : `Pay ${formatPrice(selectedPlan?.price)}`}
-              </button>
-            </div>
-          </>
-        )}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setModalOpen(false)}
+            className="flex-1 bg-bg-el text-text-secondary border border-border font-semibold text-base rounded-xl py-3 hover:bg-bg-hov transition-all"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handlePurchase}
+            disabled={purchasing}
+            className="flex-[2] bg-primary text-white font-bold text-base rounded-xl py-3 hover:bg-[#1d4ed8] disabled:opacity-50 transition-all"
+          >
+            {purchasing ? 'Processing…' : `Pay ${formatPrice(selectedPlan?.price)}`}
+          </button>
+        </div>
       </Modal>
     </div>
   );

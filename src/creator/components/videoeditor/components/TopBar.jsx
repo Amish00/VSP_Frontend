@@ -1,9 +1,29 @@
 import React, { useState } from 'react'
-import { Film, Download, Share2, Scissors, ChevronUp, ChevronDown, X, Check, Loader, AlertCircle, Undo2, Redo2, ArrowLeft } from 'lucide-react'
+import { Film, Download, Share2, Scissors, ChevronUp, ChevronDown, X, Check, Loader, AlertCircle, Undo2, Redo2, ArrowLeft, Copy, Youtube, Instagram, Twitter, Facebook } from 'lucide-react'
 import { useStore } from '../store/store'
 import { CANVAS_PRESETS, EFFECTS, transitionCSS } from '../utils/constants'
-import logoUrl from '../../../../assets/logo.svg'; 
-import { useNavigate } from 'react-router-dom';
+import logoUrl from '../../../../assets/logo.svg'
+import { useNavigate } from 'react-router-dom'
+
+// Helper functions for export
+function clamp(n, min, max) { return Math.max(min, Math.min(max, n)) }
+
+function getTransitionOpacity(clip, t) {
+  let opacity = clip.opacity ?? 1
+  const rel = t - clip.start
+  const rem = clip.duration - rel
+  if (clip.transIn && clip.transInDur > 0 && rel < clip.transInDur) {
+    const p = clamp(rel / clip.transInDur, 0, 1)
+    const style = transitionCSS(clip.transIn, p, 'in')
+    if (typeof style.opacity === 'number') opacity *= style.opacity
+  }
+  if (clip.transOut && clip.transOutDur > 0 && rem < clip.transOutDur) {
+    const p = clamp(1 - rem / clip.transOutDur, 0, 1)
+    const style = transitionCSS(clip.transOut, p, 'in')
+    if (typeof style.opacity === 'number') opacity *= style.opacity
+  }
+  return clamp(opacity, 0, 1)
+}
 
 const SHAPE_PATHS = {
   rect: 'M10,10 L90,10 L90,90 L10,90 Z',
@@ -22,57 +42,6 @@ const SHAPE_PATHS = {
   bolt: 'M58,2 L20,55 L42,55 L32,98 L80,40 L58,40 Z',
 }
 
-const FILTER_BY_ID = EFFECTS.reduce((map, fx) => {
-  if (fx.id) map[fx.id] = fx.css || 'none'
-  return map
-}, {})
-
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
-
-function clamp(n, min, max) {
-  return Math.max(min, Math.min(max, n))
-}
-
-function getTransitionOpacity(clip, t) {
-  let opacity = clip.opacity ?? 1
-  const rel = t - clip.start
-  const rem = clip.duration - rel
-
-  if (clip.transIn && clip.transInDur > 0 && rel < clip.transInDur) {
-    const p = clamp(rel / clip.transInDur, 0, 1)
-    const style = transitionCSS(clip.transIn, p, 'in')
-    if (typeof style.opacity === 'number') opacity *= style.opacity
-  }
-  if (clip.transOut && clip.transOutDur > 0 && rem < clip.transOutDur) {
-    const p = clamp(1 - rem / clip.transOutDur, 0, 1)
-    const style = transitionCSS(clip.transOut, p, 'in')
-    if (typeof style.opacity === 'number') opacity *= style.opacity
-  }
-
-  return clamp(opacity, 0, 1)
-}
-
-async function waitForMediaSeek(video, timeSec) {
-  if (!Number.isFinite(video.duration) || video.duration <= 0) return
-  const target = clamp(timeSec, 0, Math.max(0, video.duration - 1 / 120))
-  if (Math.abs(video.currentTime - target) < 1 / 120) return
-
-  await new Promise(resolve => {
-    let done = false
-    const finish = () => {
-      if (done) return
-      done = true
-      video.removeEventListener('seeked', finish)
-      video.removeEventListener('error', finish)
-      resolve()
-    }
-    video.addEventListener('seeked', finish, { once: true })
-    video.addEventListener('error', finish, { once: true })
-    video.currentTime = target
-    setTimeout(finish, 150)
-  })
-}
-
 function drawOverlay(ctx, clip, stageW, stageH, scale) {
   const x = ((clip.overlayX ?? 50) / 100) * stageW
   const y = ((clip.overlayY ?? 50) / 100) * stageH
@@ -85,14 +54,12 @@ function drawOverlay(ctx, clip, stageW, stageH, scale) {
     ctx.fillStyle = clip.textColor || '#ffffff'
     ctx.textAlign = clip.textAlign || 'center'
     ctx.textBaseline = 'middle'
-
     const text = String(clip.text || 'Text')
     const lines = text.split(/\r?\n/).slice(0, 10)
     const lineH = fontSize * 1.2
     const totalH = lines.length * lineH
     const textX = clip.textAlign === 'left' ? x - w / 2 : clip.textAlign === 'right' ? x + w / 2 : x
     let textY = y - totalH / 2 + lineH / 2
-
     ctx.shadowColor = 'rgba(0,0,0,0.6)'
     ctx.shadowBlur = 8
     for (const line of lines) {
@@ -102,18 +69,20 @@ function drawOverlay(ctx, clip, stageW, stageH, scale) {
     ctx.shadowBlur = 0
     return
   }
-
   if (clip.type === 'shape') {
-    const path = new Path2D(SHAPE_PATHS[clip.shapePath || 'rect'] || SHAPE_PATHS.rect)
+    // Keep shape aspect ratio square
+    const size = Math.min(w, h)
+    const offsetX = (w - size) / 2
+    const offsetY = (h - size) / 2
     ctx.save()
-    ctx.translate(x - w / 2, y - h / 2)
-    ctx.scale(w / 100, h / 100)
+    ctx.translate(x - w / 2 + offsetX, y - h / 2 + offsetY)
+    ctx.scale(size / 100, size / 100)
+    const path = new Path2D(SHAPE_PATHS[clip.shapePath || 'rect'] || SHAPE_PATHS.rect)
     ctx.fillStyle = clip.shapeColor || '#3b82f6'
     ctx.fill(path)
     ctx.restore()
     return
   }
-
   if (clip.type === 'sticker') {
     const size = Math.max(10, Math.min(w, h) * 0.8)
     ctx.font = `${size}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`
@@ -127,15 +96,9 @@ function drawMediaCover(ctx, media, outW, outH) {
   const srcW = media.videoWidth || media.naturalWidth || media.width || outW
   const srcH = media.videoHeight || media.naturalHeight || media.height || outH
   if (!srcW || !srcH) return
-
   const srcAspect = srcW / srcH
   const outAspect = outW / outH
-
-  let sx = 0
-  let sy = 0
-  let sw = srcW
-  let sh = srcH
-
+  let sx = 0, sy = 0, sw = srcW, sh = srcH
   if (srcAspect > outAspect) {
     sw = srcH * outAspect
     sx = (srcW - sw) / 2
@@ -143,18 +106,115 @@ function drawMediaCover(ctx, media, outW, outH) {
     sh = srcW / outAspect
     sy = (srcH - sh) / 2
   }
-
   ctx.drawImage(media, sx, sy, sw, sh, 0, 0, outW, outH)
 }
 
+// ------------------------------------------------------------
+// Share Modal Component
+// ------------------------------------------------------------
+function ShareModal({ onClose }) {
+  const { projectName } = useStore()
+  const [copied, setCopied] = useState(false)
+
+  // Generate a shareable link (in a real app, this would be a backend URL)
+  const shareableLink = `${window.location.origin}/project/${projectName.replace(/\s/g, '-').toLowerCase()}`
+
+  const socialLinks = [
+    { name: 'YouTube', icon: Youtube, color: '#FF0000', url: `https://www.youtube.com/share?url=${encodeURIComponent(shareableLink)}` },
+    { name: 'TikTok', icon: () => <span style={{ fontSize: 18 }}>🎵</span>, color: '#000000', url: `https://www.tiktok.com/share/video?url=${encodeURIComponent(shareableLink)}` },
+    { name: 'Instagram', icon: Instagram, color: '#E4405F', url: `https://www.instagram.com/create/story/?url=${encodeURIComponent(shareableLink)}` },
+    { name: 'Twitter', icon: Twitter, color: '#1DA1F2', url: `https://twitter.com/intent/tweet?text=Check%20out%20my%20video%20project%20"${encodeURIComponent(projectName)}"&url=${encodeURIComponent(shareableLink)}` },
+    { name: 'Facebook', icon: Facebook, color: '#1877F2', url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareableLink)}` },
+  ]
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(shareableLink)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div onClick={e => e.target === e.currentTarget && onClose()} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: '#111', border: '1px solid #2a2a2a', borderRadius: 12, padding: 22, width: 420, boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14, color: '#e0e0e0' }}>Share Project</div>
+            <div style={{ fontSize: 10, color: '#777', marginTop: 1 }}>"{projectName}"</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Social Media Icons */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 24 }}>
+          {socialLinks.map(social => (
+            <a
+              key={social.name}
+              href={social.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                padding: '8px 0', borderRadius: 8, background: '#0d0d0d', border: '1px solid #1a1a1a',
+                textDecoration: 'none', transition: 'all 0.1s', cursor: 'pointer'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.borderColor = '#3a3a3a' }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#0d0d0d'; e.currentTarget.style.borderColor = '#1a1a1a' }}
+            >
+              <social.icon size={20} color={social.color} />
+              <span style={{ fontSize: 10, color: '#aaa' }}>{social.name}</span>
+            </a>
+          ))}
+        </div>
+
+        {/* Shareable Link */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 9, color: '#888', fontWeight: 600, letterSpacing: 0.8, marginBottom: 7 }}>SHAREABLE LINK</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              readOnly
+              value={shareableLink}
+              style={{
+                flex: 1, background: '#161616', border: '1px solid #2a2a2a', borderRadius: 6,
+                padding: '6px 10px', fontSize: 11, color: '#aaa', outline: 'none', fontFamily: 'monospace'
+              }}
+            />
+            <button
+              onClick={handleCopyLink}
+              style={{
+                padding: '0 12px', borderRadius: 6, border: '1px solid #2a2a2a', background: '#1a1a1a',
+                color: '#ccc', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+                fontSize: 11, fontWeight: 500
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = '#252525'; e.currentTarget.style.color = '#fff' }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.color = '#ccc' }}
+            >
+              <Copy size={12} /> {copied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        </div>
+
+        {/* Info Text */}
+        <div style={{ fontSize: 9, color: '#444', textAlign: 'center', borderTop: '1px solid #1a1a1a', paddingTop: 12 }}>
+          Share this link or use the social buttons to promote your video.
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ------------------------------------------------------------
+// Export Modal Component
+// ------------------------------------------------------------
 function ExportModal({ onClose }) {
-  const { tracks, duration, width, height, fps, projectName, volume } = useStore();
-  const [format, setFormat] = useState('mp4');
-  const [resIdx, setResIdx] = useState(0);
-  const [status, setStatus] = useState('idle');
-  const [progress, setProgress] = useState(0);
-  const [msg, setMsg] = useState('');
-  const abort = React.useRef(false);
+  const { tracks, duration, width, height, fps, projectName, volume } = useStore()
+  const [format, setFormat] = useState('mp4')
+  const [resIdx, setResIdx] = useState(0)
+  const [status, setStatus] = useState('idle')
+  const [progress, setProgress] = useState(0)
+  const [msg, setMsg] = useState('')
+  const abort = React.useRef(false)
 
   const RES = [
     { label: 'Project', w: width, h: height },
@@ -162,87 +222,69 @@ function ExportModal({ onClose }) {
     { label: '1080p', w: 1920, h: 1080 },
     { label: '720p', w: 1280, h: 720 },
     { label: '480p', w: 854, h: 480 },
-  ];
-  const res = RES[resIdx];
-  const activeTracks = tracks.filter(t => !t.muted);
-  const clips = activeTracks.flatMap(t => t.clips);
-  const computedDuration = Math.max(0, ...clips.map(c => c.start + c.duration));
-  const exportDuration = computedDuration > 0 ? computedDuration : duration;
+  ]
+  const res = RES[resIdx]
+  const activeTracks = tracks.filter(t => !t.muted)
+  const clips = activeTracks.flatMap(t => t.clips)
+  const exportDuration = Math.max(0, ...clips.map(c => c.start + c.duration), duration)
 
   const doExport = async () => {
-    if (clips.length === 0) {
-      setMsg('Add clips first.')
-      return
-    }
+    if (clips.length === 0) { setMsg('Add clips first.'); return }
     abort.current = false
     setStatus('loading')
     setProgress(0)
-    setMsg('Preparing assets…')
+    setMsg('Preparing...')
 
-    let audioCtx
-    let canvasStream
-    let mixedStream
+    let audioCtx = null
+    let canvasStream = null
+    let mixedStream = null
+    let recorder = null
     const mediaMap = new Map()
+    const imageMap = new Map()
+    const audioGains = new Map()
 
     try {
-      if (format === 'gif') {
-        throw new Error('GIF export is not supported yet. Choose MP4 or WebM.')
-      }
-
       const canvas = document.createElement('canvas')
       canvas.width = res.w
       canvas.height = res.h
       const ctx = canvas.getContext('2d')
-      if (!ctx) throw new Error('Canvas context is unavailable.')
 
-      const AudioCtx = window.AudioContext || window.webkitAudioContext
-      if (!AudioCtx) throw new Error('AudioContext is not supported in this browser.')
-      audioCtx = new AudioCtx()
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)()
       await audioCtx.resume()
-      const audioDest = audioCtx.createMediaStreamDestination()
+      const dest = audioCtx.createMediaStreamDestination()
 
-      const formatMimes = format === 'mp4'
-        ? ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1', 'video/mp4']
-        : ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
-
-      const mimeType = formatMimes.find(t => window.MediaRecorder?.isTypeSupported?.(t))
-      if (!mimeType) {
-        await audioCtx.close()
-        if (format === 'mp4') {
-          throw new Error('MP4 export is not supported by this browser. Use WebM or run in a browser with MP4 MediaRecorder support.')
-        }
-        throw new Error('Video recording is not supported in this browser.')
-      }
-
-      canvasStream = canvas.captureStream(Math.max(1, fps || 30))
-      mixedStream = new MediaStream()
-      canvasStream.getVideoTracks().forEach(track => mixedStream.addTrack(track))
-      audioDest.stream.getAudioTracks().forEach(track => mixedStream.addTrack(track))
-
-      const recorder = new MediaRecorder(mixedStream, {
-        mimeType,
-        videoBitsPerSecond: 8_000_000,
-      })
-      const chunks = []
-      recorder.ondataavailable = e => {
-        if (e.data && e.data.size > 0) chunks.push(e.data)
-      }
-
-      const imageClips = clips.filter(c => c.type === 'image' && c.src)
       const mediaClips = clips.filter(c => (c.type === 'video' || c.type === 'audio') && c.src)
+      const imageClips = clips.filter(c => c.type === 'image' && c.src)
+      const total = mediaClips.length + imageClips.length
+      let loaded = 0
 
-      const uniqueImages = Array.from(new Map(imageClips.map(c => [c.src, c])).values())
+      for (const clip of mediaClips) {
+        if (abort.current) throw new Error('Cancelled')
+        setMsg(`Loading ${clip.name} (${loaded+1}/${total})`)
+        const el = document.createElement(clip.type === 'video' ? 'video' : 'audio')
+        el.crossOrigin = 'anonymous'
+        el.preload = 'auto'
+        el.src = clip.src
+        await new Promise((resolve, reject) => {
+          el.onloadedmetadata = resolve
+          el.onerror = reject
+          setTimeout(resolve, 5000)
+        })
+        el.pause()
+        const gain = audioCtx.createGain()
+        gain.gain.value = 0
+        const source = audioCtx.createMediaElementSource(el)
+        source.connect(gain)
+        gain.connect(dest)
+        mediaMap.set(clip.id, { el, gain })
+        audioGains.set(clip.id, gain)
+        loaded++
+        setProgress((loaded / total) * 30)
+      }
 
-      const imageMap = new Map()
-      const totalAssets = uniqueImages.length + mediaClips.length
-
-      let loadedCount = 0
-
-      for (let i = 0; i < uniqueImages.length; i += 1) {
-        if (abort.current) throw new Error('Export canceled.')
-
-        const clip = uniqueImages[i]
-        setMsg(`Loading media ${loadedCount + 1}/${Math.max(1, totalAssets)}…`)
+      for (const clip of imageClips) {
+        if (abort.current) throw new Error('Cancelled')
+        setMsg(`Loading image (${loaded+1}/${total})`)
         const img = new Image()
         img.crossOrigin = 'anonymous'
         await new Promise((resolve, reject) => {
@@ -251,202 +293,119 @@ function ExportModal({ onClose }) {
           img.src = clip.src
         })
         imageMap.set(clip.src, img)
-        loadedCount += 1
-        setProgress(Math.round((loadedCount / Math.max(1, totalAssets)) * 25))
+        loaded++
+        setProgress((loaded / total) * 30)
       }
 
-      for (let i = 0; i < mediaClips.length; i += 1) {
-        if (abort.current) throw new Error('Export canceled.')
+      setProgress(30)
+      setMsg('Recording...')
 
-        const clip = mediaClips[i]
-        setMsg(`Loading media ${loadedCount + 1}/${Math.max(1, totalAssets)}…`)
+      canvasStream = canvas.captureStream(fps)
+      mixedStream = new MediaStream()
+      canvasStream.getVideoTracks().forEach(t => mixedStream.addTrack(t))
+      dest.stream.getAudioTracks().forEach(t => mixedStream.addTrack(t))
 
-        const el = document.createElement(clip.type === 'video' ? 'video' : 'audio')
-        el.crossOrigin = 'anonymous'
-        el.preload = 'auto'
-        el.playsInline = true
-        el.muted = false
-        el.volume = 1
-        el.src = clip.src
+      const mimeType = format === 'mp4' ? 'video/mp4' : 'video/webm'
+      if (!MediaRecorder.isTypeSupported(mimeType)) throw new Error(`${format.toUpperCase()} not supported in this browser.`)
+      recorder = new MediaRecorder(mixedStream, { mimeType, videoBitsPerSecond: 12000000 })
+      const chunks = []
+      recorder.ondataavailable = e => chunks.push(e.data)
+      recorder.start(100)
 
-        await new Promise((resolve, reject) => {
-          const onReady = () => resolve()
-          el.addEventListener('loadedmetadata', onReady, { once: true })
-          el.addEventListener('error', () => reject(new Error(`Failed to load media: ${clip.name || clip.src}`)), { once: true })
-          setTimeout(onReady, 5000)
-        })
-
-        el.pause()
-
-        const source = audioCtx.createMediaElementSource(el)
-        const gain = audioCtx.createGain()
-        gain.gain.value = clamp((clip.muted ? 0 : (clip.volume ?? 1)) * (volume ?? 1), 0, 1)
-        source.connect(gain)
-        gain.connect(audioDest)
-
-        mediaMap.set(clip.id, { el, gain, started: false })
-        loadedCount += 1
-        setProgress(Math.round((loadedCount / Math.max(1, totalAssets)) * 25))
-      }
-
-      setProgress(25)
-      setMsg('Rendering video…')
-
-      const renderTracks = activeTracks
-      const totalFrames = Math.max(1, Math.ceil(exportDuration * fps))
-      const aspectScale = res.w / Math.max(1, width)
-      const frameMs = 1000 / Math.max(1, fps)
-
-      recorder.start(250)
-
-      for (let frame = 0; frame < totalFrames; frame += 1) {
-        if (abort.current) throw new Error('Export canceled.')
-
-        const frameStart = performance.now()
-        const t = Math.min(exportDuration, frame / fps)
+      const totalFrames = Math.ceil(exportDuration * fps)
+      for (let frame = 0; frame < totalFrames; frame++) {
+        if (abort.current) throw new Error('Export cancelled')
+        const t = frame / fps
         ctx.clearRect(0, 0, res.w, res.h)
         ctx.fillStyle = '#000'
         ctx.fillRect(0, 0, res.w, res.h)
 
-        const activeLayers = renderTracks.flatMap(track =>
-          track.clips.filter(clip => t >= clip.start && t < clip.start + clip.duration)
+        const activeClips = activeTracks.flatMap(tr =>
+          tr.clips.filter(c => t >= c.start && t < c.start + c.duration)
         )
-
-        for (const clip of activeLayers) {
+        for (const clip of activeClips) {
           const opacity = getTransitionOpacity(clip, t)
           if (opacity <= 0) continue
-
           ctx.save()
           ctx.globalAlpha = opacity
-          ctx.filter = FILTER_BY_ID[clip.filter] || clip.filter || 'none'
+          ctx.filter = EFFECTS.find(e => e.id === clip.filter)?.css || 'none'
 
-          if ((clip.type === 'video' || clip.type === 'audio') && clip.src) {
-            const media = mediaMap.get(clip.id)
+          if ((clip.type === 'video' || clip.type === 'image') && clip.src) {
+            const media = clip.type === 'video' ? mediaMap.get(clip.id) : imageMap.get(clip.src)
             if (media) {
-              const rel = t - clip.start + (clip.offset || 0)
-              const target = clamp(rel, 0, Math.max(0, (media.el.duration || rel + 1) - 1 / Math.max(1, fps)))
-
-              media.gain.gain.value = clamp((clip.muted ? 0 : (clip.volume ?? 1)) * (volume ?? 1), 0, 1)
-              media.el.playbackRate = clip.speed || 1
-
-              if (!media.started) {
-                await waitForMediaSeek(media.el, target)
-                try { await media.el.play() } catch {}
-                media.started = true
-              } else if (Math.abs(media.el.currentTime - target) > 0.25) {
-                media.el.currentTime = target
-              }
-
-              if (clip.type === 'video') {
-                try {
-                  drawMediaCover(ctx, media.el, res.w, res.h)
-                } catch {
-                  // Skip bad frame
-                }
-              }
-            }
-          } else if (clip.type === 'image' && clip.src) {
-            const img = imageMap.get(clip.src)
-            if (img) {
-              try {
-                drawMediaCover(ctx, img, res.w, res.h)
-              } catch {
-                // Ignore image draw errors
+              if (clip.type === 'video' && media.el) {
+                const rel = t - clip.start + (clip.offset || 0)
+                const target = Math.min(Math.max(0, rel), media.el.duration - 0.01)
+                if (Math.abs(media.el.currentTime - target) > 0.1) media.el.currentTime = target
+                drawMediaCover(ctx, media.el, res.w, res.h)
+              } else if (clip.type === 'image') {
+                drawMediaCover(ctx, media, res.w, res.h)
               }
             }
           } else if (clip.type === 'text' || clip.type === 'shape' || clip.type === 'sticker') {
-            drawOverlay(ctx, clip, res.w, res.h, aspectScale)
+            drawOverlay(ctx, clip, res.w, res.h, res.w / width)
           }
-
           ctx.restore()
         }
 
-        const renderPct = 25 + ((frame + 1) / totalFrames) * 70
-        setProgress(Math.max(25, Math.min(95, Math.round(renderPct))))
-        setMsg(`Rendering frame ${frame + 1}/${totalFrames}…`)
-
-        for (const clip of mediaClips) {
-          const media = mediaMap.get(clip.id)
-          if (!media) continue
-          const isActive = t >= clip.start && t < clip.start + clip.duration
-          if (!isActive && !media.el.paused) {
-            media.el.pause()
-            media.started = false
+        // Update audio gains
+        for (const [id, gain] of audioGains) {
+          const clip = clips.find(c => c.id === id)
+          if (clip) {
+            const active = t >= clip.start && t < clip.start + clip.duration
+            gain.gain.value = active ? (clip.muted ? 0 : (clip.volume ?? 1) * volume) : 0
           }
         }
 
-        const elapsed = performance.now() - frameStart
-        if (elapsed < frameMs) {
-          await sleep(frameMs - elapsed)
-        }
+        setProgress(30 + (frame / totalFrames) * 65)
+        setMsg(`Rendering frame ${frame+1}/${totalFrames}`)
+        await new Promise(r => setTimeout(r, 1000 / fps))
       }
 
-      setMsg('Finalizing file…')
-      setProgress(97)
-
-      const stopPromise = new Promise(resolve => {
-        recorder.onstop = resolve
-      })
       recorder.stop()
-      await stopPromise
-
-      mediaMap.forEach(({ el }) => el.pause())
-      canvasStream.getTracks().forEach(track => track.stop())
-      mixedStream.getTracks().forEach(track => track.stop())
-      await audioCtx.close()
-
+      await new Promise(r => recorder.onstop = r)
       const blob = new Blob(chunks, { type: mimeType })
-      if (!blob.size) {
-        throw new Error('Recorder produced an empty file. Try reducing resolution and retry.')
-      }
+      if (blob.size === 0) throw new Error('Empty recording')
 
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      const safeName = (projectName || 'export').replace(/[^a-z0-9_\- ]/gi, '').replace(/\s+/g, '-').toLowerCase() || 'export'
       a.href = url
-      a.download = `${safeName}.${format}`
-      document.body.appendChild(a)
+      a.download = `${projectName || 'export'}.${format}`
       a.click()
-      document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
       setProgress(100)
       setStatus('done')
-      setMsg(`Saved as "${a.download}"`)
-    } catch (e) {
-      mediaMap.forEach(({ el }) => {
-        try { el.pause() } catch {}
-      })
-      if (canvasStream) canvasStream.getTracks().forEach(track => track.stop())
-      if (mixedStream) mixedStream.getTracks().forEach(track => track.stop())
-      if (audioCtx && audioCtx.state !== 'closed') {
-        try { await audioCtx.close() } catch {}
-      }
+      setMsg('Export completed!')
+    } catch (err) {
       setStatus('error')
-      setMsg(e?.message || 'Export failed.')
+      setMsg(err.message)
+    } finally {
+      if (recorder && recorder.state !== 'inactive') recorder.stop()
+      if (canvasStream) canvasStream.getTracks().forEach(t => t.stop())
+      if (mixedStream) mixedStream.getTracks().forEach(t => t.stop())
+      if (audioCtx) await audioCtx.close()
+      mediaMap.forEach(({ el }) => el.pause())
     }
   }
 
   return (
     <div onClick={e => e.target === e.currentTarget && onClose()} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: '#111', border: '1px solid #2a2a2a', borderRadius: 12, padding: 22, width: 360, boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
-        {/* header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
           <div><div style={{ fontWeight: 600, fontSize: 14, color: '#e0e0e0' }}>Export</div><div style={{ fontSize: 10, color: '#777', marginTop: 1 }}>"{projectName}"</div></div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}><X size={15} /></button>
         </div>
-        {/* format */}
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 9, color: '#888', fontWeight: 600, letterSpacing: 0.8, marginBottom: 7 }}>FORMAT</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5 }}>
-            {[{ id: 'mp4', l: 'MP4' }, { id: 'webm', l: 'WebM' }, { id: 'gif', l: 'GIF' }].map(f => (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+            {[{ id: 'mp4', l: 'MP4' }, { id: 'webm', l: 'WebM' }].map(f => (
               <div key={f.id} onClick={() => setFormat(f.id)} style={{ padding: '8px 6px', borderRadius: 7, cursor: 'pointer', border: `1.5px solid ${format === f.id ? '#888' : '#2a2a2a'}`, background: format === f.id ? '#1e1e1e' : '#141414', textAlign: 'center' }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: format === f.id ? '#fff' : '#999' }}>{f.l}</div>
               </div>
             ))}
           </div>
         </div>
-        {/* resolution */}
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 9, color: '#888', fontWeight: 600, letterSpacing: 0.8, marginBottom: 7 }}>RESOLUTION</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 4 }}>
@@ -458,7 +417,6 @@ function ExportModal({ onClose }) {
             ))}
           </div>
         </div>
-        {/* info */}
         <div style={{ background: '#0d0d0d', borderRadius: 7, padding: '8px 10px', marginBottom: 14 }}>
           {[['Duration', `${exportDuration.toFixed(1)}s`], ['FPS', fps], ['Clips', clips.length], ['Output', `${res.w}×${res.h}`]].map(([k, v]) => (
             <div key={k} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
@@ -467,12 +425,11 @@ function ExportModal({ onClose }) {
             </div>
           ))}
         </div>
-        {/* progress / messages */}
         {status === 'loading' && (
           <div style={{ marginBottom: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
               <span style={{ fontSize: 11, color: '#aaa' }}>{msg}</span>
-              <span style={{ fontSize: 11, color: '#888', fontFamily: 'monospace' }}>{progress}%</span>
+              <span style={{ fontSize: 11, color: '#888', fontFamily: 'monospace' }}>{Math.floor(progress)}%</span>
             </div>
             <div style={{ height: 3, background: '#1a1a1a', borderRadius: 99 }}>
               <div style={{ width: `${progress}%`, height: '100%', background: '#fff', borderRadius: 99, transition: 'width 0.5s ease' }} />
@@ -496,17 +453,19 @@ function ExportModal({ onClose }) {
       </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
-  );
+  )
 }
 
-// ---------- Canvas Preset Modal (contrast tweaks) ----------
+// ------------------------------------------------------------
+// Preset Modal
+// ------------------------------------------------------------
 function PresetModal({ onClose }) {
-  const { setSize, width, height } = useStore();
-  const [cw, setCw] = useState(width);
-  const [ch, setCh] = useState(height);
+  const { setSize, width, height } = useStore()
+  const [cw, setCw] = useState(width)
+  const [ch, setCh] = useState(height)
   return (
     <div onClick={e => e.target === e.currentTarget && onClose()} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#111', border: '1px solid #2a2a2a', borderRadius: 12, padding: 20, width: 320, boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
+      <div style={{ background: '#111', border: '1px solid #2a2a2a', borderRadius: 12, padding: 20, width: 320 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <span style={{ fontWeight: 600, fontSize: 14, color: '#e0e0e0' }}>Canvas Size</span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}><X size={14} /></button>
@@ -523,80 +482,67 @@ function PresetModal({ onClose }) {
         <div style={{ borderTop: '1px solid #1a1a1a', paddingTop: 12 }}>
           <div style={{ fontSize: 9, color: '#888', fontWeight: 600, marginBottom: 7 }}>CUSTOM SIZE</div>
           <div style={{ display: 'flex', gap: 7, alignItems: 'center', marginBottom: 9 }}>
-            <input type="number" value={cw} onChange={e => setCw(+e.target.value)} style={{ flex: 1, background: '#161616', border: '1px solid #2a2a2a', borderRadius: 5, padding: '4px 8px', fontSize: 11, color: '#e0e0e0', outline: 'none', textAlign: 'center' }} placeholder="W" />
+            <input type="number" value={cw} onChange={e => setCw(+e.target.value)} style={{ flex: 1, background: '#161616', border: '1px solid #2a2a2a', borderRadius: 5, padding: '4px 8px', fontSize: 11, color: '#e0e0e0', outline: 'none', textAlign: 'center' }} />
             <span style={{ color: '#666' }}>×</span>
-            <input type="number" value={ch} onChange={e => setCh(+e.target.value)} style={{ flex: 1, background: '#161616', border: '1px solid #2a2a2a', borderRadius: 5, padding: '4px 8px', fontSize: 11, color: '#e0e0e0', outline: 'none', textAlign: 'center' }} placeholder="H" />
+            <input type="number" value={ch} onChange={e => setCh(+e.target.value)} style={{ flex: 1, background: '#161616', border: '1px solid #2a2a2a', borderRadius: 5, padding: '4px 8px', fontSize: 11, color: '#e0e0e0', outline: 'none', textAlign: 'center' }} />
           </div>
           <button onClick={() => { setSize(cw, ch); onClose(); }} style={{ width: '100%', padding: '8px', borderRadius: 7, border: 'none', background: '#fff', color: '#111', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Apply</button>
         </div>
       </div>
     </div>
-  );
+  )
 }
 
-// ---------- Main TopBar Component ----------
+// ------------------------------------------------------------
+// TopBar Main Component
+// ------------------------------------------------------------
 const TopBar = () => {
-  const navigate = useNavigate();
-  const { projectName, setProjectName, width, height, getSelectedClip, tracks, splitClip, currentTime } = useStore();
-  const [editName, setEditName] = useState(false);
-  const [name, setName] = useState(projectName);
-  const [showExport, setShowExport] = useState(false);
-  const [showPreset, setShowPreset] = useState(false);
+  const navigate = useNavigate()
+  const { projectName, setProjectName, width, height, getSelectedClip, tracks, splitClip, currentTime } = useStore()
+  const [editName, setEditName] = useState(false)
+  const [name, setName] = useState(projectName)
+  const [showExport, setShowExport] = useState(false)
+  const [showPreset, setShowPreset] = useState(false)
+  const [showShare, setShowShare] = useState(false)   // <-- Share modal state
 
-  const clip = getSelectedClip();
-  const track = clip ? tracks.find(t => t.clips.some(c => c.id === clip.id)) : null;
+  const clip = getSelectedClip()
+  const track = clip ? tracks.find(t => t.clips.some(c => c.id === clip.id)) : null
 
   const reorder = dir => {
-    if (!clip || !track) return;
-    const clips = [...track.clips];
-    const idx = clips.findIndex(c => c.id === clip.id);
-    const swapIdx = dir === 'fwd' ? idx + 1 : idx - 1;
-    if (swapIdx < 0 || swapIdx >= clips.length) return;
-    [clips[idx], clips[swapIdx]] = [clips[swapIdx], clips[idx]];
-    useStore.setState(s => ({ tracks: s.tracks.map(t => t.id === track.id ? { ...t, clips } : t) }));
-  };
+    if (!clip || !track) return
+    const clips = [...track.clips]
+    const idx = clips.findIndex(c => c.id === clip.id)
+    const swapIdx = dir === 'fwd' ? idx + 1 : idx - 1
+    if (swapIdx < 0 || swapIdx >= clips.length) return
+    ;[clips[idx], clips[swapIdx]] = [clips[swapIdx], clips[idx]]
+    useStore.setState(s => ({ tracks: s.tracks.map(t => t.id === track.id ? { ...t, clips } : t) }))
+  }
 
   const IconButton = ({ content, onClick, title, disabled }) => (
     <button onClick={onClick} title={title} disabled={disabled}
-      style={{
-        width: 28, height: 28, borderRadius: 6, border: 'none',
-        background: 'transparent', color: disabled ? '#2a2a2a' : '#aaa',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        transition: 'all 0.1s'
-      }}
-      onMouseEnter={e => { if (!disabled) e.currentTarget.style.color = '#e0e0e0'; }}
-      onMouseLeave={e => { if (!disabled) e.currentTarget.style.color = '#aaa'; }}>
+      style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: 'transparent', color: disabled ? '#2a2a2a' : '#aaa', cursor: disabled ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.1s' }}
+      onMouseEnter={e => { if (!disabled) e.currentTarget.style.color = '#e0e0e0' }}
+      onMouseLeave={e => { if (!disabled) e.currentTarget.style.color = '#aaa' }}>
       {content}
     </button>
-  );
+  )
 
   return (
     <>
-      <div style={{
-        height: 48, background: '#0d0d0d', borderBottom: '1px solid #1a1a1a',
-        display: 'flex', alignItems: 'center', padding: '0 12px', gap: 4,
-        flexShrink: 0, zIndex: 100
-      }}>
-        {/* Back button */}
+      <div style={{ height: 48, background: '#0d0d0d', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', padding: '0 12px', gap: 4, flexShrink: 0, zIndex: 100 }}>
         <button onClick={() => navigate('/creator/dashboard')} title="Back to Dashboard"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, background: 'transparent',
-            border: 'none', color: '#aaa', cursor: 'pointer', padding: '4px 8px',
-            borderRadius: 6, fontSize: 12, marginRight: 8
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.color = '#fff'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#aaa'; }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', padding: '4px 8px', borderRadius: 6, fontSize: 12, marginRight: 8 }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#1a1a1a'; e.currentTarget.style.color = '#fff' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#aaa' }}>
           <ArrowLeft size={16} />
           <span>Back</span>
         </button>
 
-        {/* Logo + project name */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 8 }}>
           <img src={logoUrl} alt="Logo" style={{ width: 22, height: 22, borderRadius: 6, objectFit: 'contain' }} />
           {editName ? (
             <input autoFocus value={name} onChange={e => setName(e.target.value)}
-              onBlur={() => { setProjectName(name); setEditName(false); }}
+              onBlur={() => { setProjectName(name); setEditName(false) }}
               onKeyDown={e => e.key === 'Enter' && setEditName(false)}
               style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 5, color: '#fff', padding: '3px 8px', fontSize: 13, fontWeight: 500, outline: 'none', width: 160 }} />
           ) : (
@@ -613,61 +559,53 @@ const TopBar = () => {
         <div style={{ width: 1, height: 18, background: '#2a2a2a', margin: '0 4px' }} />
 
         <IconButton content="⤒" onClick={() => {
-          if (!clip || !track) return;
-          const clips = [...track.clips];
-          const idx = clips.findIndex(c => c.id === clip.id);
-          clips.push(clips.splice(idx, 1)[0]);
-          useStore.setState(s => ({ tracks: s.tracks.map(t => t.id === track.id ? { ...t, clips } : t) }));
+          if (!clip || !track) return
+          const clips = [...track.clips]
+          const idx = clips.findIndex(c => c.id === clip.id)
+          clips.push(clips.splice(idx, 1)[0])
+          useStore.setState(s => ({ tracks: s.tracks.map(t => t.id === track.id ? { ...t, clips } : t) }))
         }} title="Bring to Front" disabled={!clip} />
         <IconButton content={<ChevronUp size={13} />} onClick={() => reorder('fwd')} title="Bring Forward" disabled={!clip} />
         <IconButton content={<ChevronDown size={13} />} onClick={() => reorder('back')} title="Send Backward" disabled={!clip} />
         <IconButton content="⤓" onClick={() => {
-          if (!clip || !track) return;
-          const clips = [...track.clips];
-          const idx = clips.findIndex(c => c.id === clip.id);
-          clips.unshift(clips.splice(idx, 1)[0]);
-          useStore.setState(s => ({ tracks: s.tracks.map(t => t.id === track.id ? { ...t, clips } : t) }));
+          if (!clip || !track) return
+          const clips = [...track.clips]
+          const idx = clips.findIndex(c => c.id === clip.id)
+          clips.unshift(clips.splice(idx, 1)[0])
+          useStore.setState(s => ({ tracks: s.tracks.map(t => t.id === track.id ? { ...t, clips } : t) }))
         }} title="Send to Back" disabled={!clip} />
         <div style={{ width: 1, height: 18, background: '#2a2a2a', margin: '0 4px' }} />
         <IconButton content={<Scissors size={14} />} onClick={() => clip && splitClip(clip.id, currentTime)} title="Split at playhead" disabled={!clip} />
 
-        {/* Canvas size selector */}
         <button onClick={() => setShowPreset(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px',
-            borderRadius: 6, border: '1px solid #2a2a2a', background: '#141414',
-            color: '#aaa', cursor: 'pointer', fontSize: 11, marginLeft: 4
-          }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#3a3a3a'; }}
-          onMouseLeave={e => { e.currentTarget.style.color = '#aaa'; e.currentTarget.style.borderColor = '#2a2a2a'; }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 6, border: '1px solid #2a2a2a', background: '#141414', color: '#aaa', cursor: 'pointer', fontSize: 11, marginLeft: 4 }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#3a3a3a' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#aaa'; e.currentTarget.style.borderColor = '#2a2a2a' }}>
           ⊞ {width}×{height} ▾
         </button>
 
         <div style={{ flex: 1 }} />
 
         <button onClick={() => setShowExport(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
-            borderRadius: 6, border: '1px solid #2a2a2a', background: '#161616',
-            color: '#bbb', cursor: 'pointer', fontSize: 12, fontWeight: 500
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = '#222'; e.currentTarget.style.color = '#fff'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = '#161616'; e.currentTarget.style.color = '#bbb'; }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 6, border: '1px solid #2a2a2a', background: '#161616', color: '#bbb', cursor: 'pointer', fontSize: 12, fontWeight: 500 }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#222'; e.currentTarget.style.color = '#fff' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#161616'; e.currentTarget.style.color = '#bbb' }}>
           <Download size={13} /> Export
         </button>
-        <button
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
-            borderRadius: 6, border: 'none', background: '#fff', color: '#111',
-            cursor: 'pointer', fontSize: 12, fontWeight: 600, marginLeft: 6
-          }}>
+
+        <button onClick={() => setShowShare(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 6, border: 'none', background: '#fff', color: '#111', cursor: 'pointer', fontSize: 12, fontWeight: 600, marginLeft: 6 }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#e0e0e0' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#fff' }}>
           <Share2 size={13} /> Share
         </button>
       </div>
+
       {showExport && <ExportModal onClose={() => setShowExport(false)} />}
       {showPreset && <PresetModal onClose={() => setShowPreset(false)} />}
+      {showShare && <ShareModal onClose={() => setShowShare(false)} />}
     </>
-  );
-};
+  )
+}
 
-export default TopBar;
+export default TopBar

@@ -23,11 +23,22 @@ const formatViewCount = (views) => {
   return `${views} views`;
 };
 
-// Map YouTube API response to the format expected by UpNextPanel
+// Same thumbnail upgrade helper
+const getBestThumbnailUrl = (url, videoId) => {
+  if (!url) return '';
+  if (url.includes('maxresdefault') || url.includes('sddefault') || url.includes('hqdefault')) {
+    return url;
+  }
+  if (url.includes('/default.jpg') || url.includes('/mqdefault.jpg')) {
+    return `https://i.ytimg.com/vi/${videoId}/sddefault.jpg`;
+  }
+  return url;
+};
+
 const mapYouTubeVideo = (ytVideo) => ({
   id: ytVideo.id,
   title: ytVideo.title,
-  thumbnailUrl: ytVideo.thumbnailUrl,
+  thumbnailUrl: getBestThumbnailUrl(ytVideo.thumbnailUrl, ytVideo.id),
   username: ytVideo.channelTitle,
   channelId: ytVideo.channelId,
   views: ytVideo.viewCount ? ytVideo.viewCount.toLocaleString() : '?',
@@ -37,9 +48,8 @@ const mapYouTubeVideo = (ytVideo) => ({
   isYouTube: true,
   publishedAt: ytVideo.publishedAt,
   description: ytVideo.description || '',
-  // UpNextPanel uses 'thumb' as fallback, so include both
-  thumb: ytVideo.thumbnailUrl,
-  em: '📹', // fallback emoji if no thumbnail
+  thumb: getBestThumbnailUrl(ytVideo.thumbnailUrl, ytVideo.id), // for UpNextPanel
+  em: '📹',
 });
 
 const YouTubeWatchPage = () => {
@@ -52,7 +62,6 @@ const YouTubeWatchPage = () => {
   const [loadingRecs, setLoadingRecs] = useState(true);
   const [error, setError] = useState(null);
 
-  // Load video details from navigation state (no API call needed)
   useEffect(() => {
     if (location.state?.video) {
       setVideo(location.state.video);
@@ -63,7 +72,6 @@ const YouTubeWatchPage = () => {
     }
   }, [location.state, videoId]);
 
-  // Load recommendations based on current video
   useEffect(() => {
     const loadRecommendations = async () => {
       if (!video) return;
@@ -79,7 +87,7 @@ const YouTubeWatchPage = () => {
         
         let recs = response.data.map(mapYouTubeVideo);
         recs = recs.filter(rec => rec.id !== video.id);
-        setRecommendations(recs.slice(0, 12)); // UpNextPanel handles show more/less internally
+        setRecommendations(recs.slice(0, 12));
       } catch (err) {
         console.error('Failed to load recommendations:', err);
         try {
@@ -102,7 +110,7 @@ const YouTubeWatchPage = () => {
   }, [video]);
 
   const handleWatchRecommendation = (recommendedVideo) => {
-    navigate(`/watch/${recommendedVideo.id}`, { state: { video: recommendedVideo } });
+    navigate(`/watch/youtube/${recommendedVideo.id}`, { state: { video: recommendedVideo } });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -137,7 +145,6 @@ const YouTubeWatchPage = () => {
   return (
     <div className="bg-bg-primary min-h-screen pt-[68px] md:pt-[92px] pb-12">
       <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Back button for mobile */}
         <button
           onClick={handleGoBack}
           className="mb-4 flex items-center gap-2 text-text-secondary hover:text-text-primary transition md:hidden"
@@ -147,9 +154,8 @@ const YouTubeWatchPage = () => {
         </button>
 
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Main video player area */}
+          {/* Main video area */}
           <div className="lg:flex-[2] min-w-0">
-            {/* Video Player */}
             <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-lg">
               <iframe
                 src={`https://www.youtube.com/embed/${video.id}?autoplay=1&rel=0`}
@@ -161,7 +167,6 @@ const YouTubeWatchPage = () => {
               />
             </div>
 
-            {/* Video Info */}
             <div className="mt-4">
               <h1 className="text-xl md:text-2xl font-bold text-text-primary mb-2">
                 {video.title}
@@ -200,7 +205,6 @@ const YouTubeWatchPage = () => {
                 </div>
               </div>
 
-              {/* Description */}
               {video.description && (
                 <div className="mt-4 p-4 bg-bg-el rounded-xl">
                   <p className="text-text-secondary text-sm whitespace-pre-wrap">
@@ -213,7 +217,7 @@ const YouTubeWatchPage = () => {
             </div>
           </div>
 
-          {/* Recommendations Sidebar - using UpNextPanel */}
+          {/* Recommendations Sidebar */}
           <div className="lg:flex-1">
             <div className="sticky top-[92px]">
               {loadingRecs ? (

@@ -1,4 +1,4 @@
-export const PEXELS_KEY = 'qcqkTO4JgIhunCS68ERUgg3XWZjco7Qp4Vu2fKbTSeT4GGhYXb7dc2CK' // Replace with your actual Pexels API key
+export const PEXELS_KEY = 'qcqkTO4JgIhunCS68ERUgg3XWZjco7Qp4Vu2fKbTSeT4GGhYXb7dc2CK'
 
 export const CANVAS_PRESETS = [
   { id: 'youtube', label: 'YouTube', w: 1920, h: 1080 },

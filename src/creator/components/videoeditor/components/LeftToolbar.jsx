@@ -73,6 +73,8 @@ const LeftToolbar = () => {
         padding: '10px 0',
         gap: 2,
         flexShrink: 0,
+        overflowY: 'auto',    // allow scroll if too many items, but we have few
+        height: '100%',       // take full height of parent
       }}
     >
       {TOOLS.map(({ id, Icon, label }) => (
