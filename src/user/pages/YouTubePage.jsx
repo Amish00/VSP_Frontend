@@ -15,10 +15,24 @@ const formatRelativeDate = (isoString) => {
   return `${Math.floor(diffDays / 7)} weeks ago`;
 };
 
+// Helper to upgrade thumbnail if backend accidentally sent low-res
+const getBestThumbnailUrl = (url, videoId) => {
+  if (!url) return '';
+  // If already high-res, return as is
+  if (url.includes('maxresdefault') || url.includes('sddefault') || url.includes('hqdefault')) {
+    return url;
+  }
+  // If it's default.jpg or mqdefault.jpg, upgrade to sddefault (640x480)
+  if (url.includes('/default.jpg') || url.includes('/mqdefault.jpg')) {
+    return `https://i.ytimg.com/vi/${videoId}/sddefault.jpg`;
+  }
+  return url;
+};
+
 const mapYouTubeVideo = (ytVideo) => ({
   id: ytVideo.id,
   title: ytVideo.title,
-  thumbnailUrl: ytVideo.thumbnailUrl,
+  thumbnailUrl: getBestThumbnailUrl(ytVideo.thumbnailUrl, ytVideo.id),
   username: ytVideo.channelTitle,
   channelId: ytVideo.channelId,
   views: ytVideo.viewCount ? ytVideo.viewCount.toLocaleString() : '?',
@@ -85,7 +99,6 @@ const YouTubePage = () => {
       {/* Header with title/description on left, search on right */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
         <div className="flex items-center gap-3">
-          {/* YouTube logo from Icon8 */}
           <img 
             src="https://img.icons8.com/color/48/youtube-play.png" 
             alt="YouTube Logo" 

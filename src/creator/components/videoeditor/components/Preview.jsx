@@ -6,7 +6,6 @@ function getTransStyle(clip, currentTime) {
   const rel = currentTime - clip.start
   const rem = clip.duration - rel
   let styles = {}
-
   if (clip.transIn && rel < clip.transInDur) {
     const p = rel / clip.transInDur
     Object.assign(styles, transitionCSS(clip.transIn, p, 'in'))
@@ -20,16 +19,12 @@ function getTransStyle(clip, currentTime) {
 
 function VideoEl({ clip, stageW, stageH, currentTime, playing, volume }) {
   const ref = useRef()
-
   useEffect(() => {
     const v = ref.current
     if (!v) return
     const rel = currentTime - clip.start + (clip.offset || 0)
-    if (Math.abs(v.currentTime - rel) > 0.25) {
-      v.currentTime = Math.max(0, rel)
-    }
+    if (Math.abs(v.currentTime - rel) > 0.25) v.currentTime = Math.max(0, rel)
   }, [currentTime])
-
   useEffect(() => {
     const v = ref.current
     if (!v) return
@@ -37,7 +32,6 @@ function VideoEl({ clip, stageW, stageH, currentTime, playing, volume }) {
     if (playing && active) { v.play().catch(() => {}) }
     else { v.pause() }
   }, [playing, currentTime])
-
   useEffect(() => {
     const v = ref.current
     if (!v) return
@@ -45,24 +39,10 @@ function VideoEl({ clip, stageW, stageH, currentTime, playing, volume }) {
     v.muted = clip.muted ?? false
     if (clip.speed) v.playbackRate = clip.speed
   }, [clip.volume, clip.muted, clip.speed, volume])
-
   const ts = getTransStyle(clip, currentTime)
-
   return (
-    <div style={{
-      position: 'absolute', inset: 0,
-      opacity: clip.opacity ?? 1,
-      filter: clip.filter || 'none',
-      ...ts,
-      overflow: 'hidden',
-    }}>
-      <video
-        ref={ref}
-        src={clip.src}
-        playsInline
-        preload="auto"
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-      />
+    <div style={{ position: 'absolute', inset: 0, opacity: clip.opacity ?? 1, filter: clip.filter || 'none', ...ts, overflow: 'hidden' }}>
+      <video ref={ref} src={clip.src} playsInline preload="auto" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
     </div>
   )
 }
@@ -78,14 +58,12 @@ function ImageEl({ clip, currentTime }) {
 
 function AudioEl({ clip, currentTime, playing, volume }) {
   const ref = useRef()
-
   useEffect(() => {
     const a = ref.current
     if (!a || !clip.src) return
     const rel = currentTime - clip.start + (clip.offset || 0)
     if (Math.abs(a.currentTime - rel) > 0.25) a.currentTime = Math.max(0, rel)
   }, [currentTime])
-
   useEffect(() => {
     const a = ref.current
     if (!a || !clip.src) return
@@ -93,18 +71,37 @@ function AudioEl({ clip, currentTime, playing, volume }) {
     if (playing && active && !clip.muted) { a.play().catch(() => {}) }
     else { a.pause() }
   }, [playing, currentTime, clip.muted])
-
   useEffect(() => {
     const a = ref.current
     if (!a) return
     a.volume = Math.min(1, (clip.volume ?? 1) * volume)
   }, [clip.volume, volume])
-
   if (!clip.src) return null
   return <audio ref={ref} src={clip.src} preload="auto" style={{ display: 'none' }} />
 }
 
+const SHAPE_PATHS = {
+  rect: 'M10,10 L90,10 L90,90 L10,90 Z',
+  circle: 'M50,5 A45,45 0 1,1 49.99,5 Z',
+  triangle: 'M50,5 L95,95 L5,95 Z',
+  diamond: 'M50,2 L98,50 L50,98 L2,50 Z',
+  star: 'M50,5 L61,35 L95,35 L68,57 L79,91 L50,70 L21,91 L32,57 L5,35 L39,35 Z',
+  heart: 'M50,75 C25,55 5,42 5,28 C5,15 15,5 28,5 C36,5 43,9 50,17 C57,9 64,5 72,5 C85,5 95,15 95,28 C95,42 75,55 50,75Z',
+  pentagon: 'M50,5 L93,35 L77,92 L23,92 L7,35 Z',
+  hexagon: 'M25,8 L75,8 L97,50 L75,92 L25,92 L3,50 Z',
+  octagon: 'M30,3 L70,3 L97,30 L97,70 L70,97 L30,97 L3,70 L3,30 Z',
+  'arrow-r': 'M10,30 L58,30 L58,15 L92,50 L58,85 L58,70 L10,70 Z',
+  'arrow-l': 'M90,30 L42,30 L42,15 L8,50 L42,85 L42,70 L90,70 Z',
+  cloud: 'M30,77 L75,77 C88,77 95,68 95,57 C95,47 88,39 78,38 C76,24 65,15 51,15 C37,15 25,24 22,37 C12,38 5,46 5,56 C5,69 15,77 30,77 Z',
+  speech: 'M14,15 L86,15 C92,15 96,19 96,25 L96,63 C96,69 92,73 86,73 L44,73 L25,92 L27,73 L14,73 C8,73 4,69 4,63 L4,25 C4,19 8,15 14,15 Z',
+  bolt: 'M58,2 L20,55 L42,55 L32,98 L80,40 L58,40 Z',
+}
+
 function OverlayEl({ clip, stageW, stageH, currentTime, selected, onSelect, onUpdate }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editValue, setEditValue] = useState(clip.text || '')
+  const inputRef = useRef(null)
+
   const ts = getTransStyle(clip, currentTime)
   const x = ((clip.overlayX ?? 50) / 100) * stageW
   const y = ((clip.overlayY ?? 50) / 100) * stageH
@@ -112,25 +109,8 @@ function OverlayEl({ clip, stageW, stageH, currentTime, selected, onSelect, onUp
   const h = ((clip.overlayH ?? 20) / 100) * stageH
   const scale = stageW / 1920
 
-  const SHAPE_PATHS = {
-    rect: 'M10,10 L90,10 L90,90 L10,90 Z',
-    circle: 'M50,5 A45,45 0 1,1 49.99,5 Z',
-    triangle: 'M50,5 L95,95 L5,95 Z',
-    diamond: 'M50,2 L98,50 L50,98 L2,50 Z',
-    star: 'M50,5 L61,35 L95,35 L68,57 L79,91 L50,70 L21,91 L32,57 L5,35 L39,35 Z',
-    heart: 'M50,75 C25,55 5,42 5,28 C5,15 15,5 28,5 C36,5 43,9 50,17 C57,9 64,5 72,5 C85,5 95,15 95,28 C95,42 75,55 50,75Z',
-    pentagon: 'M50,5 L93,35 L77,92 L23,92 L7,35 Z',
-    hexagon: 'M25,8 L75,8 L97,50 L75,92 L25,92 L3,50 Z',
-    octagon: 'M30,3 L70,3 L97,30 L97,70 L70,97 L30,97 L3,70 L3,30 Z',
-    'arrow-r': 'M10,30 L58,30 L58,15 L92,50 L58,85 L58,70 L10,70 Z',
-    'arrow-l': 'M90,30 L42,30 L42,15 L8,50 L42,85 L42,70 L90,70 Z',
-    cloud: 'M30,77 L75,77 C88,77 95,68 95,57 C95,47 88,39 78,38 C76,24 65,15 51,15 C37,15 25,24 22,37 C12,38 5,46 5,56 C5,69 15,77 30,77 Z',
-    speech: 'M14,15 L86,15 C92,15 96,19 96,25 L96,63 C96,69 92,73 86,73 L44,73 L25,92 L27,73 L14,73 C8,73 4,69 4,63 L4,25 C4,19 8,15 14,15 Z',
-    bolt: 'M58,2 L20,55 L42,55 L32,98 L80,40 L58,40 Z',
-  }
-
   const onMouseDown = useCallback(e => {
-    if (e.button !== 0) return
+    if (e.button !== 0 || isEditing) return
     e.stopPropagation()
     onSelect()
     const startX = e.clientX, startY = e.clientY
@@ -143,9 +123,10 @@ function OverlayEl({ clip, stageW, stageH, currentTime, selected, onSelect, onUp
     const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-  }, [clip, stageW, stageH, onSelect, onUpdate])
+  }, [clip, stageW, stageH, onSelect, onUpdate, isEditing])
 
   const onResizeDown = useCallback(e => {
+    if (isEditing) return
     e.stopPropagation()
     const startX = e.clientX, startY = e.clientY
     const ow = clip.overlayW ?? 40, oh = clip.overlayH ?? 20
@@ -157,32 +138,98 @@ function OverlayEl({ clip, stageW, stageH, currentTime, selected, onSelect, onUp
     const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
-  }, [clip, stageW, stageH, onUpdate])
+  }, [clip, stageW, stageH, onUpdate, isEditing])
+
+  const handleDoubleClick = (e) => {
+    e.stopPropagation()
+    if (clip.type === 'text') {
+      setIsEditing(true)
+      setEditValue(clip.text || '')
+    }
+  }
+
+  const saveEdit = () => {
+    if (isEditing) {
+      onUpdate({ text: editValue })
+      setIsEditing(false)
+    }
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      saveEdit()
+    } else if (e.key === 'Escape') {
+      setIsEditing(false)
+      setEditValue(clip.text || '')
+    }
+  }
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [isEditing])
 
   let content
   if (clip.type === 'text') {
-    content = (
-      <div style={{
-        fontFamily: clip.fontFamily || 'Inter',
-        fontSize: (clip.fontSize || 72) * scale,
-        fontWeight: clip.fontWeight || '700',
-        color: clip.textColor || '#fff',
-        textAlign: clip.textAlign || 'center',
-        lineHeight: 1.2,
-        textShadow: '0 2px 8px rgba(0,0,0,0.6)',
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-        userSelect: 'none',
-        width: '100%',
-      }}>
-        {clip.text || 'Text'}
-      </div>
-    )
+    if (isEditing) {
+      content = (
+        <textarea
+          ref={inputRef}
+          value={editValue}
+          onChange={e => setEditValue(e.target.value)}
+          onBlur={saveEdit}
+          onKeyDown={handleKeyDown}
+          style={{
+            fontFamily: clip.fontFamily || 'Inter',
+            fontSize: (clip.fontSize || 72) * scale,
+            fontWeight: clip.fontWeight || '700',
+            color: clip.textColor || '#fff',
+            textAlign: clip.textAlign || 'center',
+            lineHeight: 1.2,
+            background: 'rgba(0,0,0,0.7)',
+            border: '1px solid #fff',
+            borderRadius: 4,
+            padding: '4px 8px',
+            width: '100%',
+            height: '100%',
+            resize: 'none',
+            outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
+      )
+    } else {
+      content = (
+        <div onDoubleClick={handleDoubleClick} style={{
+          fontFamily: clip.fontFamily || 'Inter',
+          fontSize: (clip.fontSize || 72) * scale,
+          fontWeight: clip.fontWeight || '700',
+          color: clip.textColor || '#fff',
+          textAlign: clip.textAlign || 'center',
+          lineHeight: 1.2,
+          textShadow: '0 2px 8px rgba(0,0,0,0.6)',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          userSelect: 'none',
+          width: '100%',
+          cursor: 'text',
+          pointerEvents: selected ? 'auto' : 'none',
+        }}>
+          {clip.text || 'Text'}
+        </div>
+      )
+    }
   } else if (clip.type === 'shape') {
+    const size = Math.min(w, h)
     content = (
-      <svg viewBox="0 0 100 100" width="100%" height="100%" preserveAspectRatio="none">
-        <path d={SHAPE_PATHS[clip.shapePath || 'rect'] || SHAPE_PATHS.rect} fill={clip.shapeColor || '#3b82f6'} />
-      </svg>
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg viewBox="0 0 100 100" width={size} height={size} preserveAspectRatio="xMidYMid meet">
+          <path d={SHAPE_PATHS[clip.shapePath || 'rect'] || SHAPE_PATHS.rect} fill={clip.shapeColor || '#3b82f6'} />
+        </svg>
+      </div>
     )
   } else if (clip.type === 'sticker') {
     content = (
@@ -200,13 +247,13 @@ function OverlayEl({ clip, stageW, stageH, currentTime, selected, onSelect, onUp
         left: x - w / 2,
         top: y - h / 2,
         width: w, height: h,
-        cursor: 'move',
+        cursor: isEditing ? 'text' : 'move',
         opacity: clip.opacity ?? 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         ...ts,
       }}>
       {content}
-      {selected && (
+      {selected && !isEditing && (
         <>
           <div style={{ position: 'absolute', inset: -2, border: '1.5px solid rgba(255,255,255,0.9)', borderRadius: 3, pointerEvents: 'none' }} />
           <div onMouseDown={onResizeDown}

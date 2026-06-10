@@ -3,26 +3,33 @@ import { create } from 'zustand'
 let seq = 0
 const id = () => `${++seq}_${Date.now()}`
 
-const track = (type, label, color) => ({
-  id: id(),
-  type,
-  label,
-  color,
-  muted: false,
-  locked: false,
-  clips: []
-})
+function getTrackLabel(type, existingTracks) {
+  const sameType = existingTracks.filter(t => t.type === type).length
+  const prefix = type === 'video' ? 'V' : type === 'audio' ? 'A' : type === 'text' ? 'T' : 'O'
+  return `${prefix}${sameType + 1}`
+}
+
+function computeDuration(tracks) {
+  let maxEnd = 0
+  for (const track of tracks) {
+    for (const clip of track.clips) {
+      const end = clip.start + clip.duration
+      if (end > maxEnd) maxEnd = end
+    }
+  }
+  return maxEnd
+}
 
 export const useStore = create((set, get) => ({
   projectName: 'My Project',
   width: 1920,
   height: 1080,
   fps: 30,
-  duration: 60,
+  duration: 0,
 
   tracks: [
-    track('video', 'Video', '#2563eb'),
-    track('audio', 'Audio', '#16a34a'),
+    { id: id(), type: 'video', label: 'V1', color: '#2563eb', muted: false, locked: false, clips: [] },
+    { id: id(), type: 'audio', label: 'A1', color: '#16a34a', muted: false, locked: false, clips: [] },
   ],
 
   currentTime: 0,
@@ -58,28 +65,37 @@ export const useStore = create((set, get) => ({
   selectClip: id => set({ selectedClipId: id }),
   clearSelection: () => set({ selectedClipId: null }),
 
-  addTrack: (type, label) => set(s => ({
-    tracks: [...s.tracks, track(
-      type,
-      label || `${type} ${s.tracks.filter(t => t.type === type).length + 1}`,
-      type === 'video' ? '#2563eb' : type === 'audio' ? '#16a34a' : type === 'text' ? '#d97706' : '#7c3aed'
-    )]
-  })),
+  addTrack: (type, customLabel) => set(s => {
+    const label = customLabel || getTrackLabel(type, s.tracks)
+    const color = type === 'video' ? '#2563eb' : type === 'audio' ? '#16a34a' : type === 'text' ? '#d97706' : '#7c3aed'
+    return { tracks: [...s.tracks, { id: id(), type, label, color, muted: false, locked: false, clips: [] }] }
+  }),
+
   removeTrack: tid => set(s => ({ tracks: s.tracks.filter(t => t.id !== tid) })),
   muteTrack: tid => set(s => ({ tracks: s.tracks.map(t => t.id === tid ? { ...t, muted: !t.muted } : t) })),
   lockTrack: tid => set(s => ({ tracks: s.tracks.map(t => t.id === tid ? { ...t, locked: !t.locked } : t) })),
 
+  recomputeDuration: () => {
+    const newDuration = computeDuration(get().tracks)
+    set({ duration: newDuration })
+    const { currentTime } = get()
+    if (currentTime > newDuration) set({ currentTime: newDuration })
+  },
+
   addClip: (trackId, data) => {
     const track = get().tracks.find(t => t.id === trackId)
     if (!track) return null
-    const endTime = track.clips.reduce((max, c) => Math.max(max, c.start + c.duration), 0)
+    let startTime = data.start
+    if (startTime === undefined) {
+      startTime = track.clips.reduce((max, c) => Math.max(max, c.start + c.duration), 0)
+    }
     const clip = {
       id: id(),
       trackId,
       name: data.name || 'Clip',
       type: data.type || track.type,
       src: data.src || null,
-      start: endTime,
+      start: startTime,
       duration: data.duration || 5,
       offset: 0,
       volume: 1,
@@ -107,24 +123,30 @@ export const useStore = create((set, get) => ({
       sticker: data.sticker || null,
       ...data,
     }
+    clip.start = startTime
     set(s => ({
       tracks: s.tracks.map(t => t.id === trackId ? { ...t, clips: [...t.clips, clip] } : t)
     }))
+    get().recomputeDuration()
     return clip.id
   },
 
-  updateClip: (clipId, patch) => set(s => ({
-    tracks: s.tracks.map(t => ({
-      ...t,
-      clips: t.clips.map(c => c.id === clipId ? { ...c, ...patch } : c)
+  updateClip: (clipId, patch) => {
+    set(s => ({
+      tracks: s.tracks.map(t => ({
+        ...t,
+        clips: t.clips.map(c => c.id === clipId ? { ...c, ...patch } : c)
+      }))
     }))
-  })),
+    get().recomputeDuration()
+  },
 
   removeClip: clipId => {
     set(s => ({
       tracks: s.tracks.map(t => ({ ...t, clips: t.clips.filter(c => c.id !== clipId) })),
       selectedClipId: s.selectedClipId === clipId ? null : s.selectedClipId,
     }))
+    get().recomputeDuration()
   },
 
   splitClip: (clipId, time) => {
@@ -141,11 +163,15 @@ export const useStore = create((set, get) => ({
       duration: c.duration - rel,
       offset: c.offset + rel
     })
+    get().recomputeDuration()
   },
 
   duplicateClip: clipId => {
     const c = get().tracks.flatMap(t => t.clips).find(x => x.id === clipId)
-    if (c) get().addClip(c.trackId, { ...c, id: undefined, start: c.start + c.duration + 0.1 })
+    if (c) {
+      get().addClip(c.trackId, { ...c, id: undefined, start: c.start + c.duration + 0.1 })
+      get().recomputeDuration()
+    }
   },
 
   deleteSelected: () => {

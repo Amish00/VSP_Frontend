@@ -26,106 +26,244 @@ const ExportModal = ({ onClose }) => {
     return true;
   };
 
-  const buildOffscreen = (page) => {
-    const wrap = document.createElement('div');
-    wrap.style.cssText = `position:fixed;left:-99999px;top:-99999px;width:${page.width}px;height:${page.height}px;overflow:hidden;`;
-    const bg = document.createElement('div');
-    bg.style.cssText = `position:absolute;inset:0;background:${page.background};`;
-    wrap.appendChild(bg);
+  // Render a single layer to canvas context (for perfect emoji and image rendering)
+  const renderLayerToCanvas = async (ctx, layer, width, height) => {
+    ctx.save();
+    
+    // Apply transformations
+    const centerX = width / 2;
+    const centerY = height / 2;
+    ctx.translate(layer.x + centerX, layer.y + centerY);
+    ctx.rotate((layer.rotation || 0) * Math.PI / 180);
+    ctx.globalAlpha = layer.opacity ?? 1;
+    ctx.translate(-centerX, -centerY);
+    
+    if (layer.type === 'emoji') {
+      // Perfect emoji rendering using canvas text
+      const emoji = layer.emoji || '😀';
+      const fontSize = Math.min(width, height) * 0.7;
+      ctx.font = `${fontSize}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Segoe UI Symbol", "Helvetica Neue", sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#000000';
+      ctx.fillText(emoji, width / 2, height / 2);
+    } 
+    else if (layer.type === 'image' && layer.src) {
+      await new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          // Calculate object-fit positioning
+          const imgAspect = img.width / img.height;
+          const containerAspect = width / height;
+          
+          let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
+          
+          if (layer.objectFit === 'cover') {
+            if (imgAspect > containerAspect) {
+              drawHeight = height;
+              drawWidth = img.width * (height / img.height);
+              offsetX = (width - drawWidth) / 2;
+            } else {
+              drawWidth = width;
+              drawHeight = img.height * (width / img.width);
+              offsetY = (height - drawHeight) / 2;
+            }
+          } else if (layer.objectFit === 'contain') {
+            if (imgAspect > containerAspect) {
+              drawWidth = width;
+              drawHeight = img.height * (width / img.width);
+              offsetY = (height - drawHeight) / 2;
+            } else {
+              drawHeight = height;
+              drawWidth = img.width * (height / img.height);
+              offsetX = (width - drawWidth) / 2;
+            }
+          } else { // fill/stretch
+            drawWidth = width;
+            drawHeight = height;
+          }
+          
+          // Apply border radius as clip
+          if (layer.borderRadius > 0) {
+            ctx.save();
+            ctx.beginPath();
+            const radius = (layer.borderRadius / 100) * Math.min(width, height);
+            ctx.moveTo(radius, 0);
+            ctx.lineTo(width - radius, 0);
+            ctx.quadraticCurveTo(width, 0, width, radius);
+            ctx.lineTo(width, height - radius);
+            ctx.quadraticCurveTo(width, height, width - radius, height);
+            ctx.lineTo(radius, height);
+            ctx.quadraticCurveTo(0, height, 0, height - radius);
+            ctx.lineTo(0, radius);
+            ctx.quadraticCurveTo(0, 0, radius, 0);
+            ctx.closePath();
+            ctx.clip();
+          }
+          
+          ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+          
+          if (layer.borderRadius > 0) {
+            ctx.restore();
+          }
+          
+          resolve();
+        };
+        img.onerror = () => resolve();
+        img.src = layer.src;
+      });
+    }
+    else if (layer.type === 'text') {
+      ctx.font = `${layer.fontStyle || 'normal'} ${layer.fontWeight || '600'} ${layer.fontSize || 32}px ${layer.fontFamily || 'Inter, sans-serif'}`;
+      ctx.fillStyle = layer.textColor || '#000';
+      ctx.textAlign = layer.textAlign || 'left';
+      ctx.textBaseline = 'top';
+      ctx.letterSpacing = `${layer.letterSpacing || 0}px`;
+      
+      const lines = (layer.text || '').split('\n');
+      const lineHeight = (layer.lineHeight || 1.25) * (layer.fontSize || 32);
+      
+      lines.forEach((line, i) => {
+        let x = 4; // padding
+        if (ctx.textAlign === 'center') x = width / 2;
+        if (ctx.textAlign === 'right') x = width - 4;
+        ctx.fillText(line, x, i * lineHeight + 4);
+      });
+    }
+    else if (layer.type === 'shape') {
+      // Render shape using canvas paths
+      const fill = layer.fill || '#ccc';
+      const stroke = layer.stroke || 'none';
+      const strokeWidth = layer.strokeWidth || 0;
+      
+      ctx.beginPath();
+      const w = width, h = height;
+      const centerX = w / 2, centerY = h / 2;
+      
+      switch(layer.shapeType) {
+        case 'rectangle':
+          ctx.rect(0, 0, w, h);
+          break;
+        case 'circle':
+          ctx.ellipse(centerX, centerY, w/2, h/2, 0, 0, 2 * Math.PI);
+          break;
+        case 'triangle':
+          ctx.moveTo(centerX, 0);
+          ctx.lineTo(w, h);
+          ctx.lineTo(0, h);
+          ctx.closePath();
+          break;
+        case 'diamond':
+          ctx.moveTo(centerX, 0);
+          ctx.lineTo(w, centerY);
+          ctx.lineTo(centerX, h);
+          ctx.lineTo(0, centerY);
+          ctx.closePath();
+          break;
+        case 'star':
+          const points = 5;
+          const outerR = Math.min(w, h) / 2;
+          const innerR = outerR * 0.4;
+          for (let i = 0; i < points * 2; i++) {
+            const radius = i % 2 === 0 ? outerR : innerR;
+            const angle = (Math.PI * 2 * i) / (points * 2) - Math.PI / 2;
+            const x = centerX + radius * Math.cos(angle);
+            const y = centerY + radius * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          break;
+        default:
+          ctx.rect(0, 0, w, h);
+      }
+      
+      if (fill !== 'none') {
+        ctx.fillStyle = fill;
+        ctx.fill();
+      }
+      if (stroke !== 'none' && strokeWidth > 0) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = strokeWidth;
+        ctx.stroke();
+      }
+    }
+    else if (layer.type === 'line') {
+      ctx.beginPath();
+      ctx.moveTo(0, height / 2);
+      ctx.lineTo(width, height / 2);
+      ctx.strokeStyle = layer.stroke || '#000';
+      ctx.lineWidth = layer.strokeWidth || 2;
+      
+      if (layer.lineStyle === 'dashed') {
+        ctx.setLineDash([12, 6]);
+      } else if (layer.lineStyle === 'dotted') {
+        ctx.setLineDash([3, 6]);
+      } else {
+        ctx.setLineDash([]);
+      }
+      
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    
+    ctx.restore();
+  };
+
+  const renderPageToCanvas = async (page, targetScale = 1) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = page.width * targetScale;
+    canvas.height = page.height * targetScale;
+    const ctx = canvas.getContext('2d');
+    
+    // Draw background
+    ctx.fillStyle = page.background;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Scale context for high-res export
+    ctx.scale(targetScale, targetScale);
+    
+    // Render each layer in order
     for (const layer of page.layers) {
       if (!layer.visible) continue;
-      const el = document.createElement('div');
-      el.style.cssText = `position:absolute;left:${layer.x}px;top:${layer.y}px;width:${layer.width}px;height:${layer.height}px;transform:rotate(${layer.rotation || 0}deg);opacity:${layer.opacity ?? 1};transform-origin:center center;box-sizing:border-box;`;
-      if (layer.type === 'text') {
-        el.style.fontFamily = layer.fontFamily || 'Inter, sans-serif';
-        el.style.fontSize = (layer.fontSize || 32) + 'px';
-        el.style.fontWeight = layer.fontWeight || '600';
-        el.style.fontStyle = layer.fontStyle || 'normal';
-        el.style.textDecoration = layer.textDecoration || 'none';
-        el.style.color = layer.textColor || '#000';
-        el.style.textAlign = layer.textAlign || 'left';
-        el.style.lineHeight = String(layer.lineHeight || 1.25);
-        el.style.letterSpacing = (layer.letterSpacing || 0) + 'px';
-        el.style.padding = '4px';
-        el.style.whiteSpace = 'pre-wrap';
-        el.style.wordBreak = 'break-word';
-        el.style.overflow = 'hidden';
-        el.textContent = layer.text || '';
-      } else if (layer.type === 'shape') {
-        const shapesSVG = {
-          rectangle: `<rect x="0" y="0" width="100" height="100" fill="${layer.fill || '#ccc'}" stroke="${layer.stroke || 'none'}" stroke-width="${layer.strokeWidth || 0}" rx="0"/>`,
-          circle: `<ellipse cx="50" cy="50" rx="50" ry="50" fill="${layer.fill || '#ccc'}" stroke="${layer.stroke || 'none'}" stroke-width="${layer.strokeWidth || 0}"/>`,
-          triangle: `<polygon points="50,0 100,100 0,100" fill="${layer.fill || '#ccc'}" stroke="${layer.stroke || 'none'}" stroke-width="${layer.strokeWidth || 0}"/>`,
-          diamond: `<polygon points="50,0 100,50 50,100 0,50" fill="${layer.fill || '#ccc'}" stroke="${layer.stroke || 'none'}" stroke-width="${layer.strokeWidth || 0}"/>`,
-          star: `<polygon points="50,5 61,35 95,35 68,57 79,91 50,70 21,91 32,57 5,35 39,35" fill="${layer.fill || '#ccc'}" stroke="${layer.stroke || 'none'}" stroke-width="${layer.strokeWidth || 0}"/>`,
-          pentagon: `<polygon points="50,2 98,36 79,90 21,90 2,36" fill="${layer.fill || '#ccc'}" stroke="${layer.stroke || 'none'}" stroke-width="${layer.strokeWidth || 0}"/>`,
-          hexagon: `<polygon points="25,5 75,5 97,50 75,95 25,95 3,50" fill="${layer.fill || '#ccc'}" stroke="${layer.stroke || 'none'}" stroke-width="${layer.strokeWidth || 0}"/>`,
-          arrow: `<polygon points="0,35 60,35 60,0 100,50 60,100 60,65 0,65" fill="${layer.fill || '#ccc'}" stroke="${layer.stroke || 'none'}" stroke-width="${layer.strokeWidth || 0}"/>`,
-          heart: `<path d="M50,75 C25,55 5,42 5,28 C5,15 15,5 28,5 C36,5 43,9 50,17 C57,9 64,5 72,5 C85,5 95,15 95,28 C95,42 75,55 50,75Z" fill="${layer.fill || '#ccc'}" stroke="${layer.stroke || 'none'}" stroke-width="${layer.strokeWidth || 0}"/>`,
-          cross: `<path d="M35,5 L65,5 L65,35 L95,35 L95,65 L65,65 L65,95 L35,95 L35,65 L5,65 L5,35 L35,35Z" fill="${layer.fill || '#ccc'}" stroke="${layer.stroke || 'none'}" stroke-width="${layer.strokeWidth || 0}"/>`,
-          chatbubble: `<path d="M5,5 L95,5 L95,70 L55,70 L40,95 L40,70 L5,70Z" fill="${layer.fill || '#ccc'}" stroke="${layer.stroke || 'none'}" stroke-width="${layer.strokeWidth || 0}"/>`,
-          parallelogram: `<polygon points="20,5 100,5 80,95 0,95" fill="${layer.fill || '#ccc'}" stroke="${layer.stroke || 'none'}" stroke-width="${layer.strokeWidth || 0}"/>`,
-        };
-        el.innerHTML = `<svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">${shapesSVG[layer.shapeType || 'rectangle']}</svg>`;
-      } else if (layer.type === 'image' && layer.src) {
-        el.style.overflow = 'hidden';
-        const img = document.createElement('img');
-        img.crossOrigin = 'anonymous';
-        img.src = layer.src;
-        img.style.cssText = `width:100%;height:100%;object-fit:${layer.objectFit || 'cover'};border-radius:${layer.borderRadius || 0}%;display:block;`;
-        el.appendChild(img);
-      } else if (layer.type === 'emoji') {
-        el.style.display = 'flex';
-        el.style.alignItems = 'center';
-        el.style.justifyContent = 'center';
-        el.style.fontFamily = '"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji","Segoe UI Symbol",sans-serif';
-        el.style.fontSize = Math.min(layer.width, layer.height) * 0.75 + 'px';
-        el.style.lineHeight = '1.15';
-        el.style.overflow = 'visible';
-        el.textContent = layer.emoji || '';
-      } else if (layer.type === 'line') {
-        const ns = 'http://www.w3.org/2000/svg';
-        const svg = document.createElementNS(ns, 'svg');
-        svg.setAttribute('width', '100%');
-        svg.setAttribute('height', '100%');
-        const line = document.createElementNS(ns, 'line');
-        line.setAttribute('x1', '0');
-        line.setAttribute('y1', '50%');
-        line.setAttribute('x2', '100%');
-        line.setAttribute('y2', '50%');
-        line.setAttribute('stroke', layer.stroke || '#000');
-        line.setAttribute('stroke-width', String(layer.strokeWidth || 2));
-        line.setAttribute('stroke-linecap', 'round');
-        if (layer.lineStyle === 'dashed') line.setAttribute('stroke-dasharray', '12,5');
-        if (layer.lineStyle === 'dotted') line.setAttribute('stroke-dasharray', '3,6');
-        svg.appendChild(line);
-        el.appendChild(svg);
-      }
-      wrap.appendChild(el);
+      await renderLayerToCanvas(ctx, layer, layer.width, layer.height);
     }
-    document.body.appendChild(wrap);
-    return wrap;
+    
+    return canvas;
   };
 
   const doExport = async () => {
     setStatus('loading');
-    setMsg('Building canvas...');
+    setMsg('Preparing...');
     const page = store.getCurrentPage();
+    
     try {
       if (format === 'svg') {
         setMsg('Generating SVG...');
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${page.width}" height="${page.height}">`;
         svg += `<rect width="100%" height="100%" fill="${page.background}"/>`;
+        
         for (const l of page.layers) {
           if (!l.visible) continue;
-          const g = `transform="translate(${l.x},${l.y}) rotate(${l.rotation || 0},${l.width / 2},${l.height / 2})" opacity="${l.opacity ?? 1}"`;
-          if (l.type === 'text') {
-            svg += `<text ${g} font-family="${l.fontFamily || 'sans-serif'}" font-size="${l.fontSize || 32}" font-weight="${l.fontWeight || '600'}" fill="${l.textColor || '#000'}">${(l.text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>`;
-          } else if (l.type === 'shape') {
-            svg += `<g ${g}><svg x="0" y="0" width="${l.width}" height="${l.height}" viewBox="0 0 100 100" preserveAspectRatio="none"><rect width="100" height="100" fill="${l.fill || '#ccc'}"/></svg></g>`;
+          const transform = `translate(${l.x},${l.y}) rotate(${l.rotation || 0},${l.width/2},${l.height/2})`;
+          
+          if (l.type === 'emoji') {
+            svg += `<g transform="${transform}" opacity="${l.opacity ?? 1}">
+              <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" font-family="'Segoe UI Emoji','Apple Color Emoji'" font-size="${Math.min(l.width, l.height) * 0.7}" fill="#000000">${escapeXml(l.emoji || '😀')}</text>
+            </g>`;
+          } else if (l.type === 'image' && l.src) {
+            svg += `<g transform="${transform}" opacity="${l.opacity ?? 1}">
+              <image href="${l.src}" width="${l.width}" height="${l.height}" preserveAspectRatio="${l.objectFit === 'cover' ? 'xMidYMid slice' : l.objectFit === 'contain' ? 'xMidYMid meet' : 'none'}" />
+            </g>`;
+          } else if (l.type === 'text') {
+            svg += `<g transform="${transform}" opacity="${l.opacity ?? 1}">
+              <text x="4" y="4" font-family="${l.fontFamily || 'sans-serif'}" font-size="${l.fontSize || 32}" font-weight="${l.fontWeight || '600'}" fill="${l.textColor || '#000'}">${escapeXml(l.text || '')}</text>
+            </g>`;
           }
         }
         svg += '</svg>';
+        
         const blob = new Blob([svg], { type: 'image/svg+xml' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -138,37 +276,34 @@ const ExportModal = ({ onClose }) => {
         setTimeout(() => setStatus('idle'), 2000);
         return;
       }
-      const html2canvas = (await import('html2canvas')).default;
-      const wrap = buildOffscreen(page);
-      setMsg('Rendering...');
-      if (document.fonts?.ready) await document.fonts.ready;
-      await new Promise(r => setTimeout(r, 120));
-      let canvas;
-      try {
-        canvas = await html2canvas(wrap, { width: page.width, height: page.height, scale, useCORS: true, allowTaint: false, backgroundColor: null, logging: false });
-        if (isCanvasBlank(canvas)) {
-          canvas = await html2canvas(wrap, { width: page.width, height: page.height, scale, useCORS: true, allowTaint: false, backgroundColor: null, logging: false, foreignObjectRendering: true });
-        }
-      } finally {
-        document.body.removeChild(wrap);
-      }
+      
+      // PNG/JPG/PDF using canvas rendering
+      const targetScale = (format === 'png' || format === 'jpg') ? scale : 1;
+      setMsg('Rendering with canvas...');
+      const canvas = await renderPageToCanvas(page, targetScale);
+      
       if (format === 'pdf') {
         setMsg('Generating PDF...');
         const { jsPDF } = await import('jspdf');
         const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({ orientation: page.width > page.height ? 'landscape' : 'portrait', unit: 'px', format: [page.width, page.height] });
-        pdf.addImage(imgData, 'PNG', 0, 0, page.width, page.height);
+        const pdf = new jsPDF({
+          orientation: page.width > page.height ? 'landscape' : 'portrait',
+          unit: 'px',
+          format: [page.width * targetScale, page.height * targetScale],
+        });
+        pdf.addImage(imgData, 'PNG', 0, 0, page.width * targetScale, page.height * targetScale);
         pdf.save(`${getExportBaseName()}.pdf`);
       } else {
         setMsg('Saving...');
         const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
-        const q = format === 'jpg' ? 0.92 : 1;
-        const url = canvas.toDataURL(mime, q);
+        const quality = format === 'jpg' ? 0.92 : 1;
+        const url = canvas.toDataURL(mime, quality);
         const a = document.createElement('a');
         a.href = url;
         a.download = `${getExportBaseName()}.${format}`;
         a.click();
       }
+      
       setStatus('done');
       setMsg('Downloaded!');
       setTimeout(() => setStatus('idle'), 2000);
@@ -178,6 +313,16 @@ const ExportModal = ({ onClose }) => {
       setMsg(err.message);
       setTimeout(() => setStatus('idle'), 3000);
     }
+  };
+
+  const escapeXml = (str) => {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
   };
 
   const formats = [
@@ -194,8 +339,9 @@ const ExportModal = ({ onClose }) => {
       <div style={{ background: editorTheme.card, border: `1px solid ${editorTheme.border}`, borderRadius: 14, padding: 24, width: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <span style={{ fontWeight: 600, fontSize: 15, color: editorTheme.text }}>Export Design</span>
-          <button onClick={onClose} className="btn-icon"><X size={15} /></button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><X size={15} color={editorTheme.textSecondary} /></button>
         </div>
+        
         <div style={{ marginBottom: 18 }}>
           <div style={{ fontSize: 10, color: editorTheme.textMuted, fontWeight: 600, letterSpacing: 0.8, marginBottom: 8 }}>FORMAT</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
@@ -207,24 +353,33 @@ const ExportModal = ({ onClose }) => {
             ))}
           </div>
         </div>
+        
         {(format === 'png' || format === 'jpg') && (
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 10, color: editorTheme.textMuted, fontWeight: 600, letterSpacing: 0.8, marginBottom: 8 }}>SCALE</div>
             <div style={{ display: 'flex', gap: 6 }}>
               {[1, 2, 3].map(s => (
-                <button key={s} onClick={() => setScale(s)} style={{ flex: 1, padding: '8px', borderRadius: 8, border: scale === s ? `1.5px solid ${editorTheme.borderLight}` : `1.5px solid ${editorTheme.border}`, background: scale === s ? editorTheme.hov : editorTheme.el, color: scale === s ? editorTheme.text : editorTheme.textSecondary, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                <button key={s} onClick={() => setScale(s)} style={{ flex: 1, padding: '8px', borderRadius: 8, border: `1.5px solid ${scale === s ? editorTheme.borderLight : editorTheme.border}`, background: scale === s ? editorTheme.hov : editorTheme.el, color: scale === s ? editorTheme.text : editorTheme.textSecondary, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                   {s}× <span style={{ fontSize: 9, fontWeight: 400, color: editorTheme.textMuted }}>{s === 1 ? '72dpi' : s === 2 ? '144dpi' : '216dpi'}</span>
                 </button>
               ))}
             </div>
           </div>
         )}
+        
         <div style={{ background: editorTheme.side, borderRadius: 8, padding: '10px 12px', marginBottom: 18, fontSize: 11, border: `1px solid ${editorTheme.border}` }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: editorTheme.textMuted, marginBottom: 4 }}><span>Canvas</span><span style={{ color: editorTheme.textSecondary, fontFamily: 'monospace' }}>{page.width}×{page.height}px</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: editorTheme.textMuted, marginBottom: 4 }}>
+            <span>Canvas</span>
+            <span style={{ color: editorTheme.textSecondary, fontFamily: 'monospace' }}>{page.width}×{page.height}px</span>
+          </div>
           {(format === 'png' || format === 'jpg') && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: editorTheme.textMuted }}><span>Export</span><span style={{ color: editorTheme.text, fontFamily: 'monospace' }}>{page.width * scale}×{page.height * scale}px</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: editorTheme.textMuted }}>
+              <span>Export</span>
+              <span style={{ color: editorTheme.text, fontFamily: 'monospace' }}>{page.width * scale}×{page.height * scale}px</span>
+            </div>
           )}
         </div>
+        
         <button onClick={doExport} disabled={status === 'loading'} style={{ width: '100%', padding: '11px', borderRadius: 9, border: 'none', background: status === 'done' ? '#11311f' : status === 'error' ? '#3a1a1a' : editorTheme.primaryLight, color: status === 'done' ? '#4ade80' : status === 'error' ? '#f87171' : editorTheme.base, cursor: status === 'loading' ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.15s' }}>
           {status === 'loading' && <><Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> {msg}</>}
           {status === 'done' && <><Check size={14} /> {msg}</>}

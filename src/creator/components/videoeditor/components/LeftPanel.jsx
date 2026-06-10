@@ -12,7 +12,7 @@ const S = {
 
 function Panel({ title, onClose, children }) {
   return (
-    <div style={{ width: 234, background: '#0d0d0d', borderRight: '1px solid #1a1a1a', display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
+    <div style={{ width: 280, background: '#0d0d0d', borderRight: '1px solid #1a1a1a', display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 13px 9px', flexShrink: 0 }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: '#e0e0e0' }}>{title}</span>
         {onClose && <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 2 }}><X size={13} /></button>}
@@ -38,6 +38,7 @@ function Tabs({ tabs, active, onChange }) {
   )
 }
 
+// ---------- Media Panel ----------
 function MediaPanel() {
   const { tracks, addClip } = useStore()
   const fileRef = useRef()
@@ -205,6 +206,7 @@ function MediaPanel() {
   )
 }
 
+// ---------- Text Panel ----------
 function TextPanel() {
   const { tracks, addClip, addTrack } = useStore()
   const place = p => {
@@ -226,13 +228,14 @@ function TextPanel() {
   )
 }
 
+// ---------- Shapes Panel ----------
 function ShapesPanel() {
   const { tracks, addClip, addTrack } = useStore()
   const [color, setColor] = useState('#3b82f6')
   const place = s => {
     let t = tracks.find(tr => tr.type === 'shape') || tracks.find(tr => tr.type === 'overlay')
     if (!t) { addTrack('overlay', 'Overlays'); t = useStore.getState().tracks.find(tr => tr.type === 'overlay') }
-    if (t) addClip(t.id, { type: 'shape', name: s.name, shapePath: s.id, shapeColor: color, duration: 5, overlayW: 25, overlayH: 20 })
+    if (t) addClip(t.id, { type: 'shape', name: s.name, shapePath: s.id, shapeColor: color, duration: 5, overlayW: 25, overlayH: 25 })
   }
   return (
     <>
@@ -258,6 +261,7 @@ function ShapesPanel() {
   )
 }
 
+// ---------- Stickers Panel ----------
 function StickersPanel() {
   const { tracks, addClip, addTrack } = useStore()
   const [showFullPicker, setShowFullPicker] = useState(false)
@@ -340,6 +344,7 @@ function StickersPanel() {
   )
 }
 
+// ---------- Audio Panel ----------
 function AudioPanel() {
   const { tracks, addClip, addTrack } = useStore()
   const fileRef = useRef()
@@ -440,6 +445,7 @@ function AudioPanel() {
   )
 }
 
+// ---------- Transitions Panel ----------
 function TransitionsPanel() {
   const { getSelectedClip, updateClip } = useStore()
   const clip = getSelectedClip()
@@ -480,6 +486,7 @@ function TransitionsPanel() {
   )
 }
 
+// ---------- Effects Panel ----------
 function EffectsPanel() {
   const { getSelectedClip, updateClip } = useStore()
   const clip = getSelectedClip()
@@ -501,6 +508,7 @@ function EffectsPanel() {
   )
 }
 
+// ---------- Main LeftPanel ----------
 const PANELS = {
   media: { title: 'Media', C: MediaPanel },
   text: { title: 'Text', C: TextPanel },

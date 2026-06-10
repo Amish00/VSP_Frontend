@@ -1,12 +1,10 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react'
 import { useStore } from '../store/store'
-import { Volume2, VolumeX, Lock, Unlock, Plus } from 'lucide-react'
+import { Volume2, VolumeX, Lock, Unlock } from 'lucide-react'
 
 const LABEL_W = 130
 const TRACK_H = 48
 const RULER_H = 24
-const CTX_MENU_W = 170
-const CTX_MENU_H = 120
 
 function fmtTime(t) {
   const m = Math.floor(t / 60)
@@ -35,10 +33,7 @@ function WaveformBars({ data, width, color }) {
       ctx.fillRect(i * bw, h / 2 - amp, Math.max(bw - 0.5, 0.5), amp * 2)
     }
   }, [data, width, color])
-  return (
-    <canvas ref={ref}
-      style={{ position: 'absolute', inset: 0, top: 5, opacity: 0.5, pointerEvents: 'none' }} />
-  )
+  return <canvas ref={ref} style={{ position: 'absolute', inset: 0, top: 5, opacity: 0.5, pointerEvents: 'none' }} />
 }
 
 function Clip({ clip, trackColor, zoom, scrollX, selected, trackLocked }) {
@@ -112,10 +107,7 @@ function Clip({ clip, trackColor, zoom, scrollX, selected, trackLocked }) {
     window.addEventListener('mouseup', onUp)
   }, [clip, zoom, updateClip])
 
-  const clipLabel =
-    clip.type === 'text' ? `"${(clip.text || '').slice(0, 12)}"` :
-    clip.type === 'sticker' ? clip.sticker || '⭐' :
-    clip.name || clip.type
+  const clipLabel = clip.type === 'text' ? `"${(clip.text || '').slice(0, 12)}"` : clip.type === 'sticker' ? clip.sticker || '⭐' : clip.name || clip.type
 
   if (isOffscreen) return null
 
@@ -125,8 +117,8 @@ function Clip({ clip, trackColor, zoom, scrollX, selected, trackLocked }) {
         onMouseDown={onMouseDown}
         onContextMenu={e => {
           e.preventDefault()
-          const x = Math.max(8, Math.min(e.clientX, window.innerWidth - CTX_MENU_W - 8))
-          const y = Math.max(8, Math.min(e.clientY, window.innerHeight - CTX_MENU_H - 8))
+          const x = Math.max(8, Math.min(e.clientX, window.innerWidth - 170 - 8))
+          const y = Math.max(8, Math.min(e.clientY, window.innerHeight - 120 - 8))
           setCtx({ x, y })
         }}
         style={{
@@ -139,7 +131,6 @@ function Clip({ clip, trackColor, zoom, scrollX, selected, trackLocked }) {
           cursor: activeTool === 'split' ? 'crosshair' : trackLocked ? 'not-allowed' : 'grab',
           overflow: 'hidden',
           userSelect: 'none',
-          transition: 'border-color 0.1s',
         }}>
         {clip.waveform && <WaveformBars data={clip.waveform} width={width} color={col.border} />}
         {clip.transIn && width > 20 && (
@@ -203,12 +194,10 @@ function TrackRow({ track, zoom, scrollX, selectedClipId }) {
       <div style={{ width: LABEL_W, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px', background: '#0d0d0d', borderRight: '1px solid #1a1a1a' }}>
         <div style={{ width: 6, height: 6, borderRadius: 2, background: track.color, flexShrink: 0 }} />
         <span style={{ flex: 1, fontSize: 11, color: '#666', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.label}</span>
-        <button onClick={() => muteTrack(track.id)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: track.muted ? '#ef4444' : '#2a2a2a', padding: 2, display: 'flex', alignItems: 'center' }}>
+        <button onClick={() => muteTrack(track.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: track.muted ? '#ef4444' : '#2a2a2a', padding: 2, display: 'flex', alignItems: 'center' }}>
           {track.muted ? <VolumeX size={11} /> : <Volume2 size={11} />}
         </button>
-        <button onClick={() => lockTrack(track.id)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: track.locked ? '#eab308' : '#2a2a2a', padding: 2, display: 'flex', alignItems: 'center' }}>
+        <button onClick={() => lockTrack(track.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: track.locked ? '#eab308' : '#2a2a2a', padding: 2, display: 'flex', alignItems: 'center' }}>
           {track.locked ? <Lock size={11} /> : <Unlock size={11} />}
         </button>
       </div>
@@ -228,12 +217,7 @@ function TrackRow({ track, zoom, scrollX, selectedClipId }) {
 }
 
 const Timeline = () => {
-  const {
-    tracks, currentTime, duration, zoom, scrollX,
-    selectedClipId, setZoom, setScrollX, setCurrentTime,
-    addTrack, togglePlay, deleteSelected, activeTool,
-  } = useStore()
-
+  const { tracks, currentTime, duration, zoom, scrollX, selectedClipId, setZoom, setScrollX, setCurrentTime, addTrack, togglePlay, deleteSelected, activeTool } = useStore()
   const outerRef = useRef()
   const isDraggingPlayhead = useRef(false)
 
@@ -287,7 +271,7 @@ const Timeline = () => {
         <div style={{ width: LABEL_W, flexShrink: 0, display: 'flex', gap: 4 }}>
           {[['video', 'V'], ['audio', 'A'], ['text', 'T']].map(([type, lbl]) => (
             <button key={type} onClick={() => addTrack(type)}
-              style={{ padding: '1px 7px', borderRadius: 4, border: '1px solid #2a2a2a', background: '#141414', color: '#555', cursor: 'pointer', fontSize: 10, fontFamily: 'inherit', transition: 'all 0.1s' }}
+              style={{ padding: '1px 7px', borderRadius: 4, border: '1px solid #2a2a2a', background: '#141414', color: '#555', cursor: 'pointer', fontSize: 10, fontFamily: 'inherit' }}
               onMouseEnter={e => { e.currentTarget.style.color = '#aaa' }}
               onMouseLeave={e => { e.currentTarget.style.color = '#555' }}>
               +{lbl}

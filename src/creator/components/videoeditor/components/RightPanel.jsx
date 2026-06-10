@@ -71,15 +71,8 @@ const RightPanel = () => {
 
   return (
     <div style={{
-      width: 260,                      // increased from 208
-      background: '#0d0d0d',
-      borderLeft: '1px solid #1a1a1a',
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',              // prevent any overflow
-      flexShrink: 0
+      width: 260, background: '#0d0d0d', borderLeft: '1px solid #1a1a1a', display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0
     }}>
-      {/* Header */}
       <div style={{ padding: '9px 12px 8px', borderBottom: '1px solid #1a1a1a', flexShrink: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
           <span style={{ fontSize: 12, fontWeight: 600, color: '#e0e0e0', textTransform: 'capitalize' }}>{clip.type}</span>
@@ -87,7 +80,6 @@ const RightPanel = () => {
         <input value={clip.name || ''} onChange={e => upd({ name: e.target.value })} style={inp} placeholder="Clip name" />
       </div>
 
-      {/* Scrollable content – only vertical scrolling, no horizontal */}
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         <Sec title="Timing">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
@@ -224,4 +216,4 @@ const RightPanel = () => {
   );
 };
 
-export default RightPanel;
+export default RightPanel
