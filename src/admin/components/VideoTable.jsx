@@ -6,6 +6,7 @@ import ConfirmDeleteModal from './ConfirmDeleteModal';
 import Modal from '../components/ui/Modal';
 import Pagination from './Pagination';
 import { videoApi } from '../api/videoApi';
+import { Film, Smartphone, Lock, Unlock } from 'lucide-react';
 
 const STATUS_META = {
   APPROVED: { color: '#10B981', bg: 'rgba(16,185,129,.12)', label: 'Approved' },
@@ -36,7 +37,6 @@ const VideoTable = ({ search, setSearch, type }) => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const debounceTimer = useRef(null);
 
-  // Snackbar options (top-right)
   const snackbarOptions = {
     anchorOrigin: { vertical: 'top', horizontal: 'right' },
     autoHideDuration: 3000,
@@ -167,7 +167,7 @@ const VideoTable = ({ search, setSearch, type }) => {
 
   return (
     <div>
-      {/* Filter bar (unchanged) */}
+      {/* Filter bar */}
       <div className="flex gap-3 mb-4 flex-wrap items-center">
         <div className="relative flex-1 min-w-[200px]">
           <input
@@ -192,7 +192,7 @@ const VideoTable = ({ search, setSearch, type }) => {
         </div>
       </div>
 
-      {/* Table (unchanged) */}
+      {/* Table */}
       <div className="bg-bg-card border border-border rounded-xl overflow-x-auto">
         <table className="w-full text-sm" style={{ minWidth: 720 }}>
           <thead>
@@ -248,11 +248,33 @@ const VideoTable = ({ search, setSearch, type }) => {
                     </td>
                     <td className="px-4 py-3 text-text-secondary whitespace-nowrap">{video.username}</td>
                     <td className="px-4 py-3">
-                      <Badge text={video.type} type={video.type === 'SHORTS' ? 'info' : 'pro'} />
+                      <div className="flex items-center gap-1.5">
+                        {video.type === 'SHORTS' ? (
+                          <Smartphone size={16} className="text-purple-400" />
+                        ) : (
+                          <Film size={16} className="text-blue-400" />
+                        )}
+                        <span className={`text-xs font-medium ${
+                          video.type === 'SHORTS' ? 'text-purple-400' : 'text-blue-400'
+                        }`}>
+                          {video.type}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-text-secondary whitespace-nowrap">{video.category || '—'}</td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <Badge text={video.paid ? 'Paid' : 'Free'} type={video.paid ? 'paid' : 'free'} small={true} />
+                      <div className="flex items-center gap-1.5">
+                        {video.paid ? (
+                          <Lock size={14} className="text-yellow-500" />
+                        ) : (
+                          <Unlock size={14} className="text-green-500" />
+                        )}
+                        <span className={`text-xs font-medium ${
+                          video.paid ? 'text-yellow-500' : 'text-green-500'
+                        }`}>
+                          {video.paid ? 'Paid' : 'Free'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-text-muted whitespace-nowrap">
                       {new Date(video.publishedAt).toLocaleDateString()}

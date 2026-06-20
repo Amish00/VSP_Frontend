@@ -75,7 +75,7 @@ const MonthlyEarningsTable = ({ monthlyEarnings = [] }) => {
                     <tfoot className="bg-primary/10 border-t-2 border-primary/30">
                         <tr>
                             <td className="px-4 py-3 font-bold text-text-primary text-base">
-                                📊 Total Earnings
+                                Total Earnings
                             </td>
                             <td className="px-4 py-3 font-extrabold text-text-primary text-base">
                                 Rs. {totalEarned.toFixed(2)}

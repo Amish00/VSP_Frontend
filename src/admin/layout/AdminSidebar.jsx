@@ -11,12 +11,13 @@ import {
   Settings,
   FileSliders,
 } from 'lucide-react';
+import { FaMoneyBillWave } from "react-icons/fa6";
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
   { id: 'videos', label: 'Video Management', icon: Video, path: '/admin/videos' },
   { id: 'users', label: 'User Management', icon: Users, path: '/admin/users' },
-  { id: 'revenue', label: 'Revenue', icon: DollarSign, path: '/admin/revenue' },
+  { id: 'revenue', label: 'Revenue', icon: FaMoneyBillWave, path: '/admin/revenue' },
   { id: 'reports', label: 'Reports', icon: FileText, path: '/admin/reports' },
   { id: 'settings', label: 'Settings', icon: Settings, path: '/admin/settings' },
 ];
@@ -24,24 +25,19 @@ const NAV = [
 const AdminSidebar = ({ active, onSelect, className = '' }) => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const currentPath = location.pathname;
 
   const getActiveFromPath = () => {
-    if (!currentPath.startsWith('/admin')) return null;
-
-    if (currentPath === '/admin') return 'dashboard';
-    if (currentPath.startsWith('/admin/videos')) return 'videos';
-    if (currentPath.startsWith('/admin/users')) return 'users';
-    if (currentPath.startsWith('/admin/revenue')) return 'revenue';
-    if (currentPath.startsWith('/admin/reports')) return 'reports';
-    if (currentPath.startsWith('/admin/settings')) return 'settings';
-
+    const pathname = location.pathname;
+    if (pathname === '/admin') return 'dashboard';
+    if (pathname.startsWith('/admin/videos')) return 'videos';
+    if (pathname.startsWith('/admin/users')) return 'users';
+    if (pathname.startsWith('/admin/revenue')) return 'revenue';
+    if (pathname.startsWith('/admin/reports')) return 'reports';
+    if (pathname.startsWith('/admin/settings')) return 'settings';
     return null;
   };
 
-  const activeId = currentPath.startsWith('/admin')
-    ? (active !== undefined ? active : getActiveFromPath())
-    : null;
+  const activeId = active !== undefined ? active : getActiveFromPath();
 
   const handleItemClick = (item) => {
     if (onSelect) {

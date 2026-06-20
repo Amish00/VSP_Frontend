@@ -1,4 +1,3 @@
-// StatCard.jsx
 import React from 'react';
 
 const StatCard = ({ icon, label, value, change, color }) => {

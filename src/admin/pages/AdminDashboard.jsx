@@ -113,7 +113,7 @@ const AdminDashboard = () => {
             </div>
 
             <h2 className="font-display font-bold text-lg mb-3 text-text-primary">
-                ⏳ Pending Review ({stats.pendingVideos})
+                Pending Review ({stats.pendingVideos})
             </h2>
             <PendingVideosTable />
         </div>

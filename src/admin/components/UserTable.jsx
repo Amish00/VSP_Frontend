@@ -5,13 +5,15 @@ import UserDataModal from './UserDataModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 import Pagination from './Pagination';
 import { userApi } from '../api/userApi';
+import { videoApi } from '../api/videoApi';
+import { User, UserCheck, UserPlus, FilePlus, Eye, CircleDollarSign } from 'lucide-react';
 
 const PAGE_SIZE = 10;
 
 const UserTable = () => {
   const { enqueueSnackbar } = useSnackbar();
-  const [allUsers, setAllUsers] = useState([]);         // all fetched users
-  const [filteredUsers, setFilteredUsers] = useState([]); // after search+filter
+  const [allUsers, setAllUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [loading, setLoading] = useState(true);
@@ -21,23 +23,21 @@ const UserTable = () => {
   const [userToDelete, setUserToDelete] = useState(null);
   const [currentUserRole, setCurrentUserRole] = useState('');
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [videoCounts, setVideoCounts] = useState({});
 
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
 
-  // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const debounceTimer = useRef(null);
 
-  // Snackbar options (top‑right)
   const snackbarOptions = {
     anchorOrigin: { vertical: 'top', horizontal: 'right' },
     autoHideDuration: 3000,
   };
 
-  // Debounce search input
+  // Debounce search
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
@@ -47,12 +47,11 @@ const UserTable = () => {
     return () => clearTimeout(debounceTimer.current);
   }, [search]);
 
-  // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [filter, debouncedSearch]);
 
-  // Fetch current user role and id
+  // Fetch current user role & id
   useEffect(() => {
     const role = sessionStorage.getItem('user_role');
     setCurrentUserRole(role || 'VIEWER');
@@ -68,11 +67,11 @@ const UserTable = () => {
     fetchCurrentUser();
   }, [enqueueSnackbar]);
 
-  // Fetch all users (no pagination params)
+  // Fetch all users
   const fetchAllUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await userApi.getAllUsers(); // returns full array
+      const data = await userApi.getAllUsers();
       setAllUsers(Array.isArray(data) ? data : data.content || []);
     } catch (err) {
       console.error('Failed to fetch users', err);
@@ -83,9 +82,28 @@ const UserTable = () => {
     }
   }, [enqueueSnackbar]);
 
+  // Fetch video counts
+  const fetchVideoCounts = useCallback(async () => {
+    try {
+      const response = await videoApi.getAllVideos(null, '', 0, 10000, null);
+      const videos = response.content || [];
+      const counts = {};
+      videos.forEach(v => {
+        const creatorId = v.creatorId || v.userId;
+        if (creatorId) {
+          counts[creatorId] = (counts[creatorId] || 0) + 1;
+        }
+      });
+      setVideoCounts(counts);
+    } catch (err) {
+      console.error('Failed to fetch video counts', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAllUsers();
-  }, [fetchAllUsers]);
+    fetchVideoCounts();
+  }, [fetchAllUsers, fetchVideoCounts]);
 
   // Apply search and filter client‑side
   useEffect(() => {
@@ -98,7 +116,6 @@ const UserTable = () => {
 
     let result = [...allUsers];
 
-    // 1. Search by name or email
     if (debouncedSearch.trim()) {
       const term = debouncedSearch.toLowerCase();
       result = result.filter(
@@ -109,10 +126,8 @@ const UserTable = () => {
       );
     }
 
-    // 2. Apply filter (role or status)
     if (filter !== 'All') {
       if (filter === 'CREATOR' || filter === 'VIEWER') {
-        // filter by role
         result = result.filter(u => u.role === filter);
       } else if (filter === 'Blocked') {
         result = result.filter(u => u.status === 'BLOCKED');
@@ -126,7 +141,6 @@ const UserTable = () => {
     setTotalPages(Math.max(1, Math.ceil(result.length / PAGE_SIZE)));
   }, [allUsers, debouncedSearch, filter]);
 
-  // Paginate the filtered users
   const paginatedUsers = filteredUsers.slice(
     (currentPage - 1) * PAGE_SIZE,
     currentPage * PAGE_SIZE
@@ -147,7 +161,7 @@ const UserTable = () => {
     try {
       await userApi.deleteUser(userToDelete.id);
       enqueueSnackbar('User deleted successfully', { variant: 'success', ...snackbarOptions });
-      await fetchAllUsers(); // refresh full list
+      await fetchAllUsers();
       setDeleteModalOpen(false);
       setUserToDelete(null);
     } catch (err) {
@@ -158,32 +172,30 @@ const UserTable = () => {
   };
 
   const handleUserUpdated = () => {
-    fetchAllUsers(); // refresh after edit
+    fetchAllUsers();
   };
 
-  // Badge helpers
-  const getRoleBadgeType = (role) => {
+  // Helper: role icon & color
+  const getRoleMeta = (role) => {
     switch (role) {
-      case 'ADMIN': return 'admin';
-      case 'CREATOR': return 'creator';
-      default: return 'viewer';
+      case 'ADMIN':
+        return { icon: UserCheck, color: 'text-red-500' };
+      case 'CREATOR':
+        return { icon: UserPlus, color: 'text-blue-500' };
+      default:
+        return { icon: User, color: 'text-gray-400' };
     }
   };
 
-  const getPlanBadgeType = (plan) => {
+  // Helper: plan icon & color
+  const getPlanMeta = (plan) => {
     switch (plan) {
-      case 'CREATE': return 'create_plan';
-      case 'VIEW': return 'view_plan';
-      default: return 'free_plan';
-    }
-  };
-
-  const getStatusBadgeType = (status) => {
-    switch (status) {
-      case 'ACTIVE': return 'active';
-      case 'BLOCKED': return 'blocked';
-      case 'SUSPENDED': return 'suspended';
-      default: return 'draft';
+      case 'CREATE':
+        return { icon: FilePlus, color: 'text-green-500' };
+      case 'VIEW':
+        return { icon: Eye, color: 'text-indigo-400' };
+      default:
+        return { icon: CircleDollarSign, color: 'text-gray-400' };
     }
   };
 
@@ -235,6 +247,10 @@ const UserTable = () => {
               const displayName = u.fullName || u.username;
               const avatarUrl = u.profilePicture;
               const isBlockedOrSuspended = u.status === 'BLOCKED' || u.status === 'SUSPENDED';
+              const videoCount = videoCounts[u.id] || 0;
+              const RoleIcon = getRoleMeta(u.role).icon;
+              const PlanIcon = getPlanMeta(u.plan).icon;
+
               return (
                 <tr
                   key={u.id}
@@ -263,27 +279,27 @@ const UserTable = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <Badge text={u.role} type={getRoleBadgeType(u.role)} small />
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge text={u.plan} type={getPlanBadgeType(u.plan)} small />
-                  </td>
-                  <td className="px-4 py-3">
-                    <div>
-                      <span className="text-text-secondary tabular-nums">{u.videos || 0}</span>
-                      {u.videos > 0 && (
-                        <div className="w-12 h-1 bg-bg-el rounded-full mt-1 overflow-hidden">
-                          <div
-                            className="h-full bg-primary rounded-full"
-                            style={{ width: `${Math.min((u.videos / 30) * 100, 100)}%` }}
-                          />
-                        </div>
-                      )}
+                    <div className="flex items-center gap-1.5">
+                      <RoleIcon size={16} className={getRoleMeta(u.role).color} />
+                      <span className={`font-semibold ${getRoleMeta(u.role).color}`}>
+                        {u.role}
+                      </span>
                     </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <PlanIcon size={16} className={getPlanMeta(u.plan).color} />
+                      <span className={`font-semibold ${getPlanMeta(u.plan).color}`}>
+                        {u.plan}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-text-secondary tabular-nums">{videoCount}</span>
                   </td>
                   <td className="px-4 py-3 text-text-muted whitespace-nowrap">{u.joined || '—'}</td>
                   <td className="px-4 py-3">
-                    <Badge text={u.status} type={getStatusBadgeType(u.status)} small />
+                    <Badge text={u.status} type={u.status.toLowerCase()} small />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">

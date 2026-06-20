@@ -83,25 +83,25 @@ const VideosPage = () => {
       {!loadingStats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard
-            icon={<Video size={24} />}
+            icon={<Video size={24} color="#60A5FA" />}
             label="Total Videos"
             value={stats.total.toLocaleString()}
             color="#60A5FA"
           />
           <StatCard
-            icon={<Clock size={24} />}
+            icon={<Clock size={24} color="#F59E0B" />}
             label="Pending Review"
             value={stats.pending.toLocaleString()}
             color="#F59E0B"
           />
           <StatCard
-            icon={<CheckCircle size={24} />}
+            icon={<CheckCircle size={24} color="#10B981" />}
             label="Approved"
             value={stats.approved.toLocaleString()}
             color="#10B981"
           />
           <StatCard
-            icon={<XCircle size={24} />}
+            icon={<XCircle size={24} color="#EF4444" />}
             label="Rejected"
             value={stats.rejected.toLocaleString()}
             color="#EF4444"

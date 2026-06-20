@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
-  Tv,
   BarChart3,
   Video,
   Upload,
@@ -19,28 +18,43 @@ const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/creator/dashboard' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/creator/analytics' },
   { id: 'videos', label: 'My Videos', icon: Video, path: '/creator/videos' },
-  { id: 'shorts', label: 'My Shorts', icon: Smartphone, path: '/creator/shorts' },  
+  { id: 'shorts', label: 'My Shorts', icon: Smartphone, path: '/creator/shorts' },
   { id: 'upload', label: 'Upload', icon: Upload, path: '/creator/upload' },
   { id: 'editors', label: 'Editors', icon: Scissors, path: '/creator/editors' },
   { id: 'earnings', label: 'Earnings', icon: DollarSign, path: '/creator/earnings' },
 ];
 
-const CreatorSidebar = ({ active, onSelect, className = '' }) => {
+const CreatorSidebar = ({ onSelect, className = '' }) => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
 
-  // Determine active item from pathname so only one nav item is highlighted.
+  // Determine active item based on current pathname + query params
   const isActive = (item) => {
     const pathname = location.pathname;
+    const searchParams = new URLSearchParams(location.search);
 
+    // Dashboard
     if (item.id === 'dashboard') {
       return pathname === '/creator' || pathname === '/creator/dashboard';
     }
 
-    if (item.id === 'videos') {
-      return pathname.startsWith('/creator/video') || pathname.startsWith('/creator/videos');
+    // Dynamic video/short detail page: /creator/video/:id
+    if (pathname.startsWith('/creator/video/')) {
+      const type = searchParams.get('type');
+      if (item.id === 'shorts' && type === 'short') return true;
+      if (item.id === 'videos' && type !== 'short') return true;
+      return false;
     }
 
+    // List pages
+    if (item.id === 'videos') {
+      return pathname === '/creator/videos' || pathname.startsWith('/creator/videos');
+    }
+    if (item.id === 'shorts') {
+      return pathname === '/creator/shorts' || pathname.startsWith('/creator/shorts');
+    }
+
+    // Other static paths
     return pathname === item.path || pathname.startsWith(`${item.path}/`);
   };
 

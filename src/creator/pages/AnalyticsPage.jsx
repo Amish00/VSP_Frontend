@@ -4,6 +4,8 @@ import ContentPieChart from '../components/ContentPieChart';
 import StatCard from '../components/ui/StatCard';
 import { creatorApi } from '../api/creatorApi';
 
+import { FiEye, FiClock, FiUsers, FiTrendingUp } from 'react-icons/fi';
+
 const RANGES = ['7 days', '30 days', '90 days', '1 year'];
 
 const AnalyticsPage = () => {
@@ -35,11 +37,11 @@ const AnalyticsPage = () => {
   }, [currentDays]);
 
   const stats = [
-    { icon: '👁', label: 'Views', value: summary.views.toLocaleString(), change: '+12%', color: '#60A5FA' },
-    { icon: '⏱', label: 'Watch time', value: `${summary.watchTimeHours.toLocaleString()} hrs`, change: '+8%', color: '#10B981' },
-    { icon: '👥', label: 'New subs', value: `+${summary.newSubscribers.toLocaleString()}`, change: '+22%', color: '#F59E0B' },
-    { icon: '📈', label: 'CTR', value: `${summary.ctr}%`, change: '+0.3%', color: '#0EA5E9' },
-  ];
+  { icon: <FiEye color="#60A5FA" />, label: 'Views', value: summary.views.toLocaleString(), change: '+12%', color: '#60A5FA' },
+  { icon: <FiClock color="#10B981" />, label: 'Watch time', value: `${summary.watchTimeHours.toLocaleString()} hrs`, change: '+8%', color: '#10B981' },
+  { icon: <FiUsers color="#F59E0B" />, label: 'New subs', value: `+${summary.newSubscribers.toLocaleString()}`, change: '+22%', color: '#F59E0B' },
+  { icon: <FiTrendingUp color="#0EA5E9" />, label: 'CTR', value: `${summary.ctr}%`, change: '+0.3%', color: '#0EA5E9' },
+];
 
   return (
     <div className="pb-6">
