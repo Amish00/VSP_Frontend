@@ -64,7 +64,9 @@ const SignInPage = () => {
   };
 
   const handleOAuth = (provider) => {
-    window.location.href = `/oauth2/authorization/${provider.toLowerCase()}`;
+    let registrationId = provider.toLowerCase();
+    if (provider === "Outlook") registrationId = "azure";
+    window.location.href = `/oauth2/authorization/${registrationId}`;
   };
 
   return (
@@ -158,7 +160,7 @@ const SignInPage = () => {
       </div>
 
       <p className="text-center text-sm text-text-muted">
-        No account?{' '}
+        Don't have an account?{' '}
         <Link to="/signup" className="text-primary-light font-semibold hover:opacity-80">
           Sign Up
         </Link>

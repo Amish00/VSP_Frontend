@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSnackbar } from 'notistack';
-import Badge from './ui/Badge';
 import VideoDataModal from './VideoDataModal';
 import Modal from '../components/ui/Modal';
 import Pagination from './Pagination';
 import { videoApi } from '../api/videoApi';
+import { Film, Smartphone } from 'lucide-react';
 
 const PAGE_SIZE = 10;
 
@@ -68,7 +68,6 @@ const PendingVideosTable = () => {
     const handleApprove = async (id) => {
         try {
             await videoApi.updateVideoStatus(id, 'APPROVED');
-            // Refresh current page after approve
             await fetchPendingVideos();
         } catch (err) {
             enqueueSnackbar(`Approve failed: ${getErrorMessage(err, 'Unknown error')}`, {
@@ -90,7 +89,7 @@ const PendingVideosTable = () => {
             .split(" ")
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(" ");
-        };
+    };
 
     const confirmReject = async () => {
         if (!rejectReason.trim()) {
@@ -157,7 +156,18 @@ const PendingVideosTable = () => {
                                 </td>
                                 <td className="px-4 py-3 text-text-secondary whitespace-nowrap">{video.username}</td>
                                 <td className="px-4 py-3">
-                                    <Badge text={video.type} type={video.type === 'SHORTS' ? 'info' : 'pro'} />
+                                    <div className="flex items-center gap-1.5">
+                                        {video.type === 'SHORTS' ? (
+                                            <Smartphone size={16} className="text-purple-400" />
+                                        ) : (
+                                            <Film size={16} className="text-blue-400" />
+                                        )}
+                                        <span className={`text-xs font-medium ${
+                                            video.type === 'SHORTS' ? 'text-purple-400' : 'text-blue-400'
+                                        }`}>
+                                            {video.type}
+                                        </span>
+                                    </div>
                                 </td>
                                 <td className="px-4 py-3 text-text-secondary">{video.category || '—'}</td>
                                 <td className="px-4 py-3 text-text-muted whitespace-nowrap">

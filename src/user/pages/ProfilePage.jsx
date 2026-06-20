@@ -1,7 +1,7 @@
 // src/pages/ProfilePage.jsx
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, Save } from 'lucide-react'
+import { Camera, Save, Eye, Shield } from 'lucide-react'
 import Badge from '../components/ui/Badge'
 import VideoGrid from '../components/VideoGrid'
 import Modal from '../components/ui/Modal'
@@ -12,9 +12,13 @@ import { creatorApi } from '../../creator/api/creatorApi'
 const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say']
 const COUNTRIES = ['Nepal', 'India', 'USA', 'UK', 'Canada', 'Australia', 'Germany', 'Japan', 'Other']
 
-const inp = "w-full bg-bg-el text-text-primary text-base rounded-xl border border-border px-4 py-3 placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-const sel = `${inp} appearance-none`
-const readOnlyInput = "w-full bg-bg-el/50 text-text-secondary text-base rounded-xl border border-border px-4 py-3 cursor-not-allowed"
+// Input styles – no white backgrounds, forced ring removal
+const inp =
+  "w-full bg-bg-el text-text-primary text-base rounded-xl border border-border px-4 py-3 placeholder:text-text-muted focus:outline-none focus:ring-0 focus:border-primary transition-all"
+// Select: ensure background and appearance, remove default arrow (we keep the arrow as is but style)
+const sel = `${inp} appearance-none bg-bg-el`
+const readOnlyInput =
+  "w-full bg-bg-el/50 text-text-secondary text-base rounded-xl border border-border px-4 py-3 cursor-not-allowed"
 
 const formatNumber = (num) => {
   if (num == null) return '0'
@@ -50,7 +54,7 @@ const transformVideo = (video) => ({
   thumbnailUrl: video.thumbnailUrl,
   username: video.username,
   profilePicture: video.profilePicture,
-  em: video.thumbnailUrl ? '' : '🎬',
+  em: '',
   description: video.description,
   tags: video.tags?.split(',') || [],
   category: video.category,
@@ -109,7 +113,7 @@ const ProfilePage = () => {
         setAvatarUrl(userData.profilePicture || '')
         setBannerUrl(userData.bannerUrl || '')
 
-        if (userData.role !== 'ADMIN') {
+        if (userData.role === 'CREATOR') {
           const videosRes = await creatorApi.getVideos('APPROVED')
           const rawVideos = videosRes.data.content || []
           setUserVideos(rawVideos.map(transformVideo))
@@ -183,9 +187,6 @@ const ProfilePage = () => {
       const res = await userApi.uploadBanner(pendingBannerFile)
       setBannerUrl(res.bannerUrl)
       alert('Banner updated')
-    } catch (err) {
-      console.error('Banner upload failed', err)
-      alert('Failed to upload banner')
     } finally {
       setUploadingBanner(false)
       setPendingBannerFile(null)
@@ -196,16 +197,14 @@ const ProfilePage = () => {
     navigate(`/watch/${video.id}`)
   }
 
-  const isCreatorOrViewer = user?.role === 'CREATOR' || user?.role === 'VIEWER'
-
   if (loading) {
     return <div className="min-h-screen bg-bg-base flex items-center justify-center text-text-muted">Loading profile...</div>
   }
 
   return (
     <div className="min-h-screen bg-bg-base">
-      {/* Banner section */}
-      <div className="h-40 sm:h-52 relative overflow-hidden">
+      {/* Banner – increased to h-64 on mobile, h-80 on small screens */}
+      <div className="h-64 sm:h-80 relative overflow-hidden">
         {bannerUrl ? (
           <img src={bannerUrl} alt="Channel banner" className="w-full h-full object-cover" />
         ) : (
@@ -222,10 +221,10 @@ const ProfilePage = () => {
         </label>
       </div>
 
-      {/* Main content with consistent container */}
+      {/* Main content – adjust negative margin to match taller banner */}
       <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pb-[96px] md:pb-16">
-        {/* Avatar + header */}
-        <div className="relative z-10 -mt-14 sm:-mt-16 mb-6 pb-6 border-b border-border">
+        {/* Avatar + header – increased negative margin to overlap more */}
+        <div className="relative z-10 -mt-24 sm:-mt-28 mb-6 pb-6 border-b border-border">
           <div className="inline-flex flex-col sm:flex-row items-start sm:items-end gap-4 px-4 py-3 rounded-2xl bg-bg-base/70 backdrop-blur-sm border border-border/70 shadow-[0_8px_22px_rgba(0,0,0,0.28)]">
             <div className="relative">
               {avatarUrl ? (
@@ -244,10 +243,25 @@ const ProfilePage = () => {
             </div>
 
             <div className="min-w-0 sm:mb-2">
-              <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-text-primary mb-0.5 [text-shadow:0_2px_14px_rgba(0,0,0,0.65)]">{profile.fullName || profile.username}</h1>
+              {/* Reduced username font size */}
+              <h1 className="font-display text-xl sm:text-2xl font-extrabold text-text-primary mb-0.5 [text-shadow:0_2px_14px_rgba(0,0,0,0.65)]">
+                {profile.fullName || profile.username}
+              </h1>
               <p className="text-sm text-text-muted mb-2 [text-shadow:0_1px_10px_rgba(0,0,0,0.55)]">@{profile.username}</p>
               <div className="flex flex-wrap gap-2">
-                <Badge text={user?.role === 'CREATOR' ? 'Creator' : user?.role === 'VIEWER' ? '👀 Viewer' : '🛡️ Admin'} type={user?.role === 'CREATOR' ? 'pro' : 'draft'} />
+                {user?.role === 'CREATOR' && (
+                  <Badge text="Creator" type="pro" />
+                )}
+                {user?.role === 'VIEWER' && (
+                  <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-bg-el border border-border text-text-secondary text-xs font-medium">
+                    <Eye size={12} /> Viewer
+                  </span>
+                )}
+                {user?.role === 'ADMIN' && (
+                  <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-bg-el border border-border text-text-secondary text-xs font-medium">
+                    <Shield size={12} /> Admin
+                  </span>
+                )}
                 <Badge text={profile.country || 'Nepal'} type="draft" />
               </div>
             </div>
@@ -326,7 +340,7 @@ const ProfilePage = () => {
             </div>
           </div>
 
-          {isCreatorOrViewer && (
+          {user?.role === 'CREATOR' && (
             <>
               <h2 className="font-display font-bold text-xl text-text-primary mb-4">Your Videos</h2>
               {userVideos.length > 0 ? (
@@ -377,4 +391,4 @@ const ProfilePage = () => {
   )
 }
 
-export default ProfilePage;
+export default ProfilePage

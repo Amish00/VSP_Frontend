@@ -4,15 +4,25 @@ import StatCard from '../components/ui/StatCard';
 import RevenueChart from '../components/RevenueChart';
 import PayoutTable from '../components/PayoutTable';
 import { adminRevenueApi } from '../../creator/api/creatorApi';
-import { DollarSign, CreditCard, TrendingUp, Users, Wallet } from 'lucide-react';
+import { DollarSign, CreditCard, TrendingUp, Users, Wallet, BanknoteIcon } from 'lucide-react';
 import RevenueRecordsTable from '../components/RevenueRecordsTable';
 import { useNotification } from '../../hooks/useNotification';
+import { FaMoneyBillWave } from "react-icons/fa6";
 
-const RANGES = ['30 days', '90 days', '1 year', 'All time'];
+const RANGES = ['30 days', '90 days', '1 year'];
+const getMonthsFromRange = (range) => {
+  switch (range) {
+    case '30 days': return 1;
+    case '90 days': return 3;
+    case '1 year': return 12;
+    default: return 12; // fallback
+  }
+};
 
 const RevenuePage = () => {
     const { showSuccess, showError } = useNotification();
-    const [range, setRange] = useState('30 days');
+    // Default range set to '1 year'
+    const [range, setRange] = useState('1 year');
     const [monthlyData, setMonthlyData] = useState([]);
     const [pendingPayouts, setPendingPayouts] = useState([]);
     const [totalStats, setTotalStats] = useState({ totalRevenue: 0, platformFee: 0, creatorPool: 0 });
@@ -23,7 +33,8 @@ const RevenuePage = () => {
 
     const fetchData = async () => {
         try {
-            const monthlyRes = await adminRevenueApi.getMonthlyRevenue(12);
+            const months = getMonthsFromRange(range);
+            const monthlyRes = await adminRevenueApi.getMonthlyRevenue(months);
             setMonthlyData(monthlyRes.data);
 
             const pendingRes = await adminRevenueApi.getPendingPayouts();
@@ -44,7 +55,7 @@ const RevenuePage = () => {
         try {
             await adminRevenueApi.processPayout(payoutId);
             showSuccess('Payout processed successfully');
-            fetchData(); // refresh the list
+            fetchData();
         } catch (err) {
             const msg = err.response?.data?.message || 'Failed to process payout';
             showError(msg);
@@ -65,10 +76,34 @@ const RevenuePage = () => {
     };
 
     const stats = [
-        { icon: <DollarSign size={24} />, label: 'Total Revenue', value: `Rs.${totalStats.totalRevenue.toFixed(0)}`, change: '+22%', color: '#10B981' },
-        { icon: <CreditCard size={24} />, label: 'Subscriptions', value: `Rs.${totalStats.totalRevenue.toFixed(0)}`, change: '+18%', color: '#60A5FA' },
-        { icon: <TrendingUp size={24} />, label: 'Platform Fee (30%)', value: `Rs.${totalStats.platformFee.toFixed(0)}`, change: '+12%', color: '#F59E0B' },
-        { icon: <Wallet size={24} />, label: 'Creator Pool', value: `Rs.${totalStats.creatorPool.toFixed(0)}`, change: '+8%', color: '#0EA5E9' },
+        { 
+            icon: <FaMoneyBillWave size={24} color="#10B981" />, 
+            label: 'Total Revenue', 
+            value: `Rs.${totalStats.totalRevenue.toFixed(0)}`, 
+            change: '+22%', 
+            color: '#10B981' 
+        },
+        { 
+            icon: <CreditCard size={24} color="#60A5FA" />, 
+            label: 'Subscriptions', 
+            value: `Rs.${totalStats.totalRevenue.toFixed(0)}`, 
+            change: '+18%', 
+            color: '#60A5FA' 
+        },
+        { 
+            icon: <TrendingUp size={24} color="#F59E0B" />, 
+            label: 'Platform Fee (30%)', 
+            value: `Rs.${totalStats.platformFee.toFixed(0)}`, 
+            change: '+12%', 
+            color: '#F59E0B' 
+        },
+        { 
+            icon: <Wallet size={24} color="#0EA5E9" />, 
+            label: 'Creator Pool', 
+            value: `Rs.${totalStats.creatorPool.toFixed(0)}`, 
+            change: '+8%', 
+            color: '#0EA5E9' 
+        },
     ];
 
     return (

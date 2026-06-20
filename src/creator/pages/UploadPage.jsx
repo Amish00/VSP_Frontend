@@ -1,9 +1,9 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
+import { Upload, X, Film, CheckCircle, AlertCircle } from 'lucide-react';
 import DropZone from '../components/upload/DropZone';
-import UploadProgress from '../components/upload/UploadProgress';
-import { Upload, X } from 'lucide-react';
+import Modal from '../components/ui/Modal';
 import { creatorApi } from '../api/creatorApi';
 
 const inp = "w-full bg-bg-el text-text-primary text-base rounded-xl border border-border px-4 py-3 placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all";
@@ -16,7 +16,13 @@ const Toggle = ({ value, onChange, label, desc }) => (
       <p className="text-sm font-medium text-text-primary">{label}</p>
       {desc && <p className="text-xs text-text-muted mt-0.5">{desc}</p>}
     </div>
-    <button type="button" role="switch" aria-checked={value} onClick={() => onChange(!value)} className={`relative w-11 h-6 rounded-full flex-shrink-0 mt-0.5 transition-all ${value ? 'bg-primary' : 'bg-bg-hov'}`}>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={value}
+      onClick={() => onChange(!value)}
+      className={`relative w-11 h-6 rounded-full flex-shrink-0 mt-0.5 transition-all ${value ? 'bg-primary' : 'bg-bg-hov'}`}
+    >
       <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${value ? 'left-[22px]' : 'left-1'}`} />
     </button>
   </div>
@@ -38,6 +44,7 @@ const UploadPage = () => {
   const [thumbFile, setThumbFile] = useState(null);
   const [thumb, setThumb] = useState(null);
   const thumbRef = useRef();
+  const [dropzoneKey, setDropzoneKey] = useState(0);
 
   const [form, setForm] = useState({
     title: '',
@@ -51,6 +58,7 @@ const UploadPage = () => {
   });
   const upd = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
+  // Fallback progress simulation
   const progressTimerRef = useRef(null);
   const startTimeRef = useRef(null);
   const realProgressRef = useRef(0);
@@ -63,7 +71,7 @@ const UploadPage = () => {
   }, []);
 
   const startFallbackProgress = useCallback(() => {
-    startTimeRef.current = Date.now();
+    startTimeRef.current = Date.  now();
     realProgressRef.current = 0;
     setUploadProgress(0);
     progressTimerRef.current = setInterval(() => {
@@ -94,6 +102,7 @@ const UploadPage = () => {
       paid: false,
       type: 'VIDEO',
     });
+    setDropzoneKey(prev => prev + 1); // force remount of DropZone
   };
 
   const onThumbChange = (e) => {
@@ -102,6 +111,24 @@ const UploadPage = () => {
       setThumbFile(f);
       setThumb(URL.createObjectURL(f));
     }
+  };
+
+  // Modal control
+  const [modalOpen, setModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (submitting || uploadSuccess || uploadError) {
+      setModalOpen(true);
+    } else {
+      setModalOpen(false);
+    }
+  }, [submitting, uploadSuccess, uploadError]);
+
+  const closeModalAndReset = () => {
+    if (submitting) return;
+    setModalOpen(false);
+    setUploadError(null);
+    setUploadSuccess(false);
   };
 
   const handleSubmit = async () => {
@@ -156,39 +183,82 @@ const UploadPage = () => {
     return () => stopFallbackProgress();
   }, [stopFallbackProgress]);
 
-  // UPLOADING SCREEN
-  if (submitting) {
-    return <UploadProgress file={file} onDone={() => {}} error={null} isUploading={true} progress={uploadProgress} />;
-  }
+  const modalTitle = submitting ? 'Upload in Progress' : uploadSuccess ? 'Upload Complete' : 'Upload Failed';
+  const modalCloseable = !submitting;
+  const modalOnClose = modalCloseable ? closeModalAndReset : undefined;
 
-  // SUCCESS SCREEN
-  if (uploadSuccess) {
-    return (
-      <div className="text-center py-16">
-        <div className="w-16 h-16 rounded-full bg-success/15 border-2 border-success flex items-center justify-center text-3xl mx-auto mb-4">✓</div>
-        <h2 className="font-display text-2xl font-extrabold mb-2 text-text-primary">Video Submitted!</h2>
-        <p className="text-text-secondary text-sm mb-6 leading-relaxed">Your video is now under review. You'll be notified once it goes live.</p>
-        <div className="flex gap-3 justify-center">
-          <button onClick={resetForm} className="px-5 py-2 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition">Upload Another</button>
-          <button onClick={() => navigate('/dashboard')} className="px-5 py-2 rounded-xl border border-border bg-bg-card text-text-primary font-semibold hover:bg-bg-hov transition">Go to Dashboard</button>
+  const renderModalContent = () => {
+    if (submitting) {
+      return (
+        <div className="text-center">
+          <Upload size={48} className="mx-auto mb-4 text-primary animate-pulse" />
+          <h2 className="font-display text-2xl font-bold mb-2 text-text-primary">Uploading…</h2>
+          <p className="text-sm text-text-secondary mb-4">{file?.name || 'Video file'} is being uploaded.</p>
+          <div className="max-w-md mx-auto">
+            <div className="h-2 bg-bg-el rounded-full overflow-hidden">
+              <div className="h-full bg-primary rounded-full transition-all duration-200" style={{ width: `${uploadProgress}%` }} />
+            </div>
+            <p className="text-sm font-medium text-text-primary mt-2">{uploadProgress}%</p>
+          </div>
+          <p className="text-sm text-text-muted mt-2">Please do not close this window.</p>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  // ERROR SCREEN
-  if (uploadError && !submitting) {
-    return (
-      <div className="text-center py-16">
-        <div className="w-16 h-16 rounded-full bg-red-500/15 border-2 border-red-500 flex items-center justify-center text-3xl mx-auto mb-4">⚠️</div>
-        <h2 className="font-display text-2xl font-bold mb-2 text-text-primary">Upload Failed</h2>
-        <p className="text-sm text-text-secondary mb-4">{uploadError}</p>
-        <button onClick={() => setUploadError(null)} className="px-5 py-2 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition">Try Again</button>
-      </div>
-    );
-  }
+    if (uploadSuccess) {
+      return (
+        <div className="text-center">
+          <CheckCircle size={48} className="mx-auto mb-4 text-success" />
+          <h2 className="font-display text-2xl font-extrabold mb-2 text-text-primary">Video Submitted!</h2>
+          <p className="text-text-secondary text-sm mb-6 leading-relaxed">
+            Your video is now under review. You'll be notified once it goes live.
+          </p>
+          <div className="flex gap-3 justify-center flex-wrap">
+            <button
+              onClick={() => {
+                resetForm();
+                setModalOpen(false);
+              }}
+              className="px-5 py-2 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition"
+            >
+              Upload Another
+            </button>
+            <button
+              onClick={() => {
+                setModalOpen(false);
+                navigate('/dashboard');
+              }}
+              className="px-5 py-2 rounded-xl border border-border bg-bg-card text-text-primary font-semibold hover:bg-bg-hov transition"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
 
-  // NORMAL UPLOAD FORM
+    if (uploadError) {
+      return (
+        <div className="text-center">
+          <AlertCircle size={48} className="mx-auto mb-4 text-red-500" />
+          <h2 className="font-display text-2xl font-bold mb-2 text-text-primary">Upload Failed</h2>
+          <p className="text-sm text-text-secondary mb-4">{uploadError}</p>
+          <button
+            onClick={() => {
+              setUploadError(null);
+              setModalOpen(false);
+            }}
+            className="px-5 py-2 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   const canSubmit = Boolean(file && form.title.trim());
 
   return (
@@ -197,14 +267,20 @@ const UploadPage = () => {
       <p className="text-sm text-text-secondary mb-6">Fill in all details before submitting for review.</p>
 
       <div className="mb-6 space-y-4">
-        <DropZone onFile={setFile} />
+        <DropZone key={dropzoneKey} onFile={setFile} />
         {file && (
           <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-bg-card px-4 py-3">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-text-primary truncate">{file.name}</p>
               <p className="text-xs text-text-muted">Ready to submit for review</p>
             </div>
-            <button type="button" onClick={() => setFile(null)} className="shrink-0 rounded-lg border border-border bg-bg-el px-3 py-1.5 text-xs font-semibold text-text-secondary hover:bg-bg-hov hover:text-text-primary transition-colors">Remove</button>
+            <button
+              type="button"
+              onClick={() => setFile(null)}
+              className="shrink-0 rounded-lg border border-border bg-bg-el px-3 py-1.5 text-xs font-semibold text-text-secondary hover:bg-bg-hov hover:text-text-primary transition-colors"
+            >
+              Remove
+            </button>
           </div>
         )}
       </div>
@@ -216,17 +292,35 @@ const UploadPage = () => {
             <h2 className="font-display font-bold text-sm text-text-muted uppercase tracking-wider mb-4">Basic Information</h2>
             <div className="mb-4">
               <label className="block text-sm font-semibold text-text-secondary mb-1.5">Title *</label>
-              <input value={form.title} onChange={e => upd('title', e.target.value)} placeholder="Enter an engaging title for your video" className={inp} maxLength={100} />
+              <input
+                value={form.title}
+                onChange={e => upd('title', e.target.value)}
+                placeholder="Enter an engaging title for your video"
+                className={inp}
+                maxLength={100}
+              />
               <p className="text-xs text-text-muted mt-1 text-right">{form.title.length}/100</p>
             </div>
             <div className="mb-4">
               <label className="block text-sm font-semibold text-text-secondary mb-1.5">Description</label>
-              <textarea value={form.description} onChange={e => upd('description', e.target.value)} rows={5} placeholder="Describe your video content, include keywords, chapters, links…" className={area} maxLength={5000} />
+              <textarea
+                value={form.description}
+                onChange={e => upd('description', e.target.value)}
+                rows={5}
+                placeholder="Describe your video content, include keywords, chapters, links…"
+                className={area}
+                maxLength={5000}
+              />
               <p className="text-xs text-text-muted mt-1 text-right">{form.description.length}/5000</p>
             </div>
             <div>
               <label className="block text-sm font-semibold text-text-secondary mb-1.5">Tags</label>
-              <input value={form.tags} onChange={e => upd('tags', e.target.value)} placeholder="react, tutorial, web development (comma separated, max 10)" className={inp} />
+              <input
+                value={form.tags}
+                onChange={e => upd('tags', e.target.value)}
+                placeholder="react, tutorial, web development (comma separated, max 10)"
+                className={inp}
+              />
               <p className="text-xs text-text-muted mt-1">Add relevant tags to help viewers discover your video</p>
             </div>
           </div>
@@ -251,11 +345,25 @@ const UploadPage = () => {
               <label className="block text-sm font-semibold text-text-secondary mb-1.5">Content Type</label>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="type" value="VIDEO" checked={form.type === 'VIDEO'} onChange={() => upd('type', 'VIDEO')} className="w-4 h-4 text-primary" />
+                  <input
+                    type="radio"
+                    name="type"
+                    value="VIDEO"
+                    checked={form.type === 'VIDEO'}
+                    onChange={() => upd('type', 'VIDEO')}
+                    className="w-4 h-4 text-primary"
+                  />
                   <span className="text-text-primary">Video</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="type" value="SHORTS" checked={form.type === 'SHORTS'} onChange={() => upd('type', 'SHORTS')} className="w-4 h-4 text-primary" />
+                  <input
+                    type="radio"
+                    name="type"
+                    value="SHORTS"
+                    checked={form.type === 'SHORTS'}
+                    onChange={() => upd('type', 'SHORTS')}
+                    className="w-4 h-4 text-primary"
+                  />
                   <span className="text-text-primary">Short</span>
                 </label>
               </div>
@@ -272,7 +380,10 @@ const UploadPage = () => {
         <div className="space-y-5">
           <div className="bg-bg-card border border-border rounded-2xl p-6">
             <h2 className="font-display font-bold text-sm text-text-muted uppercase tracking-wider mb-4">Thumbnail</h2>
-            <div onClick={() => thumbRef.current?.click()} className="aspect-video rounded-xl border-2 border-dashed border-border-light flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 hover:bg-primary/4 transition-all mb-3 overflow-hidden relative">
+            <div
+              onClick={() => thumbRef.current?.click()}
+              className="aspect-video rounded-xl border-2 border-dashed border-border-light flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 hover:bg-primary/4 transition-all mb-3 overflow-hidden relative"
+            >
               {thumb ? (
                 <img src={thumb} alt="Thumbnail preview" className="w-full h-full object-cover" />
               ) : (
@@ -283,7 +394,14 @@ const UploadPage = () => {
                 </>
               )}
               {thumb && (
-                <button onClick={e => { e.stopPropagation(); setThumb(null); setThumbFile(null); }} className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80">
+                <button
+                  onClick={e => {
+                    e.stopPropagation();
+                    setThumb(null);
+                    setThumbFile(null);
+                  }}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                >
                   <X size={14} />
                 </button>
               )}
@@ -295,7 +413,7 @@ const UploadPage = () => {
             <h2 className="font-display font-bold text-sm text-text-muted uppercase tracking-wider mb-4">Preview Card</h2>
             <div className="rounded-xl overflow-hidden border border-border">
               <div className="aspect-video bg-bg-el flex items-center justify-center relative overflow-hidden">
-                {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : <span className="text-4xl">🎬</span>}
+                {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : <Film size={48} className="text-text-muted" />}
                 <span className="absolute bottom-2 right-2 bg-black/85 text-white px-2 py-0.5 rounded-md text-xs font-semibold">0:00</span>
                 {form.paid ? (
                   <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-xs font-semibold" style={{ background:'rgba(245,158,11,.2)', color:'#F59E0B', border:'1px solid rgba(245,158,11,.35)' }}>PAID</span>
@@ -311,12 +429,28 @@ const UploadPage = () => {
           </div>
 
           <div className="space-y-2">
-            <button onClick={handleSubmit} disabled={!canSubmit} className="w-full bg-primary text-white font-bold text-base rounded-xl py-3 hover:bg-[#1d4ed8] disabled:opacity-40 transition-all shadow-[0_2px_8px_rgba(37,99,235,.4)]">
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+              className="w-full bg-primary text-white font-bold text-base rounded-xl py-3 hover:bg-[#1d4ed8] disabled:opacity-40 transition-all shadow-[0_2px_8px_rgba(37,99,235,.4)]"
+            >
               Submit for Review
             </button>
           </div>
         </div>
       </div>
+
+      {/* Modal Overlay */}
+      <Modal
+        open={modalOpen}
+        onClose={modalOnClose}
+        title={modalTitle}
+        closeOnBackdropClick={modalCloseable}
+        showCloseButton={modalCloseable}
+        minH="320px"
+      >
+        {renderModalContent()}
+      </Modal>
     </div>
   );
 };

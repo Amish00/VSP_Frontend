@@ -1,16 +1,18 @@
-// src/components/upload/UploadProgress.jsx
 import React from 'react';
+import { CheckCircle, AlertCircle, Upload } from 'lucide-react';
 import Button from '../ui/Button';
 
 const UploadProgress = ({ file, onDone, error, isUploading, progress = 0 }) => {
   if (!isUploading && !error) {
-    // success state (kept for completeness, though we now handle success separately)
+    // success state
     return (
       <div className="text-center py-16">
-        <div className="w-16 h-16 rounded-full bg-success/15 border-2 border-success flex items-center justify-center text-3xl mx-auto mb-4">✓</div>
+        <CheckCircle size={64} className="mx-auto mb-4 text-success" />
         <h2 className="font-display text-2xl font-extrabold mb-2 text-text-primary">Video Submitted!</h2>
-        <p className="text-text-secondary text-sm mb-6 leading-relaxed">Your upload finished and the video is now under review.</p>
-        <div className="flex gap-3 justify-center">
+        <p className="text-text-secondary text-sm mb-6 leading-relaxed">
+          Your upload finished and the video is now under review.
+        </p>
+        <div className="flex gap-3 justify-center flex-wrap">
           <Button onClick={onDone}>Upload Another</Button>
           <Button variant="ghost" onClick={onDone}>View My Videos</Button>
         </div>
@@ -21,7 +23,7 @@ const UploadProgress = ({ file, onDone, error, isUploading, progress = 0 }) => {
   if (error) {
     return (
       <div className="text-center py-16">
-        <div className="w-16 h-16 rounded-full bg-red-500/15 border-2 border-red-500 flex items-center justify-center text-3xl mx-auto mb-4">⚠️</div>
+        <AlertCircle size={64} className="mx-auto mb-4 text-red-500" />
         <h2 className="font-display text-2xl font-bold mb-2 text-text-primary">Upload Failed</h2>
         <p className="text-sm text-text-secondary mb-4">{error}</p>
         <Button onClick={onDone}>Try Again</Button>
@@ -29,10 +31,10 @@ const UploadProgress = ({ file, onDone, error, isUploading, progress = 0 }) => {
     );
   }
 
-  // Uploading state with real/smooth progress
+  // Uploading state
   return (
     <div className="text-center py-16">
-      <div className="text-5xl mb-4">📤</div>
+      <Upload size={64} className="mx-auto mb-4 text-primary animate-pulse" />
       <h2 className="font-display text-2xl font-bold mb-2 text-text-primary">Uploading…</h2>
       <p className="text-sm text-text-secondary mb-4">{file?.name || 'Video file'} is being uploaded.</p>
       <div className="max-w-md mx-auto">

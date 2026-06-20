@@ -83,6 +83,6 @@ export const authApi = {
   // OAuth (placeholders – implement when endpoints are ready)
   googleAuth: (idToken) => api.post('/api/auth/oauth2/google', { idToken }),
   githubAuth: (code) => api.post('/api/auth/oauth2/github', { code }),
-  outlookAuth: (code) => api.post('/api/auth/oauth2/outlook', { code }),
+  outlookAuth: (code) => api.post('/api/auth/oauth2/azure', { code }),
 };
 export default api;

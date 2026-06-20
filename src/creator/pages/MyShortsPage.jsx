@@ -1,12 +1,21 @@
-// src/creator/pages/MyShortsPage.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
+import Pagination from '../components/Pagination';
 import { creatorApi } from '../api/creatorApi';
-import { ArrowUp, Eye, Heart, MessageCircle, Lock, Unlock } from 'lucide-react';
+import {
+  ArrowUp,
+  Eye,
+  Heart,
+  MessageCircle,
+  Lock,
+  Unlock,
+  Smartphone,
+  Search,
+} from 'lucide-react';
 
 const formatNumber = (num) => {
   if (!num) return '0';
@@ -18,86 +27,130 @@ const formatNumber = (num) => {
 const STATUS_META = {
   APPROVED: { label: 'Approved', type: 'approved' },
   REJECTED: { label: 'Rejected', type: 'rejected' },
-  PENDING:  { label: 'Pending',  type: 'pending' },
+  PENDING: { label: 'Pending', type: 'pending' },
+};
+
+const getTypeMeta = (type) => {
+  // Always SHORTS for this page
+  return { icon: Smartphone, color: 'text-purple-400' };
 };
 
 const MyShortsPage = ({ onNav }) => {
   const { enqueueSnackbar } = useSnackbar();
   const navigate = useNavigate();
+
   const [shorts, setShorts] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const debounceTimer = useRef(null);
+
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const pageSize = 10;
+
   const [shortToDelete, setShortToDelete] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
+  // Debounce search
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => setDebouncedSearch(search), 500);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(0);
+    }, 500);
     return () => clearTimeout(debounceTimer.current);
   }, [search]);
 
-  const fetchShorts = useCallback(async () => {
+  const fetchShorts = useCallback(async (page = currentPage) => {
     setLoading(true);
     try {
       const filterParam = statusFilter === 'All' ? null : statusFilter;
-      // Explicitly ask for SHORTS type
-      const response = await creatorApi.getVideos(filterParam, debouncedSearch, 'SHORTS', 10, 0);
-      let items = response.data.content || [];
-      // Extra safety: filter out any non-shorts (in case backend ignores type)
-      items = items.filter(v => v.type === 'SHORTS');
-      setShorts(items);
+      // Pass 'SHORTS' as type – backend will filter
+      const response = await creatorApi.getVideos(
+        filterParam,
+        debouncedSearch,
+        'SHORTS',    // <-- type
+        pageSize,
+        page
+      );
+
+      const content = response.data.content || [];
+      setShorts(content);
+      setTotalPages(response.data.totalPages || 0);
     } catch (err) {
       console.error('Failed to fetch shorts', err);
       enqueueSnackbar('Failed to load shorts.', { variant: 'error' });
       setShorts([]);
+      setTotalPages(0);
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, debouncedSearch, enqueueSnackbar]);
+  }, [statusFilter, debouncedSearch, pageSize, currentPage, enqueueSnackbar]);
 
   useEffect(() => {
-    fetchShorts();
-  }, [fetchShorts]);
+    fetchShorts(currentPage);
+  }, [fetchShorts, currentPage]);
 
-  const handleEdit = (short) => navigate(`/creator/short/${short.id}?mode=edit`);
-  const handleDeleteClick = (short) => { setShortToDelete(short); setDeleteModalOpen(true); };
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage - 1);
+  };
+
+  const handleEdit = (short) => navigate(`/creator/video/${short.id}?mode=edit&type=short`);
+  const handleDeleteClick = (short) => {
+    setShortToDelete(short);
+    setDeleteModalOpen(true);
+  };
+
   const handleDeleteConfirm = async () => {
     if (!shortToDelete) return;
     try {
       await creatorApi.deleteVideo(shortToDelete.id);
       enqueueSnackbar('Short deleted', { variant: 'success' });
       setDeleteModalOpen(false);
-      await fetchShorts();
+      await fetchShorts(currentPage);
     } catch (err) {
       enqueueSnackbar(`Delete failed: ${err.response?.data?.message || err.message}`, { variant: 'error' });
     }
   };
-  const handleTitleClick = (short) => navigate(`/creator/short/${short.id}?mode=view`);
-  const handleUpload = () => onNav ? onNav('upload') : navigate('/creator/upload');
+
+  const handleTitleClick = (short) => navigate(`/creator/video/${short.id}?mode=view&type=short`);
+  const handleUpload = () => (onNav ? onNav('upload') : navigate('/creator/upload'));
 
   return (
     <div className="pb-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-text-primary">My Shorts</h1>
-        <Button onClick={handleUpload}><ArrowUp /> Upload New Short</Button>
+        <Button onClick={handleUpload}>
+          <ArrowUp /> Upload New Short
+        </Button>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search shorts by title..."
-          className="flex-1 px-4 py-2.5 rounded-xl border border-border bg-bg-el text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none"
-        />
-        <div className="flex gap-1 p-1 bg-bg-el border border-border rounded-xl">
-          {['All', 'PENDING', 'APPROVED', 'REJECTED'].map(f => (
+        <div className="relative flex-1">
+          <div className="relative">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search shorts by title..."
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-bg-el text-text-primary text-sm placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+            />
+          </div>
+        </div>
+        <div className="flex gap-1 p-1 bg-bg-el border border-border rounded-xl flex-wrap">
+          {['All', 'PENDING', 'APPROVED', 'REJECTED'].map((f) => (
             <button
               key={f}
-              onClick={() => setStatusFilter(f)}
+              onClick={() => {
+                setStatusFilter(f);
+                setCurrentPage(0);
+              }}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                 statusFilter === f ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary'
               }`}
@@ -108,7 +161,6 @@ const MyShortsPage = ({ onNav }) => {
         </div>
       </div>
 
-      {/* Table with Type column */}
       <div className="bg-bg-card border border-border rounded-xl overflow-x-auto">
         <table className="w-full text-sm" style={{ minWidth: 880 }}>
           <thead>
@@ -122,7 +174,7 @@ const MyShortsPage = ({ onNav }) => {
               <th className="px-4 py-3 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Comments</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Upload Date</th>
               <th className="px-4 py-3 text-left text-xs font-bold text-text-muted uppercase tracking-wider">Actions</th>
-             </tr>
+            </tr>
           </thead>
           <tbody>
             {loading ? (
@@ -139,8 +191,10 @@ const MyShortsPage = ({ onNav }) => {
                 <td colSpan={9} className="px-4 py-10 text-center text-text-muted">No shorts found.</td>
               </tr>
             ) : (
-              shorts.map(short => {
+              shorts.map((short) => {
                 const meta = STATUS_META[short.status] || { label: short.status, type: 'pending' };
+                const { icon: TypeIcon, color: typeColor } = getTypeMeta(short.type);
+
                 return (
                   <tr key={short.id} className="border-b border-border/50 last:border-0 hover:bg-bg-hov/30">
                     <td className="px-4 py-3">
@@ -158,31 +212,65 @@ const MyShortsPage = ({ onNav }) => {
                         </button>
                       </div>
                     </td>
+
                     <td className="px-4 py-3">
-                      <Badge text="SHORTS" type="info" />
+                      <div className="flex items-center gap-1.5">
+                        <TypeIcon size={16} className={typeColor} />
+                        <span className={`text-xs font-medium ${typeColor}`}>SHORTS</span>
+                      </div>
                     </td>
+
                     <td className="px-4 py-3">
                       {short.paid ? (
-                        <span className="flex items-center gap-1 text-amber-500"><Lock size={14} /> Paid</span>
+                        <span className="flex items-center gap-1 text-amber-500">
+                          <Lock size={14} /> Paid
+                        </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-success"><Unlock size={14} /> Free</span>
+                        <span className="flex items-center gap-1 text-success">
+                          <Unlock size={14} /> Free
+                        </span>
                       )}
                     </td>
-                    <td className="px-4 py-3"><Badge text={meta.label} type={meta.type} /></td>
+
+                    <td className="px-4 py-3">
+                      <Badge text={meta.label} type={meta.type} />
+                    </td>
+
                     <td className="px-4 py-3 text-text-secondary tabular-nums whitespace-nowrap">
-                      <div className="flex items-center gap-1"><Eye size={14} className="text-text-muted" />{formatNumber(short.viewCount)}</div>
+                      <div className="flex items-center gap-1">
+                        <Eye size={14} className="text-text-muted" />
+                        {formatNumber(short.viewCount)}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-text-secondary tabular-nums whitespace-nowrap">
-                      <div className="flex items-center gap-1"><Heart size={14} className="text-text-muted" />{formatNumber(short.likesCount)}</div>
+                      <div className="flex items-center gap-1">
+                        <Heart size={14} className="text-text-muted" />
+                        {formatNumber(short.likesCount)}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-text-secondary tabular-nums whitespace-nowrap">
-                      <div className="flex items-center gap-1"><MessageCircle size={14} className="text-text-muted" />{formatNumber(short.commentCount)}</div>
+                      <div className="flex items-center gap-1">
+                        <MessageCircle size={14} className="text-text-muted" />
+                        {formatNumber(short.commentCount)}
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-text-muted whitespace-nowrap">{new Date(short.publishedAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-text-muted whitespace-nowrap">
+                      {new Date(short.publishedAt).toLocaleDateString()}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1.5">
-                        <button onClick={() => handleEdit(short)} className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary-light text-xs font-bold hover:bg-primary/20">Edit</button>
-                        <button onClick={() => handleDeleteClick(short)} className="px-3 py-1.5 rounded-lg bg-danger/10 text-danger text-xs font-bold hover:bg-danger/20">Delete</button>
+                        <button
+                          onClick={() => handleEdit(short)}
+                          className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary-light text-xs font-bold hover:bg-primary/20"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(short)}
+                          className="px-3 py-1.5 rounded-lg bg-danger/10 text-danger text-xs font-bold hover:bg-danger/20"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -192,6 +280,17 @@ const MyShortsPage = ({ onNav }) => {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-end mt-6">
+          <Pagination
+            currentPage={currentPage + 1}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            siblingCount={1}
+          />
+        </div>
+      )}
 
       <ConfirmDeleteModal
         isOpen={deleteModalOpen}

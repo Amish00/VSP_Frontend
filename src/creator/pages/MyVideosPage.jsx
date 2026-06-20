@@ -4,8 +4,19 @@ import { useSnackbar } from 'notistack';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
+import Pagination from '../components/Pagination';
 import { creatorApi } from '../api/creatorApi';
-import { ArrowUp, Eye, Heart, MessageCircle, Lock, Unlock } from 'lucide-react';
+import {
+  ArrowUp,
+  Eye,
+  Heart,
+  MessageCircle,
+  Lock,
+  Unlock,
+  Film,
+  Smartphone,
+  Search,
+} from 'lucide-react';
 
 const formatNumber = (num) => {
   if (!num) return '0';
@@ -17,18 +28,33 @@ const formatNumber = (num) => {
 const STATUS_META = {
   APPROVED: { label: 'Approved', type: 'approved' },
   REJECTED: { label: 'Rejected', type: 'rejected' },
-  PENDING:  { label: 'Pending',  type: 'pending' },
+  PENDING: { label: 'Pending', type: 'pending' },
+};
+
+const getTypeMeta = (type) => {
+  const t = type?.toUpperCase();
+  if (t === 'SHORTS') {
+    return { icon: Smartphone, color: 'text-purple-400' };
+  }
+  return { icon: Film, color: 'text-blue-400' };
 };
 
 const MyVideosPage = ({ onNav }) => {
   const { enqueueSnackbar } = useSnackbar();
   const navigate = useNavigate();
+
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const debounceTimer = useRef(null);
+
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const pageSize = 10;
+
   const [videoToDelete, setVideoToDelete] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
@@ -37,28 +63,44 @@ const MyVideosPage = ({ onNav }) => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
       setDebouncedSearch(search);
+      setCurrentPage(0);
     }, 500);
     return () => clearTimeout(debounceTimer.current);
   }, [search]);
 
-  const fetchVideos = useCallback(async () => {
+  const fetchVideos = useCallback(async (page = currentPage) => {
     setLoading(true);
     try {
       const filterParam = statusFilter === 'All' ? null : statusFilter;
-      const response = await creatorApi.getVideos(filterParam, debouncedSearch, 'VIDEO', 10, 0);
-      setVideos(response.data.content || []);
+      // Pass 'VIDEO' as type – backend will filter
+      const response = await creatorApi.getVideos(
+        filterParam,
+        debouncedSearch,
+        'VIDEO',      // <-- type
+        pageSize,
+        page
+      );
+
+      const content = response.data.content || [];
+      setVideos(content);
+      setTotalPages(response.data.totalPages || 0);
     } catch (err) {
       console.error('Failed to fetch videos', err);
       enqueueSnackbar('Failed to load videos. Please refresh the page.', { variant: 'error' });
       setVideos([]);
+      setTotalPages(0);
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, debouncedSearch, enqueueSnackbar]);
+  }, [statusFilter, debouncedSearch, pageSize, currentPage, enqueueSnackbar]);
 
   useEffect(() => {
-    fetchVideos();
-  }, [fetchVideos]);
+    fetchVideos(currentPage);
+  }, [fetchVideos, currentPage]);
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage - 1);
+  };
 
   const handleEdit = (video) => {
     navigate(`/creator/video/${video.id}?mode=edit`);
@@ -75,7 +117,7 @@ const MyVideosPage = ({ onNav }) => {
       await creatorApi.deleteVideo(videoToDelete.id);
       enqueueSnackbar('Video deleted successfully', { variant: 'success' });
       setDeleteModalOpen(false);
-      await fetchVideos();
+      await fetchVideos(currentPage);
     } catch (err) {
       console.error('Delete failed', err);
       const msg = err.response?.data?.message || err.message;
@@ -96,24 +138,35 @@ const MyVideosPage = ({ onNav }) => {
     <div className="pb-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-text-primary">My Videos</h1>
-        <Button onClick={handleUpload}> <ArrowUp/> Upload New</Button>
+        <Button onClick={handleUpload}>
+          <ArrowUp /> Upload New Videos
+        </Button>
       </div>
 
-      {/* Filters row */}
+      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search videos by title..."
-            className="w-full pl-4 pr-4 py-2.5 rounded-xl border border-border bg-bg-el text-text-primary text-sm placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
+          <div className="relative">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search videos by title..."
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-bg-el text-text-primary text-sm placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+            />
+          </div>
         </div>
         <div className="flex gap-1 p-1 bg-bg-el border border-border rounded-xl flex-wrap">
           {['All', 'PENDING', 'APPROVED', 'REJECTED'].map((f) => (
             <button
               key={f}
-              onClick={() => setStatusFilter(f)}
+              onClick={() => {
+                setStatusFilter(f);
+                setCurrentPage(0);
+              }}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                 statusFilter === f ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary'
               }`}
@@ -124,7 +177,7 @@ const MyVideosPage = ({ onNav }) => {
         </div>
       </div>
 
-      {/* Video Table */}
+      {/* Table */}
       <div className="bg-bg-card border border-border rounded-xl overflow-x-auto">
         <table className="w-full text-sm" style={{ minWidth: 880 }}>
           <thead>
@@ -157,6 +210,8 @@ const MyVideosPage = ({ onNav }) => {
             ) : (
               videos.map((video) => {
                 const meta = STATUS_META[video.status] || { label: video.status, type: 'pending' };
+                const { icon: TypeIcon, color: typeColor } = getTypeMeta(video.type);
+
                 return (
                   <tr key={video.id} className="border-b border-border/50 last:border-0 hover:bg-bg-hov/30">
                     <td className="px-4 py-3">
@@ -174,29 +229,63 @@ const MyVideosPage = ({ onNav }) => {
                         </button>
                       </div>
                     </td>
-                    <td className="px-4 py-3"><Badge text={video.type || 'VIDEO'} type={video.type === 'SHORTS' ? 'info' : 'pro'} /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        <TypeIcon size={16} className={typeColor} />
+                        <span className={`text-xs font-medium ${typeColor}`}>
+                          {video.type || 'VIDEO'}
+                        </span>
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       {video.paid ? (
-                        <span className="flex items-center gap-1 text-amber-500"><Lock size={14} /> Paid</span>
+                        <span className="flex items-center gap-1 text-amber-500">
+                          <Lock size={14} /> Paid
+                        </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-success"><Unlock size={14} /> Free</span>
+                        <span className="flex items-center gap-1 text-success">
+                          <Unlock size={14} /> Free
+                        </span>
                       )}
                     </td>
-                    <td className="px-4 py-3"><Badge text={meta.label} type={meta.type} /></td>
-                    <td className="px-4 py-3 text-text-secondary tabular-nums whitespace-nowrap">
-                      <div className="flex items-center gap-1"><Eye size={14} className="text-text-muted" />{formatNumber(video.viewCount)}</div>
+                    <td className="px-4 py-3">
+                      <Badge text={meta.label} type={meta.type} />
                     </td>
                     <td className="px-4 py-3 text-text-secondary tabular-nums whitespace-nowrap">
-                      <div className="flex items-center gap-1"><Heart size={14} className="text-text-muted" />{formatNumber(video.likesCount)}</div>
+                      <div className="flex items-center gap-1">
+                        <Eye size={14} className="text-text-muted" />
+                        {formatNumber(video.viewCount)}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-text-secondary tabular-nums whitespace-nowrap">
-                      <div className="flex items-center gap-1"><MessageCircle size={14} className="text-text-muted" />{formatNumber(video.commentCount)}</div>
+                      <div className="flex items-center gap-1">
+                        <Heart size={14} className="text-text-muted" />
+                        {formatNumber(video.likesCount)}
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-text-muted whitespace-nowrap">{new Date(video.publishedAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-text-secondary tabular-nums whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        <MessageCircle size={14} className="text-text-muted" />
+                        {formatNumber(video.commentCount)}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-text-muted whitespace-nowrap">
+                      {new Date(video.publishedAt).toLocaleDateString()}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1.5">
-                        <button onClick={() => handleEdit(video)} className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary-light text-xs font-bold hover:bg-primary/20">Edit</button>
-                        <button onClick={() => handleDeleteClick(video)} className="px-3 py-1.5 rounded-lg bg-danger/10 text-danger text-xs font-bold hover:bg-danger/20">Delete</button>
+                        <button
+                          onClick={() => handleEdit(video)}
+                          className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary-light text-xs font-bold hover:bg-primary/20"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(video)}
+                          className="px-3 py-1.5 rounded-lg bg-danger/10 text-danger text-xs font-bold hover:bg-danger/20"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -206,6 +295,17 @@ const MyVideosPage = ({ onNav }) => {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-end mt-6">
+          <Pagination
+            currentPage={currentPage + 1}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            siblingCount={1}
+          />
+        </div>
+      )}
 
       <ConfirmDeleteModal
         isOpen={deleteModalOpen}

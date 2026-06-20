@@ -1,14 +1,53 @@
 import React from 'react';
 import StatCard from './ui/StatCard';
+import { FiEye, FiUsers, FiFilm, FiStar, FiClock } from 'react-icons/fi';
+import { FaMoneyBillWave,FaRegEye } from "react-icons/fa6";
+
 
 const PlatformStats = ({ stats, loading }) => {
+    
     const defaultStats = [
-        { icon: '👁', label: 'Total Views', value: stats.totalViews.toLocaleString(), change: '+18%', color: '#60A5FA' },
-        { icon: '👥', label: 'Total Users', value: stats.totalUsers.toLocaleString(), change: '+12%', color: '#10B981' },
-        { icon: '🎬', label: 'Total Videos', value: stats.totalVideos.toLocaleString(), change: '+8%', color: '#F59E0B' },
-        { icon: '💰', label: 'Total Revenue', value: `Rs.${stats.totalRevenue.toLocaleString()}`, change: '+22%', color: '#EF4444' },
-        { icon: '🌟', label: 'Creators', value: stats.totalCreators.toLocaleString(), change: '+15%', color: '#0EA5E9' },
-        { icon: '⏳', label: 'Pending Review', value: stats.pendingVideos.toLocaleString(), color: '#F59E0B' }
+        { 
+            icon: <FiEye color="#60A5FA" />, 
+            label: 'Total Views', 
+            value: stats.totalViews.toLocaleString(), 
+            change: '+18%', 
+            color: '#60A5FA' 
+        },
+        { 
+            icon: <FiUsers color="#10B981" />, 
+            label: 'Total Users', 
+            value: stats.totalUsers.toLocaleString(), 
+            change: '+12%', 
+            color: '#10B981' 
+        },
+        { 
+            icon: <FiFilm color="#F59E0B" />, 
+            label: 'Total Videos', 
+            value: stats.totalVideos.toLocaleString(), 
+            change: '+8%', 
+            color: '#F59E0B' 
+        },
+        { 
+            icon: <FaMoneyBillWave color="#EF4444" />, 
+            label: 'Total Revenue', 
+            value: `Rs.${stats.totalRevenue.toLocaleString()}`, 
+            change: '+22%', 
+            color: '#EF4444' 
+        },
+        { 
+            icon: <FaRegEye color="#0EA5E9" />, 
+            label: 'Creators', 
+            value: stats.totalCreators.toLocaleString(), 
+            change: '+15%', 
+            color: '#0EA5E9' 
+        },
+        { 
+            icon: <FiClock color="#F59E0B" />, 
+            label: 'Pending Review', 
+            value: stats.pendingVideos.toLocaleString(), 
+            color: '#F59E0B' 
+        }
     ];
 
     if (loading) {

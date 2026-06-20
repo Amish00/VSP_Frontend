@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSnackbar } from 'notistack';
 import UserTable from '../components/UserTable';
 import StatCard from '../components/ui/StatCard';
-import { Users, UserCheck, UserPlus, UserX } from 'lucide-react';
+import { Users, UserCheck, UserPlus, UserX, User2 } from 'lucide-react';
 import { userApi } from '../api/userApi';
 
 const UsersPage = () => {
@@ -14,7 +14,6 @@ const UsersPage = () => {
   const [activeUsers, setActiveUsers] = useState(0);
   const [loadingStats, setLoadingStats] = useState(true);
 
-  // Snackbar options (top-right)
   const snackbarOptions = {
     anchorOrigin: { vertical: 'top', horizontal: 'right' },
     autoHideDuration: 3000,
@@ -54,10 +53,10 @@ const UsersPage = () => {
 
       {!loadingStats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatCard icon={<Users size={24} />} label="Total Users" value={totalUsers.toLocaleString()} />
-          <StatCard icon={<UserPlus size={24} />} label="Creators" value={totalCreators.toLocaleString()} />
-          <StatCard icon={<Users size={24} />} label="Viewers" value={totalViewers.toLocaleString()} />
-          <StatCard icon={<UserCheck size={24} />} label="Active Users" value={activeUsers.toLocaleString()} />
+          <StatCard icon={<Users size={24} color="#60A5FA" />} label="Total Users" value={totalUsers.toLocaleString()} color="#60A5FA" />
+          <StatCard icon={<UserPlus size={24} color="#10B981" />} label="Creators" value={totalCreators.toLocaleString()} color="#10B981" />
+          <StatCard icon={<User2 size={24} color="#F59E0B" />} label="Viewers" value={totalViewers.toLocaleString()} color="#F59E0B" />
+          <StatCard icon={<UserCheck size={24} color="#8B5CF6" />} label="Active Users" value={activeUsers.toLocaleString()} color="#8B5CF6" />
         </div>
       )}
 

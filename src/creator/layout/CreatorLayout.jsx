@@ -1,4 +1,4 @@
-// src/creator/layout/CreatorLayout.js (refactored with Outlet)
+// src/creator/layout/CreatorLayout.js
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/context/AuthContext';
@@ -19,7 +19,7 @@ const CreatorLayout = () => {
     navigate('/');
   };
 
-  // Map current path to navigation id
+  // Only used for top nav (if needed)
   const pathToNavId = {
     '/creator': 'dashboard',
     '/creator/dashboard': 'dashboard',
@@ -57,8 +57,7 @@ const CreatorLayout = () => {
       />
       <div className="flex flex-1 overflow-hidden">
         <CreatorSidebar
-          active={activeNav}
-          onSelect={onNavSelect}
+          onSelect={onNavSelect}   // no active prop – sidebar handles it internally
           className="hidden md:flex md:flex-col"
         />
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-8 bg-bg-base">

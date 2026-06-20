@@ -22,14 +22,15 @@ import {
   MessageCircle,
   Heart,
   UserPlus,
+  Film,
 } from 'lucide-react';
 import logoUrl from '../../assets/logo.svg';
 import Badge from '../components/ui/Badge';
 import api from '../../user/api/Api';
 import { useNavigate, useLocation } from 'react-router-dom';
 import LanguageSwitcher from '../../user/components/LanguageSwitcher';
+import Modal from '../components/ui/Modal';
 
-// Map notification type to an icon (emoji)
 const getNotificationIcon = (type) => {
   const icons = {
     VIDEO_APPROVED: <CheckCircle className="text-green-500" size={20} />,
@@ -64,13 +65,12 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
   const [profOpen, setProfOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [viraModalOpen, setViraModalOpen] = useState(false);
 
-  // Real notifications state
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(false);
 
-  // Determine active nav based on current path
   const getActiveNavFromPath = () => {
     const currentPath = location.pathname;
     const navItem = NAV.find(item => currentPath.startsWith(item.path));
@@ -78,7 +78,6 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
   };
   const currentActiveNav = activeNav || getActiveNavFromPath();
 
-  // Fetch real user data
   useEffect(() => {
     const fetchUser = async () => {
       const token = sessionStorage.getItem('access_token');
@@ -101,7 +100,6 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     fetchUser();
   }, [navigate]);
 
-  // Notification API calls
   const fetchUnreadCount = async () => {
     if (!user) return;
     try {
@@ -117,9 +115,8 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     setNotifLoading(true);
     try {
       const res = await api.get('/notifications', { params: { page: 0, size: 20 } });
-      // Sort: unread first, then by createdAt desc
       const sorted = [...res.data.content].sort((a, b) => {
-        if (a.read !== b.read) return a.read ? 1 : -1; // unread (false) first
+        if (a.read !== b.read) return a.read ? 1 : -1;
         return new Date(b.createdAt) - new Date(a.createdAt);
       });
       setNotifications(sorted);
@@ -131,16 +128,13 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     }
   };
 
-  // Mark single notification as read
   const markAsRead = async (id) => {
     try {
       await api.put(`/notifications/${id}/read`);
-      // Update local state
       setNotifications(prev => {
         const updated = prev.map(n =>
           n.id === id ? { ...n, read: true } : n
         );
-        // Re-sort: unread first
         return updated.sort((a, b) => {
           if (a.read !== b.read) return a.read ? 1 : -1;
           return new Date(b.createdAt) - new Date(a.createdAt);
@@ -166,7 +160,6 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     }
   };
 
-  // Poll unread count every 30 seconds when user is logged in
   useEffect(() => {
     if (!user) return;
     fetchUnreadCount();
@@ -174,7 +167,6 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Load notifications when panel opens
   useEffect(() => {
     if (notifOpen && user) {
       fetchNotifications();
@@ -241,7 +233,6 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
 
         <div className="flex-1" />
 
-        {/* Keep the Home button in header */}
         <button
           onClick={onGoHome}
           className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border bg-bg-el text-text-secondary text-sm font-medium hover:bg-bg-hov hover:text-text-primary transition-all"
@@ -362,7 +353,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
               <div className="fixed inset-0 z-[148]" onClick={() => setProfOpen(false)} />
               <div
                 role="menu"
-                className="absolute top-[calc(100%+8px)] right-0 w-52 bg-bg-card border border-border rounded-2xl z-[149] shadow-drop overflow-visible"
+                className="absolute top-[calc(100%+8px)] right-0 w-64 bg-bg-card border border-border rounded-2xl z-[149] shadow-drop overflow-visible"
               >
                 <div className="px-4 py-3.5 border-b border-border">
                   <div className="flex items-center gap-2.5 mb-2">
@@ -375,7 +366,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     )}
                     <div className="min-w-0">
                       <p className="font-semibold text-sm text-text-primary truncate">{user.username}</p>
-                      <p className="text-xs text-text-muted break-all leading-snug">{user.email}</p>
+                      <p className="text-xs text-text-muted truncate max-w-[160px] leading-snug">{user.email}</p>
                     </div>
                   </div>
                   <Badge text={`${user.role}`} type="pro" />
@@ -393,7 +384,6 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     My Profile
                   </button>
 
-                  {/* YouTube option */}
                   <button
                     role="menuitem"
                     onClick={() => {
@@ -404,6 +394,19 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                   >
                     <Youtube size={13} className="text-text-muted" />
                     YouTube
+                  </button>
+
+                  {/* ViraShare with icon – opens modal */}
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      setProfOpen(false);
+                      setViraModalOpen(true);
+                    }}
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-text-secondary text-sm hover:bg-bg-hov transition-colors"
+                  >
+                    <Film size={13} className="text-text-muted" />
+                    ViraShare (Movies & TV)
                   </button>
 
                   <button
@@ -482,6 +485,46 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
           </div>
         </>
       )}
+
+      {/* ViraShare Modal – now uses Film icon in title */}
+      <Modal
+        open={viraModalOpen}
+        onClose={() => setViraModalOpen(false)}
+        title={
+          <>
+            <Film size={20} className="inline mr-2 text-primary-light" />
+            ViraShare – Movies & TV Shows
+          </>
+        }
+        maxW="500px"
+      >
+        <div className="space-y-4">
+          <p className="text-text-secondary text-sm leading-relaxed">
+            <strong className="text-text-primary">ViraShare</strong> is a free streaming platform where you can watch
+            the latest movies and complete TV shows. Enjoy unlimited entertainment without any cost!
+          </p>
+          <p className="text-text-muted text-sm">
+            Click <strong>Visit</strong> to explore the full catalog now.
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              onClick={() => setViraModalOpen(false)}
+              className="px-4 py-2 rounded-lg border border-border bg-bg-el text-text-secondary hover:bg-bg-hov transition-colors text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                window.open('http://localhost:5175', '_blank');
+                setViraModalOpen(false);
+              }}
+              className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors text-sm font-semibold"
+            >
+              Visit ViraShare
+            </button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 };

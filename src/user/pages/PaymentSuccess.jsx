@@ -1,12 +1,14 @@
 // src/pages/PaymentSuccess.jsx
 import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { getCurrentUser } from '../api/Api';
 import { useAuth } from '../../auth/context/AuthContext';
+import api from '../api/Api'; // import your axios instance
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { updateUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [planName, setPlanName] = useState('');
@@ -15,7 +17,6 @@ const PaymentSuccess = () => {
   const fetchAndUpdateUser = useCallback(async () => {
     try {
       const userData = await getCurrentUser();
-      // userData contains: id, username, email, role, plan, subscriptionExpiry, etc.
       setPlanName(userData.plan || 'Premium');
       if (userData.subscriptionExpiry) {
         const expiry = new Date(userData.subscriptionExpiry);
@@ -35,17 +36,33 @@ const PaymentSuccess = () => {
   }, [updateUser]);
 
   useEffect(() => {
-    fetchAndUpdateUser();
-  }, [fetchAndUpdateUser]);
+    const verifyAndFetch = async () => {
+      const sessionId = searchParams.get('session_id');
 
-  useEffect(() => {
-    if (loading) return;
-  }, [loading]);
+      // If a session_id is present, it's a Stripe payment – verify it first
+      if (sessionId) {
+        try {
+          // Call the new verification endpoint
+          await api.get(`/payment/stripe/verify?session_id=${sessionId}`);
+          // Verification succeeded – now fetch the updated user
+          await fetchAndUpdateUser();
+        } catch (err) {
+          console.error('Stripe verification failed:', err);
+          // Redirect to failure page
+          navigate('/payment/failure');
+          return;
+        }
+      } else {
+        // eSewa or Khalti – they already triggered the backend verification,
+        // and the backend redirected here. Just fetch the updated user.
+        await fetchAndUpdateUser();
+      }
+    };
 
-  const handleNavigateNow = () => {
-    navigate('/plans');
-  };
+    verifyAndFetch();
+  }, [searchParams, fetchAndUpdateUser, navigate]);
 
+  // (The rest of your component remains identical)
   if (loading) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center px-4 py-16 bg-gradient-to-b from-bg-deep to-bg-card">
@@ -109,7 +126,7 @@ const PaymentSuccess = () => {
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
-            onClick={handleNavigateNow}
+            onClick={() => navigate('/plans')}
             className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-semibold hover:opacity-85 transition-all"
           >
             <ArrowLeft className="w-5 h-5" />

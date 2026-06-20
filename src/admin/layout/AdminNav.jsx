@@ -25,7 +25,6 @@ import api from '../../user/api/Api';
 import { useNavigate } from 'react-router-dom';
 import LanguageSwitcher from '../../user/components/LanguageSwitcher';
 
-// Map notification type to an icon (emoji)
 const getNotificationIcon = (type) => {
   const icons = {
     VIDEO_APPROVED: <CheckCircle className="text-green-500" size={20} />,
@@ -101,9 +100,8 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     setNotifLoading(true);
     try {
       const res = await api.get('/notifications', { params: { page: 0, size: 20 } });
-      // Sort: unread first, then by createdAt desc
       const sorted = [...res.data.content].sort((a, b) => {
-        if (a.read !== b.read) return a.read ? 1 : -1; // unread (false) first
+        if (a.read !== b.read) return a.read ? 1 : -1;
         return new Date(b.createdAt) - new Date(a.createdAt);
       });
       setNotifications(sorted);
@@ -115,16 +113,13 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     }
   };
 
-  // Mark single notification as read
   const markAsRead = async (id) => {
     try {
       await api.put(`/notifications/${id}/read`);
-      // Update local state
       setNotifications(prev => {
         const updated = prev.map(n =>
           n.id === id ? { ...n, read: true } : n
         );
-        // Re-sort: unread first
         return updated.sort((a, b) => {
           if (a.read !== b.read) return a.read ? 1 : -1;
           return new Date(b.createdAt) - new Date(a.createdAt);
@@ -241,7 +236,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     <X size={14} />
                   </button>
                 </div>
-                <div className="max-h-86 overflow-y-auto" style={{ maxHeight: '480px' }}>
+                <div className="overflow-y-auto" style={{ maxHeight: '480px' }}>
                   {notifLoading ? (
                     <div className="px-4 py-8 text-center text-text-muted">Loading...</div>
                   ) : notifications.length === 0 ? (
@@ -316,7 +311,8 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
               <div className="fixed inset-0 z-[148]" onClick={() => setProfOpen(false)} />
               <div
                 role="menu"
-                className="absolute top-[calc(100%+8px)] right-0 w-52 bg-bg-card border border-border rounded-2xl z-[149] shadow-drop overflow-visible"
+                // Increased width from w-52 to w-64, same as creator nav
+                className="absolute top-[calc(100%+8px)] right-0 w-64 bg-bg-card border border-border rounded-2xl z-[149] shadow-drop overflow-visible"
               >
                 <div className="px-4 py-3.5 border-b border-border">
                   <div className="flex items-center gap-2.5 mb-2">
@@ -329,7 +325,8 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     )}
                     <div className="min-w-0">
                       <p className="font-semibold text-sm text-text-primary truncate">{user.username}</p>
-                      <p className="text-xs text-text-muted break-all leading-snug">{user.email}</p>
+                      {/* Email: replaced break-all with truncate and max-w-[160px] to keep in one line */}
+                      <p className="text-xs text-text-muted truncate max-w-[160px] leading-snug">{user.email}</p>
                     </div>
                   </div>
                   <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-danger/10 text-danger text-xs font-semibold">

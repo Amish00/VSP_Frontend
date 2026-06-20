@@ -6,6 +6,9 @@ import ContentPieChart from '../components/ContentPieChart';
 import VideoTable from '../components/VideoTable';
 import { creatorApi, earningsApi } from '../api/creatorApi';
 
+import { FiEye, FiDollarSign, FiUsers, FiFilm } from 'react-icons/fi';
+import { FaHeart } from 'react-icons/fa'; 
+
 const DashboardPage = ({ user }) => {
   const [stats, setStats] = useState({
     totalViews: 0,
@@ -21,7 +24,7 @@ const DashboardPage = ({ user }) => {
       try {
         const [statsRes, videosRes] = await Promise.all([
           creatorApi.getDashboardStats(),
-          creatorApi.getVideos(null, '', 5, 0) // get recent 5 videos – you need to modify getVideos to accept size/offset
+          creatorApi.getVideos(null, '', 5, 0)
         ]);
         setStats(statsRes.data);
         setRecentVideos(videosRes.data.content || []);
@@ -42,16 +45,16 @@ const DashboardPage = ({ user }) => {
   };
 
   const STATS = [
-    { icon: '👁', label: 'Total Views', value: formatNumber(stats.totalViews), change: '+18% this month', color: '#60A5FA' },
-    { icon: '💰', label: 'Earnings', value: `$${stats.totalEarnings.toLocaleString()}`, change: '+$180 this month', color: '#10B981' },
-    { icon: '👥', label: 'Subscribers', value: formatNumber(stats.subscriberCount), change: '+340 this month', color: '#F59E0B' },
-    { icon: '❤️', label: 'Total Likes', value: formatNumber(stats.totalLikes), change: '+2.1K this month', color: '#EF4444' }
+    { icon: <FiEye color="#60A5FA"/>, label: 'Total Views', value: formatNumber(stats.totalViews), change: '+18% this month', color: '#60A5FA' },
+    { icon: <FiDollarSign color="#10B981"/>, label: 'Earnings', value: `$${stats.totalEarnings.toLocaleString()}`, change: '+$180 this month', color: '#10B981' },
+    { icon: <FiUsers color="#F59E0B"/>, label: 'Subscribers', value: formatNumber(stats.subscriberCount), change: '+340 this month', color: '#F59E0B' },
+    { icon: <FaHeart color="#EF4444"/>, label: 'Total Likes', value: formatNumber(stats.totalLikes), change: '+2.1K this month', color: '#EF4444' }
   ];
 
   const recentActivities = [
-    { icon: '🎬', text: 'New upload approved: "System Design"', time: '2h ago', color: 'text-success' },
-    { icon: '💰', text: `Payout of $${stats.totalEarnings > 0 ? Math.min(stats.totalEarnings, 500) : 420} processed`, time: '3 days ago', color: 'text-primary-light' },
-    { icon: '👤', text: `${stats.subscriberCount > 0 ? Math.floor(stats.subscriberCount * 0.04) : 340} new subscribers this week`, time: '1 week ago', color: 'text-warning' }
+    { icon: <FiFilm color="#10B981"/>, text: 'New upload approved: "System Design"', time: '2h ago', color: 'text-success' },
+    { icon: <FiDollarSign color="#10B981"/>, text: `Payout of $${stats.totalEarnings > 0 ? Math.min(stats.totalEarnings, 500) : 420} processed`, time: '3 days ago', color: 'text-primary-light' },
+    { icon: <FiUsers color="#F59E0B"/>, text: `${stats.subscriberCount > 0 ? Math.floor(stats.subscriberCount * 0.04) : 340} new subscribers this week`, time: '1 week ago', color: 'text-warning' }
   ];
 
   return (

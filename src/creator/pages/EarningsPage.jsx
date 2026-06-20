@@ -69,24 +69,16 @@ const EarningsPage = () => {
     };
 
     const stats = [
-        { icon: <DollarSign size={24} />, label: 'Total Earned', value: `Rs.${summary.totalEarned.toFixed(2)}`, change: '+12%', color: '#10B981' },
-        { icon: <Clock size={24} />, label: 'Pending', value: `Rs.${summary.pending.toFixed(2)}`, color: '#F59E0B' },
-        { icon: <CheckCircle size={24} />, label: 'Paid Out', value: `Rs.${summary.paidOut.toFixed(2)}`, color: '#60A5FA' },
-        { icon: <TrendingUp size={24} />, label: 'Rev Share', value: '70%', color: '#0EA5E9' },
+        { icon: <DollarSign size={24} color="#10B981" />, label: 'Total Earned', value: `Rs.${summary.totalEarned.toFixed(2)}`, change: '+12%', color: '#10B981' },
+        { icon: <Clock size={24} color="#F59E0B" />, label: 'Pending', value: `Rs.${summary.pending.toFixed(2)}`, color: '#F59E0B' },
+        { icon: <CheckCircle size={24} color="#60A5FA" />, label: 'Paid Out', value: `Rs.${summary.paidOut.toFixed(2)}`, color: '#60A5FA' },
+        { icon: <TrendingUp size={24} color="#0EA5E9" />, label: 'Rev Share', value: '70%', color: '#0EA5E9' },
     ];
 
     return (
         <div className="pb-6">
             <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
                 <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-text-primary">Earnings</h1>
-                <div className="flex gap-1 p-1 bg-bg-el border border-border rounded-xl">
-                    {RANGES.map(r => (
-                        <button key={r} onClick={() => setRange(r)} 
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${range === r ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary'}`}>
-                            {r}
-                        </button>
-                    ))}
-                </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
