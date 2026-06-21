@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Camera, Save, Eye, Shield } from 'lucide-react'
+import { Snackbar, Alert } from '@mui/material' 
 import Badge from '../components/ui/Badge'
 import VideoGrid from '../components/VideoGrid'
 import Modal from '../components/ui/Modal'
@@ -15,7 +16,6 @@ const COUNTRIES = ['Nepal', 'India', 'USA', 'UK', 'Canada', 'Australia', 'German
 // Input styles – no white backgrounds, forced ring removal
 const inp =
   "w-full bg-bg-el text-text-primary text-base rounded-xl border border-border px-4 py-3 placeholder:text-text-muted focus:outline-none focus:ring-0 focus:border-primary transition-all"
-// Select: ensure background and appearance, remove default arrow (we keep the arrow as is but style)
 const sel = `${inp} appearance-none bg-bg-el`
 const readOnlyInput =
   "w-full bg-bg-el/50 text-text-secondary text-base rounded-xl border border-border px-4 py-3 cursor-not-allowed"
@@ -73,6 +73,22 @@ const ProfilePage = () => {
   const [pendingAvatarFile, setPendingAvatarFile] = useState(null)
   const [pendingBannerFile, setPendingBannerFile] = useState(null)
 
+  // Snackbar state
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success', // 'success' | 'error' | 'info' | 'warning'
+  })
+
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbar({ open: true, message, severity })
+  }
+
+  const handleSnackbarClose = (event, reason) => {
+    if (reason === 'clickaway') return
+    setSnackbar({ ...snackbar, open: false })
+  }
+
   const [profile, setProfile] = useState({
     fullName: '',
     username: '',
@@ -120,6 +136,7 @@ const ProfilePage = () => {
         }
       } catch (err) {
         console.error('Failed to load profile', err)
+        showSnackbar('Failed to load profile', 'error')
       } finally {
         setLoading(false)
       }
@@ -131,16 +148,16 @@ const ProfilePage = () => {
 
   const handleSave = async () => {
     if (!userId) {
-      alert('User ID not found. Please refresh the page.')
+      showSnackbar('User ID not found. Please refresh the page.', 'error')
       return
     }
     setSaving(true)
     try {
       await userApi.updateUser(userId, profile)
-      alert('Profile updated successfully')
+      showSnackbar('Profile updated successfully', 'success')
     } catch (err) {
       console.error('Save failed', err)
-      alert('Failed to save profile: ' + (err.response?.data?.message || err.message))
+      showSnackbar('Failed to save profile: ' + (err.response?.data?.message || err.message), 'error')
     } finally {
       setSaving(false)
     }
@@ -161,10 +178,10 @@ const ProfilePage = () => {
     try {
       const res = await userApi.uploadProfilePicture(pendingAvatarFile)
       setAvatarUrl(res.profilePicture)
-      alert('Profile picture updated')
+      showSnackbar('Profile picture updated', 'success')
     } catch (err) {
       console.error('Avatar upload failed', err)
-      alert('Failed to upload profile picture')
+      showSnackbar('Failed to upload profile picture', 'error')
     } finally {
       setUploadingAvatar(false)
       setPendingAvatarFile(null)
@@ -186,7 +203,10 @@ const ProfilePage = () => {
     try {
       const res = await userApi.uploadBanner(pendingBannerFile)
       setBannerUrl(res.bannerUrl)
-      alert('Banner updated')
+      showSnackbar('Banner updated', 'success')
+    } catch (err) {
+      console.error('Banner upload failed', err)
+      showSnackbar('Failed to upload banner', 'error')
     } finally {
       setUploadingBanner(false)
       setPendingBannerFile(null)
@@ -387,6 +407,17 @@ const ProfilePage = () => {
           </button>
         </div>
       </Modal>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={5000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} variant="filled" sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </div>
   )
 }
