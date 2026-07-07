@@ -1,4 +1,3 @@
-// src/pages/HistoryPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Eye, Trash2, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -6,6 +5,14 @@ import Badge from '../components/ui/Badge';
 import { getHistory, clearHistory } from '../api/Api';
 
 const PAGE_SIZE = 20;
+
+// Helper to convert any string to title case (camelCase per word)
+const toTitleCase = (str) => {
+  if (!str) return '';
+  return str.replace(/\w\S*/g, (word) => {
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  });
+};
 
 const HistoryPage = () => {
   const navigate = useNavigate();
@@ -16,7 +23,6 @@ const HistoryPage = () => {
   const [clearing, setClearing] = useState(false);
   const [error, setError] = useState(null);
 
-  // Load history (append or reset)
   const loadHistory = useCallback(async (reset = false) => {
     if (loading) return;
     setLoading(true);
@@ -37,13 +43,11 @@ const HistoryPage = () => {
     }
   }, [page, loading]);
 
-  // Initial load
   useEffect(() => {
     loadHistory(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Clear all history
   const handleClearHistory = async () => {
     if (clearing) return;
     setClearing(true);
@@ -60,7 +64,6 @@ const HistoryPage = () => {
     }
   };
 
-  // Format relative time (e.g., "today", "2 days ago", etc.)
   const formatWatchedTime = (timestamp) => {
     try {
       const date = new Date(timestamp);
@@ -92,7 +95,6 @@ const HistoryPage = () => {
     }
   };
 
-  // Navigate to watch page
   const handleWatch = (videoId) => {
     navigate(`/watch/${videoId}`);
   };
@@ -159,19 +161,31 @@ const HistoryPage = () => {
 
               {/* Video info */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-text-primary leading-snug mb-1 line-clamp-2">
-                  {item.videoTitle}
-                </p>
+                {/* Title with type badge inline and title case */}
+                <div className="flex items-center flex-wrap gap-2 mb-1">
+                  <p className="text-base sm:text-lg font-semibold text-text-primary leading-snug line-clamp-2">
+                    {toTitleCase(item.videoTitle)}
+                  </p>
+                  <Badge
+                    text={item.type === 'SHORTS' ? 'SHORT' : 'VIDEO'}
+                    type={item.type === 'SHORTS' ? 'short' : 'video'}
+                    small
+                  />
+                </div>
+
+                {/* Channel & views */}
                 <p className="text-xs text-text-muted mb-1.5">
                   {item.username} · <Eye size={10} className="inline" />{' '}
                   {item.viewCount?.toLocaleString() || 0}
                 </p>
+
+                {/* Watched time */}
                 <p className="text-2xs text-text-muted">
                   Watched {formatWatchedTime(item.watchedAt)}
                 </p>
               </div>
 
-              {/* Badge – shows PAID/FREE if backend returns 'paid' field, otherwise just shows WATCHED */}
+              {/* Paid/Free badge */}
               <div className="flex items-start flex-shrink-0 mt-1">
                 {item.paid !== undefined ? (
                   <Badge text={item.paid ? 'PAID' : 'FREE'} type={item.paid ? 'paid' : 'free'} small />
@@ -182,7 +196,6 @@ const HistoryPage = () => {
             </button>
           ))}
 
-          {/* Load more button */}
           {hasMore && (
             <div className="flex justify-center mt-4">
               <button
@@ -204,4 +217,4 @@ const HistoryPage = () => {
   );
 };
 
-export default HistoryPage;
+export default HistoryPage; 

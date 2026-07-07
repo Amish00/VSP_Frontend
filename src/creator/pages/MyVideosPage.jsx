@@ -5,6 +5,7 @@ import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import Pagination from '../components/Pagination';
+import StatCard from '../components/ui/StatCard';
 import { creatorApi } from '../api/creatorApi';
 import {
   ArrowUp,
@@ -16,6 +17,10 @@ import {
   Film,
   Smartphone,
   Search,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Film as FilmIcon,
 } from 'lucide-react';
 
 const formatNumber = (num) => {
@@ -46,6 +51,15 @@ const MyVideosPage = ({ onNav }) => {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Stats
+  const [stats, setStats] = useState({
+    total: 0,
+    approved: 0,
+    pending: 0,
+    rejected: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -53,7 +67,7 @@ const MyVideosPage = ({ onNav }) => {
 
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const pageSize = 10;
+  const pageSize = 7;
 
   const [videoToDelete, setVideoToDelete] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -68,19 +82,43 @@ const MyVideosPage = ({ onNav }) => {
     return () => clearTimeout(debounceTimer.current);
   }, [search]);
 
+  // ---------- Fetch stats (only once on mount) ----------
+  const fetchStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      // We'll use the fallback (parallel calls to existing paginated API)
+      const statuses = ['All', 'APPROVED', 'PENDING', 'REJECTED'];
+      const type = 'VIDEO';
+      const size = 1; // we only need totalElements
+
+      const promises = statuses.map((status) =>
+        creatorApi.getVideos(status === 'All' ? null : status, '', type, size, 0)
+      );
+      const responses = await Promise.all(promises);
+      const counts = responses.map((res) => res.data.totalElements || 0);
+      // order: [total, approved, pending, rejected]
+      const [total, approved, pending, rejected] = counts;
+      setStats({ total, approved, pending, rejected });
+    } catch (err) {
+      console.error('Failed to fetch video stats', err);
+      setStats({ total: 0, approved: 0, pending: 0, rejected: 0 });
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
+  // ---------- Fetch video list (depends on filters and page) ----------
   const fetchVideos = useCallback(async (page = currentPage) => {
     setLoading(true);
     try {
       const filterParam = statusFilter === 'All' ? null : statusFilter;
-      // Pass 'VIDEO' as type – backend will filter
       const response = await creatorApi.getVideos(
         filterParam,
         debouncedSearch,
-        'VIDEO',      // <-- type
+        'VIDEO',
         pageSize,
         page
       );
-
       const content = response.data.content || [];
       setVideos(content);
       setTotalPages(response.data.totalPages || 0);
@@ -94,10 +132,18 @@ const MyVideosPage = ({ onNav }) => {
     }
   }, [statusFilter, debouncedSearch, pageSize, currentPage, enqueueSnackbar]);
 
+  // ---------- Effects ----------
+  // Stats only on mount
+  useEffect(() => {
+    fetchStats();
+  }, []); // empty deps
+
+  // Videos when filters or page change
   useEffect(() => {
     fetchVideos(currentPage);
-  }, [fetchVideos, currentPage]);
+  }, [fetchVideos, currentPage]); // fetchVideos already includes all needed deps
 
+  // ---------- Handlers ----------
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage - 1);
   };
@@ -117,6 +163,8 @@ const MyVideosPage = ({ onNav }) => {
       await creatorApi.deleteVideo(videoToDelete.id);
       enqueueSnackbar('Video deleted successfully', { variant: 'success' });
       setDeleteModalOpen(false);
+      // Refresh both stats and list
+      await fetchStats();
       await fetchVideos(currentPage);
     } catch (err) {
       console.error('Delete failed', err);
@@ -143,6 +191,45 @@ const MyVideosPage = ({ onNav }) => {
         </Button>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        {statsLoading ? (
+          <>
+            <div className="bg-bg-card border border-border rounded-2xl p-4 animate-pulse h-24"></div>
+            <div className="bg-bg-card border border-border rounded-2xl p-4 animate-pulse h-24"></div>
+            <div className="bg-bg-card border border-border rounded-2xl p-4 animate-pulse h-24"></div>
+            <div className="bg-bg-card border border-border rounded-2xl p-4 animate-pulse h-24"></div>
+          </>
+        ) : (
+          <>
+            <StatCard
+              icon={<FilmIcon size={24} color="#60A5FA" />}
+              label="Total Videos"
+              value={stats.total}
+              color="#60A5FA"
+            />
+            <StatCard
+              icon={<CheckCircle size={24} color="#10B981" />}
+              label="Approved"
+              value={stats.approved}
+              color="#10B981"
+            />
+            <StatCard
+              icon={<Clock size={24} color="#F59E0B" />}
+              label="Pending"
+              value={stats.pending}
+              color="#F59E0B"
+            />
+            <StatCard
+              icon={<XCircle size={24} color="#EF4444" />}
+              label="Rejected"
+              value={stats.rejected}
+              color="#EF4444"
+            />
+          </>
+        )}
+      </div>
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
@@ -153,10 +240,7 @@ const MyVideosPage = ({ onNav }) => {
               placeholder="Search videos by title..."
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-bg-el text-text-primary text-sm placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-            />
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           </div>
         </div>
         <div className="flex gap-1 p-1 bg-bg-el border border-border rounded-xl flex-wrap">

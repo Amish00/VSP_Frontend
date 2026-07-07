@@ -37,6 +37,12 @@ export const clearHistory = () => {
   return api.delete('/history');
 };
 
+// ---------- Video API ----------
+export const recordWatch = (videoId) => {
+  return api.post(`/videos/${videoId}/watch`);
+};
+
+// ---------- User API ----------
 export const getCurrentUser = async () => {
   const response = await api.get('/users/me');
   return response.data;
@@ -48,7 +54,7 @@ export const upgradeToFreePlan = async () => {
 };
 
 export const canWatchPaidVideo = (user) => {
-  if (!user) return false; // not logged in
+  if (!user) return false;
   if (user.role === 'ADMIN' || user.role === 'CREATOR') return true;
   return user.plan && user.plan !== 'FREE';
 };
@@ -63,6 +69,5 @@ export const markAllNotificationsAsRead = () =>
 export const getUnreadNotificationCount = () => 
   api.get('/notifications/unread-count');
 
-// NEW: mark a single notification as read
 export const markNotificationAsRead = (notificationId) => 
   api.put(`/notifications/${notificationId}/read`);

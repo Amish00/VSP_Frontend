@@ -5,6 +5,7 @@ import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import Pagination from '../components/Pagination';
+import StatCard from '../components/ui/StatCard';
 import { creatorApi } from '../api/creatorApi';
 import {
   ArrowUp,
@@ -15,6 +16,9 @@ import {
   Unlock,
   Smartphone,
   Search,
+  CheckCircle,
+  XCircle,
+  Clock,
 } from 'lucide-react';
 
 const formatNumber = (num) => {
@@ -30,8 +34,7 @@ const STATUS_META = {
   PENDING: { label: 'Pending', type: 'pending' },
 };
 
-const getTypeMeta = (type) => {
-  // Always SHORTS for this page
+const getTypeMeta = () => {
   return { icon: Smartphone, color: 'text-purple-400' };
 };
 
@@ -42,6 +45,15 @@ const MyShortsPage = ({ onNav }) => {
   const [shorts, setShorts] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Stats
+  const [stats, setStats] = useState({
+    total: 0,
+    approved: 0,
+    pending: 0,
+    rejected: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -49,7 +61,7 @@ const MyShortsPage = ({ onNav }) => {
 
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const pageSize = 10;
+  const pageSize = 7;
 
   const [shortToDelete, setShortToDelete] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -64,19 +76,41 @@ const MyShortsPage = ({ onNav }) => {
     return () => clearTimeout(debounceTimer.current);
   }, [search]);
 
+  // ---------- Fetch stats (only once on mount) ----------
+  const fetchStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const statuses = ['All', 'APPROVED', 'PENDING', 'REJECTED'];
+      const type = 'SHORTS';
+      const size = 1;
+
+      const promises = statuses.map((status) =>
+        creatorApi.getVideos(status === 'All' ? null : status, '', type, size, 0)
+      );
+      const responses = await Promise.all(promises);
+      const counts = responses.map((res) => res.data.totalElements || 0);
+      const [total, approved, pending, rejected] = counts;
+      setStats({ total, approved, pending, rejected });
+    } catch (err) {
+      console.error('Failed to fetch short stats', err);
+      setStats({ total: 0, approved: 0, pending: 0, rejected: 0 });
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
+  // ---------- Fetch shorts list ----------
   const fetchShorts = useCallback(async (page = currentPage) => {
     setLoading(true);
     try {
       const filterParam = statusFilter === 'All' ? null : statusFilter;
-      // Pass 'SHORTS' as type – backend will filter
       const response = await creatorApi.getVideos(
         filterParam,
         debouncedSearch,
-        'SHORTS',    // <-- type
+        'SHORTS',
         pageSize,
         page
       );
-
       const content = response.data.content || [];
       setShorts(content);
       setTotalPages(response.data.totalPages || 0);
@@ -90,10 +124,18 @@ const MyShortsPage = ({ onNav }) => {
     }
   }, [statusFilter, debouncedSearch, pageSize, currentPage, enqueueSnackbar]);
 
+  // ---------- Effects ----------
+  // Stats only on mount
+  useEffect(() => {
+    fetchStats();
+  }, []); // empty deps
+
+  // Shorts when filters or page change
   useEffect(() => {
     fetchShorts(currentPage);
   }, [fetchShorts, currentPage]);
 
+  // ---------- Handlers ----------
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage - 1);
   };
@@ -110,6 +152,7 @@ const MyShortsPage = ({ onNav }) => {
       await creatorApi.deleteVideo(shortToDelete.id);
       enqueueSnackbar('Short deleted', { variant: 'success' });
       setDeleteModalOpen(false);
+      await fetchStats();
       await fetchShorts(currentPage);
     } catch (err) {
       enqueueSnackbar(`Delete failed: ${err.response?.data?.message || err.message}`, { variant: 'error' });
@@ -128,6 +171,46 @@ const MyShortsPage = ({ onNav }) => {
         </Button>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        {statsLoading ? (
+          <>
+            <div className="bg-bg-card border border-border rounded-2xl p-4 animate-pulse h-24"></div>
+            <div className="bg-bg-card border border-border rounded-2xl p-4 animate-pulse h-24"></div>
+            <div className="bg-bg-card border border-border rounded-2xl p-4 animate-pulse h-24"></div>
+            <div className="bg-bg-card border border-border rounded-2xl p-4 animate-pulse h-24"></div>
+          </>
+        ) : (
+          <>
+            <StatCard
+              icon={<Smartphone size={24} color="#A78BFA" />}
+              label="Total Shorts"
+              value={stats.total}
+              color="#A78BFA"
+            />
+            <StatCard
+              icon={<CheckCircle size={24} color="#10B981" />}
+              label="Approved"
+              value={stats.approved}
+              color="#10B981"
+            />
+            <StatCard
+              icon={<Clock size={24} color="#F59E0B" />}
+              label="Pending"
+              value={stats.pending}
+              color="#F59E0B"
+            />
+            <StatCard
+              icon={<XCircle size={24} color="#EF4444" />}
+              label="Rejected"
+              value={stats.rejected}
+              color="#EF4444"
+            />
+          </>
+        )}
+      </div>
+
+      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
           <div className="relative">
@@ -137,10 +220,7 @@ const MyShortsPage = ({ onNav }) => {
               placeholder="Search shorts by title..."
               className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-bg-el text-text-primary text-sm placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
-            <Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-            />
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           </div>
         </div>
         <div className="flex gap-1 p-1 bg-bg-el border border-border rounded-xl flex-wrap">
@@ -161,6 +241,7 @@ const MyShortsPage = ({ onNav }) => {
         </div>
       </div>
 
+      {/* Table */}
       <div className="bg-bg-card border border-border rounded-xl overflow-x-auto">
         <table className="w-full text-sm" style={{ minWidth: 880 }}>
           <thead>
@@ -193,7 +274,7 @@ const MyShortsPage = ({ onNav }) => {
             ) : (
               shorts.map((short) => {
                 const meta = STATUS_META[short.status] || { label: short.status, type: 'pending' };
-                const { icon: TypeIcon, color: typeColor } = getTypeMeta(short.type);
+                const { icon: TypeIcon, color: typeColor } = getTypeMeta();
 
                 return (
                   <tr key={short.id} className="border-b border-border/50 last:border-0 hover:bg-bg-hov/30">
@@ -212,14 +293,12 @@ const MyShortsPage = ({ onNav }) => {
                         </button>
                       </div>
                     </td>
-
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
                         <TypeIcon size={16} className={typeColor} />
                         <span className={`text-xs font-medium ${typeColor}`}>SHORTS</span>
                       </div>
                     </td>
-
                     <td className="px-4 py-3">
                       {short.paid ? (
                         <span className="flex items-center gap-1 text-amber-500">
@@ -231,11 +310,9 @@ const MyShortsPage = ({ onNav }) => {
                         </span>
                       )}
                     </td>
-
                     <td className="px-4 py-3">
                       <Badge text={meta.label} type={meta.type} />
                     </td>
-
                     <td className="px-4 py-3 text-text-secondary tabular-nums whitespace-nowrap">
                       <div className="flex items-center gap-1">
                         <Eye size={14} className="text-text-muted" />

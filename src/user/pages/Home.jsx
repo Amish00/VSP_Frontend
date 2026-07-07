@@ -1,15 +1,14 @@
-// src/pages/Home.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Lock } from 'lucide-react';
 import HeroCarousel from '../components/HeroCarousel';
 import VideoGrid from '../components/VideoGrid';
 import ShortsCard from '../components/shorts/ShortsCard';
-import ShortsPlayer from '../components/shorts/ShortsPlayer';
 import api, { canWatchPaidVideo } from '../api/Api';
 import { useAuth } from '../../auth/context/AuthContext';
 import LockedModal from '../components/LockedModal';
 
+// Helper functions (keep as in your original)
 const formatNumber = (num) => {
   if (!num && num !== 0) return '0';
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
@@ -69,7 +68,6 @@ const Home = () => {
   const [selectedVideoTitle, setSelectedVideoTitle] = useState('');
   const [carouselVideos, setCarouselVideos] = useState([]);
   const [carouselLoading, setCarouselLoading] = useState(true);
-  const [selectedShortIndex, setSelectedShortIndex] = useState(null);
 
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -159,7 +157,10 @@ const Home = () => {
     }
   };
 
-  const openShortsPlayer = (index) => setSelectedShortIndex(index);
+  // Navigate to shorts player route
+  const openShortsPlayer = (shortId) => {
+    navigate(`/shorts/watch/${shortId}`);
+  };
 
   // Show only 6 shorts in a grid (consistent with other sections)
   const displayedShorts = shorts.slice(0, 6);
@@ -211,7 +212,7 @@ const Home = () => {
           </div>
         )}
 
-        {/* ========== SHORTS SECTION (grid layout) ========== */}
+        {/* Shorts Section (grid) */}
         {!shortsLoading && displayedShorts.length > 0 && (
           <div className="mb-10">
             <div className="flex justify-between items-center mb-3">
@@ -220,15 +221,17 @@ const Home = () => {
                 View more <ArrowRight size={16} />
               </a>
             </div>
-            {/* Grid instead of horizontal scroll */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {displayedShorts.map((short, idx) => (
-                <ShortsCard key={short.id} short={short} onPlay={() => openShortsPlayer(idx)} />
+              {displayedShorts.map((short) => (
+                <ShortsCard
+                  key={short.id}
+                  short={short}
+                  onPlay={() => openShortsPlayer(short.id)}
+                />
               ))}
             </div>
           </div>
         )}
-        {/* ================================================= */}
 
         {/* Trending Paid Section */}
         <div className="flex flex-wrap items-center justify-between mb-2 mt-4 gap-2">
@@ -254,15 +257,6 @@ const Home = () => {
 
         <LockedModal isOpen={modalOpen} onClose={() => setModalOpen(false)} videoTitle={selectedVideoTitle} />
       </div>
-
-      {/* Shorts Player Modal */}
-      {selectedShortIndex !== null && (
-        <ShortsPlayer
-          shorts={shorts}
-          initialIndex={selectedShortIndex}
-          onClose={() => setSelectedShortIndex(null)}
-        />
-      )}
     </>
   );
 };
