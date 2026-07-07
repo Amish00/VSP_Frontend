@@ -77,6 +77,7 @@ export const creatorApi = {
   getAnalyticsSummary: (days) => axiosInstance.get(`/api/creator/analytics/summary?days=${days}`),
   getTopVideos: (limit = 5) => axiosInstance.get(`/api/creator/analytics/top-videos?limit=${limit}`),
   getDashboardStats: () => axiosInstance.get('/api/creator/dashboard/stats'),
+  getVideoStats: () => axiosInstance.get('/api/creator/videos/stats'),
 }
 
 export const earningsApi = {

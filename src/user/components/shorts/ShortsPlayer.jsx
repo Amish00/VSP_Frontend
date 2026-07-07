@@ -1,11 +1,11 @@
-// src/components/shorts/ShortsPlayer.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Heart, MessageCircle, Share2, ChevronUp, ChevronDown, MoreHorizontal } from 'lucide-react';
-import api from '../../api/Api';
+import api, { recordWatch } from '../../api/Api';
 import CommentSection from '../video/CommentSection';
 import ShareModal from '../ShareModal';
-import { useNotification } from '../../../hooks/useNotification'; 
+import { useNotification } from '../../../hooks/useNotification';
 
+// ----- Inner Modal component for description/comments -----
 const ShortsModal = ({ isOpen, onClose, title, children }) => {
   useEffect(() => {
     if (!isOpen) return;
@@ -38,6 +38,7 @@ const ShortsModal = ({ isOpen, onClose, title, children }) => {
   );
 };
 
+// ----- Main ShortsPlayer component -----
 const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
   const [index, setIndex] = useState(initialIndex);
   const [liked, setLiked] = useState({});
@@ -47,7 +48,10 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const touchY = useRef(null);
   const videoRef = useRef(null);
-  const { showWarning } = useNotification(); // use snackbar instead of alert
+  const { showWarning } = useNotification();
+
+  // Ref to prevent duplicate history recording for the same short
+  const historyRecordedRef = useRef(false);
 
   const current = shorts[index];
   if (!current) return null;
@@ -55,7 +59,7 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
   const goNext = () => setIndex(i => (i + 1) % shorts.length);
   const goPrev = () => setIndex(i => (i - 1 + shorts.length) % shorts.length);
 
-  // Control video play/pause via ref
+  // Play/Pause control
   useEffect(() => {
     if (!videoRef.current) return;
     if (playing) {
@@ -70,11 +74,38 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
 
   const handleVideoEnded = () => goNext();
 
+  // Reset history flag and set playing true on short change
   useEffect(() => {
+    historyRecordedRef.current = false;
     setPlaying(true);
   }, [index]);
 
-  // Like status
+  // ----- Record watch history after 2 seconds of playback -----
+  useEffect(() => {
+    if (!current?.id) return;
+    if (historyRecordedRef.current) return;
+
+    const timer = setTimeout(() => {
+      // Only record if still playing and video is not paused
+      if (playing && videoRef.current && !videoRef.current.paused) {
+        recordWatch(current.id)
+          .then(() => {
+            console.log('History recorded for short:', current.id);
+            historyRecordedRef.current = true;
+          })
+          .catch(err => {
+            // Ignore 401 (not logged in) and other client errors gracefully
+            if (err.response?.status !== 401) {
+              console.error('Failed to record history:', err);
+            }
+          });
+      }
+    }, 2000); // 2 seconds
+
+    return () => clearTimeout(timer);
+  }, [current.id, playing]);
+
+  // ----- Like status fetch -----
   useEffect(() => {
     const fetchLikeStatus = async () => {
       try {
@@ -89,7 +120,7 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
     fetchLikeStatus();
   }, [current.id, current.likesCount]);
 
-  // Keyboard navigation
+  // ----- Keyboard navigation -----
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'ArrowUp') { e.preventDefault(); goPrev(); }
@@ -101,6 +132,7 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [goPrev, goNext, onClose]);
 
+  // ----- Like toggle -----
   const toggleLike = async () => {
     try {
       if (liked[current.id]) {
@@ -115,7 +147,6 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
     } catch (err) {
       console.error('Like/unlike failed', err);
       if (err.response?.status === 401) {
-        // Replace alert with snackbar notification
         showWarning('Please login to like videos');
       } else {
         showWarning('Something went wrong. Please try again.');
@@ -132,13 +163,16 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
   const hasLongDescription = descriptionPreview.length > 80;
   const truncatedDesc = hasLongDescription ? descriptionPreview.slice(0, 80) + '...' : descriptionPreview;
 
+  // ----- Render -----
   return (
     <>
       <div className="fixed inset-0 bg-black z-[200] flex items-center justify-center">
+        {/* Close button */}
         <button onClick={onClose} className="absolute top-4 left-4 z-20 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center">
           <X size={20} />
         </button>
 
+        {/* Progress dots */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
           {shorts.map((_, i) => (
             <button key={i} onClick={() => setIndex(i)}
@@ -148,6 +182,7 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
         </div>
 
         <div className="flex items-center justify-center w-full gap-3 px-3">
+          {/* Prev/Next buttons */}
           <div className="flex flex-col gap-3">
             <button onClick={goPrev} className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition">
               <ChevronUp size={28} />
@@ -157,6 +192,7 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
             </button>
           </div>
 
+          {/* Video player + info */}
           <div className="flex flex-col items-center gap-3">
             <div className="relative rounded-xl overflow-hidden bg-black"
                  style={{ width: 'min(340px, calc(100vw - 160px))', height: 'min(600px, calc(100vh - 160px))' }}
@@ -166,7 +202,7 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
                    if (dy > 40) goNext();
                    if (dy < -40) goPrev();
                    touchY.current = null;
-                  }}
+                 }}
                  onClick={() => setPlaying(p => !p)}>
               <video
                 ref={videoRef}
@@ -184,6 +220,7 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
               )}
             </div>
 
+            {/* Title and description */}
             <div className="w-full max-w-[340px]">
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-bold">
@@ -207,6 +244,7 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
             </div>
           </div>
 
+          {/* Action buttons */}
           <div className="flex flex-col gap-4 items-center">
             <button onClick={toggleLike} className="flex flex-col items-center gap-1">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center ${liked[current.id] ? 'bg-red-500/20 text-red-500' : 'bg-white/10 text-white'}`}>
@@ -230,6 +268,7 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
         </div>
       </div>
 
+      {/* Modal for description and comments */}
       <ShortsModal isOpen={modalOpen} onClose={closeModal} title="Video details & comments">
         <div className="space-y-5">
           <div><h3 className="text-sm font-semibold text-white mb-2">Description</h3><p className="text-sm text-white/80 whitespace-pre-wrap">{current.description || 'No description.'}</p></div>
@@ -238,6 +277,7 @@ const ShortsPlayer = ({ shorts, initialIndex = 0, onClose }) => {
         </div>
       </ShortsModal>
 
+      {/* Share Modal */}
       <ShareModal
         isOpen={shareModalOpen}
         onClose={closeShareModal}

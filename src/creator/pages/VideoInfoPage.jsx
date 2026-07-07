@@ -1,10 +1,9 @@
-// src/creator/pages/VideoInfoPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import {
   Upload, X, Edit, Save, Eye, Heart, MessageCircle,
-  ThumbsUp, ArrowLeft, Film, CheckCircle, AlertCircle
+  ThumbsUp, ArrowLeft, Film, CheckCircle, AlertCircle, XCircle, Clock
 } from 'lucide-react';
 import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
@@ -25,7 +24,7 @@ const VideoInfoPage = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') || 'view';
-  const typeParam = searchParams.get('type'); // 'short' or undefined
+  const typeParam = searchParams.get('type');
   const navigate = useNavigate();
 
   const [video, setVideo] = useState(null);
@@ -347,15 +346,34 @@ const VideoInfoPage = () => {
         )}
       </div>
 
-      {/* Stats Row */}
+      {/* Stats Row – each stat has its own colour, matching icons and smaller status label */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <StatCard icon={<Eye size={24} />} label="Views" value={video.viewCount?.toLocaleString() || 0} />
-        <StatCard icon={<Heart size={24} />} label="Likes" value={video.likesCount?.toLocaleString() || 0} />
-        <StatCard icon={<MessageCircle size={24} />} label="Comments" value={video.commentCount?.toLocaleString() || 0} />
+        <StatCard 
+          icon={<Eye size={24} color="#60A5FA" />} 
+          label="Views" 
+          value={video.viewCount?.toLocaleString() || 0} 
+          color="#60A5FA"
+        />
+        <StatCard 
+          icon={<Heart size={24} color="#EC4899" />} 
+          label="Likes" 
+          value={video.likesCount?.toLocaleString() || 0} 
+          color="#EC4899"
+        />
+        <StatCard 
+          icon={<MessageCircle size={24} color="#10B981" />} 
+          label="Comments" 
+          value={video.commentCount?.toLocaleString() || 0} 
+          color="#10B981"
+        />
         <StatCard
-          icon={video.status === 'APPROVED' ? <ThumbsUp size={24} className="text-green-500" /> : <div className="w-6 h-6 rounded-full" style={{ backgroundColor: status.color }} />}
+          icon={
+            video.status === 'APPROVED' ? <CheckCircle size={24} color="#10B981" /> :
+            video.status === 'REJECTED' ? <XCircle size={24} color="#EF4444" /> :
+            <Clock size={24} color="#F59E0B" />
+          }
           label="Status"
-          value={status.label}
+          value={<span className="text-sm font-medium">{status.label}</span>}
           color={status.color}
         />
       </div>

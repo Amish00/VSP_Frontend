@@ -10,6 +10,8 @@ const S = {
   live:     'bg-rose-600 text-white border-rose-700',
   draft:    'bg-gray-600 text-white border-gray-700',
   info:     'bg-sky-600 text-white border-sky-700',
+  video:    'bg-blue-600 text-white border-blue-700',
+  short:    'bg-purple-600 text-white border-purple-700',
 };
 
 const Badge = ({ text, type = 'free', small = false }) => {

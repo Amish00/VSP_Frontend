@@ -47,6 +47,7 @@ import { translateText } from './context/translationService';
 import EditorSelectionPage from './creator/pages/EditorSelectionPage';
 import ShortsFeed from './user/pages/ShortsFeed';
 import MyShortsPage from './creator/pages/MyShortsPage';
+import ShortsWatchPage from './user/pages/ShortsWatchPage';
 import YouTubePage from './user/pages/YouTubePage';
 import YouTubeWatchPage from './user/pages/YouTubeWatchPage';
 
@@ -233,13 +234,15 @@ function App() {
           <Route path="/payment/success" element={<PaymentSuccess />} />
           <Route path="/payment/failure" element={<PaymentFailure />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/settings" element={<div> Settings Pages </div>} />
+          <Route path="/settings" element={<NotFound />} />
           <Route path="/all-videos" element={<AllVideosPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/not-found" element={<NotFound />} />
           <Route path="/shorts" element={<ShortsFeed />} />
+          <Route path="/shorts/watch/:id" element={<ShortsWatchPage />} />
           <Route path="/youtube" element={<YouTubePage />} />
           <Route path="/watch/youtube/:videoId" element={<YouTubeWatchPage />} />
+
           
 
         </Route>

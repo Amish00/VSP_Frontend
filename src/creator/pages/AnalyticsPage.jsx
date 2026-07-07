@@ -160,7 +160,7 @@ const AnalyticsPage = () => {
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
               <Bar
                 dataKey="views"
-                fill="#60A5FA"                  // solid blue (no gradient)
+                fill="#60A5FA"
                 radius={[0, 6, 6, 0]}
                 barSize={26}
                 label={{

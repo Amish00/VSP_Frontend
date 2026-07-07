@@ -1,5 +1,5 @@
 // src/pages/PlansPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
 import PlanCard from '../components/plans/PlanCard';
@@ -59,8 +59,30 @@ const PlansPage = () => {
     fetchUser();
   }, [enqueueSnackbar]);
 
-  const plans = PLANS[billing] || [];
+  // Determine current plan id (default to 'free' if none)
+  const currentPlanId = useMemo(() => {
+    if (!user || !user.plan) return 'free';
+    return user.plan.toLowerCase(); // 'free', 'view', or 'creator'
+  }, [user]);
+
+  // Reorder plans: current plan first, then the rest in original order
+  const getOrderedPlans = (planList) => {
+    if (!user) return planList; // not logged in – keep original order
+
+    const currentPlan = planList.find(p => p.id === currentPlanId);
+    if (!currentPlan) return planList;
+
+    const otherPlans = planList.filter(p => p.id !== currentPlanId);
+    return [currentPlan, ...otherPlans];
+  };
+
+  const plans = useMemo(() => {
+    const rawPlans = PLANS[billing] || [];
+    return getOrderedPlans(rawPlans);
+  }, [billing, user, currentPlanId]);
+
   const hasActivePaidPlan = user && user.subscriptionExpiry && new Date(user.subscriptionExpiry) > new Date() && user.plan !== 'FREE';
+  // Hide "Popular" badge if user is logged in (we'll show "Current Plan" instead)
   const hidePopularBadge = !!user;
 
   const handleSelect = async (plan) => {
@@ -121,7 +143,7 @@ const PlansPage = () => {
       } else if (data.gateway === 'khalti') {
         window.location.href = data.payment_url;
       } else if (data.gateway === 'stripe') {
-          window.location.href = data.url;
+        window.location.href = data.url;
       }
     } catch (err) {
       console.error(err);
@@ -131,7 +153,6 @@ const PlansPage = () => {
     }
   };
 
-  // Safe formatting: handle undefined/null/0
   const formatPrice = (price) => {
     const safePrice = typeof price === 'number' ? price : 0;
     return `Rs.${safePrice.toLocaleString('en-IN')}`;
@@ -156,18 +177,24 @@ const PlansPage = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-[900px] mx-auto text-left mb-10">
-          {plans.map(plan => {
-            const isCurrentPlan = user && user.plan === plan.id.toUpperCase();
-            const disabled = (plan.id !== 'free' && hasActivePaidPlan) || isCurrentPlan;
-            const planWithPopular = { ...plan, popular: plan.popular && !hidePopularBadge };
+          {plans.map((plan) => {
+            const isCurrentPlan = user && plan.id === currentPlanId;
+            const isCurrentPlanActive = isCurrentPlan && (!user.subscriptionExpiry || new Date(user.subscriptionExpiry) > new Date());
+            const disabled = (plan.id !== 'free' && hasActivePaidPlan) || (isCurrentPlan && isCurrentPlanActive);
+            // Show "Current Plan" badge instead of "Popular" for the user's plan
+            const planWithProps = {
+              ...plan,
+              popular: plan.popular && !hidePopularBadge && !isCurrentPlan, // hide popular if logged in or if it's the current plan
+              isCurrentPlan: isCurrentPlan && isCurrentPlanActive,
+            };
             return (
               <PlanCard
                 key={plan.id}
-                plan={planWithPopular}
+                plan={planWithProps}
                 onSelect={handleSelect}
                 currencySymbol="Rs."
                 disabled={disabled}
-                isCurrentPlan={isCurrentPlan}
+                isCurrentPlan={isCurrentPlan && isCurrentPlanActive}
               />
             );
           })}
@@ -180,7 +207,7 @@ const PlansPage = () => {
         </div>
       </div>
 
-      {/* Payment Modal - Content Preferences removed */}
+      {/* Payment Modal */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={`Subscribe to ${selectedPlan?.name || ''}`} maxW={560}>
         <div className="bg-bg-el border border-border rounded-xl p-4 mb-5">
           <div className="flex justify-between border-b border-border pb-3 mb-3">
