@@ -1,9 +1,10 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
-import { Upload, X, Film, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, X, Film, CheckCircle, AlertCircle, Eye, Heart, Clock } from 'lucide-react';
 import DropZone from '../components/upload/DropZone';
 import Modal from '../components/ui/Modal';
+import Badge from '../components/ui/Badge';
 import { creatorApi } from '../api/creatorApi';
 
 const inp = "w-full bg-bg-el text-text-primary text-base rounded-xl border border-border px-4 py-3 placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all";
@@ -71,7 +72,7 @@ const UploadPage = () => {
   }, []);
 
   const startFallbackProgress = useCallback(() => {
-    startTimeRef.current = Date.  now();
+    startTimeRef.current = Date.now();
     realProgressRef.current = 0;
     setUploadProgress(0);
     progressTimerRef.current = setInterval(() => {
@@ -102,7 +103,7 @@ const UploadPage = () => {
       paid: false,
       type: 'VIDEO',
     });
-    setDropzoneKey(prev => prev + 1); // force remount of DropZone
+    setDropzoneKey(prev => prev + 1);
   };
 
   const onThumbChange = (e) => {
@@ -113,7 +114,6 @@ const UploadPage = () => {
     }
   };
 
-  // Modal control
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
@@ -260,6 +260,11 @@ const UploadPage = () => {
   };
 
   const canSubmit = Boolean(file && form.title.trim());
+
+  // Fake metadata for preview
+  const fakeViews = 0;
+  const fakeLikes = 0;
+  const fakeTime = 'just now';
 
   return (
     <div className="pb-6 w-full">
@@ -415,15 +420,39 @@ const UploadPage = () => {
               <div className="aspect-video bg-bg-el flex items-center justify-center relative overflow-hidden">
                 {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : <Film size={48} className="text-text-muted" />}
                 <span className="absolute bottom-2 right-2 bg-black/85 text-white px-2 py-0.5 rounded-md text-xs font-semibold">0:00</span>
-                {form.paid ? (
-                  <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-xs font-semibold" style={{ background:'rgba(245,158,11,.2)', color:'#F59E0B', border:'1px solid rgba(245,158,11,.35)' }}>PAID</span>
-                ) : (
-                  <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-xs font-semibold bg-success/15 text-success border border-success/30">FREE</span>
-                )}
+                <div className="absolute top-2 left-2">
+                  <Badge text={form.paid ? 'PAID' : 'FREE'} type={form.paid ? 'paid' : 'free'} small />
+                </div>
               </div>
               <div className="p-3">
-                <p className="text-sm font-semibold text-text-primary line-clamp-2 mb-1">{form.title || 'Your video title will appear here'}</p>
-                <p className="text-xs text-text-muted">{form.category}</p>
+                <div className="flex items-start gap-2">
+                  <div className="w-7 h-7 rounded-full bg-gray-700 border border-gray-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                    Y
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-text-primary line-clamp-2 mb-0.5">
+                      {form.title || 'Your video title will appear here'}
+                    </p>
+                    <p className="text-xs text-text-muted truncate">You</p>
+                  </div>
+                </div>
+                {/* Metadata row with fake data */}
+                <div className="flex items-center gap-2 mt-1.5 pl-9 text-[11px] text-gray-400">
+                  <span className="flex items-center gap-1">
+                    <Eye size={12} className="text-gray-500" />
+                    {fakeViews}
+                  </span>
+                  <span aria-hidden>·</span>
+                  <span className="flex items-center gap-1">
+                    <Heart size={12} className="text-gray-500" />
+                    {fakeLikes}
+                  </span>
+                  <span aria-hidden>·</span>
+                  <span className="flex items-center gap-1 whitespace-nowrap">
+                    <Clock size={12} className="text-gray-500" />
+                    {fakeTime}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

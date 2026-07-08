@@ -6,7 +6,7 @@ import ConfirmDeleteModal from './ConfirmDeleteModal';
 import Modal from '../components/ui/Modal';
 import Pagination from './Pagination';
 import { videoApi } from '../api/videoApi';
-import { Film, Smartphone, Lock, Unlock } from 'lucide-react';
+import { Film, Smartphone, Lock, Unlock, Search } from 'lucide-react';
 
 const STATUS_META = {
   APPROVED: { color: '#10B981', bg: 'rgba(16,185,129,.12)', label: 'Approved' },
@@ -170,11 +170,13 @@ const VideoTable = ({ search, setSearch, type }) => {
       {/* Filter bar */}
       <div className="flex gap-3 mb-4 flex-wrap items-center">
         <div className="relative flex-1 min-w-[200px]">
+          {/* Search icon added here */}
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={`Search ${type === 'SHORTS' ? 'shorts' : 'videos'} by title or creator…`}
-            className="w-full pl-4 pr-4 py-2.5 rounded-xl border border-border bg-bg-el text-text-primary text-sm placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-bg-el text-text-primary text-sm placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
           />
         </div>
         <div className="flex gap-1 p-1 bg-bg-el border border-border rounded-xl">

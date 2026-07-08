@@ -262,6 +262,11 @@ const VideoInfoPage = () => {
     return `/creator/video/${id}?mode=${viewMode}${typeQuery}`;
   };
 
+  // Navigate back to the appropriate list page
+  const handleBackToList = () => {
+    navigate(isShort ? '/creator/shorts' : '/creator/videos');
+  };
+
   // Render progress modal content
   const renderProgressContent = () => {
     if (uploadSuccess) {
@@ -318,18 +323,18 @@ const VideoInfoPage = () => {
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 pb-8">
+    <div className="w-full pb-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          {isEditMode && (
-            <button
-              onClick={() => navigate(buildUrl('view'))}
-              className="p-2 rounded-lg bg-bg-el border border-border text-text-secondary hover:text-text-primary transition"
-            >
-              <ArrowLeft size={20} />
-            </button>
-          )}
+          {/* Persistent Back button – navigates to the correct list page */}
+          <button
+            onClick={handleBackToList}
+            className="p-2 rounded-lg bg-bg-el border border-border text-text-secondary hover:text-text-primary transition"
+            aria-label="Back to list"
+          >
+            <ArrowLeft size={20} />
+          </button>
           <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-text-primary">
             {isEditMode
               ? (isShort ? 'Edit Short' : 'Edit Video')

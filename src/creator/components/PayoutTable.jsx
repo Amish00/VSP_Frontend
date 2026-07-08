@@ -192,7 +192,7 @@ const PayoutTable = ({ rows, onProcess, onReject, isAdmin = false, extraActions 
                       <td className="px-4 py-3 text-text-secondary">
                         {new Date(row.requestedAt).toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-3 font-semibold text-text-primary">${row.amount}</td>
+                      <td className="px-4 py-3 font-semibold text-text-primary">Rs.{row.amount}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
                           <MethodIcon size={16} className={methodColor} />
