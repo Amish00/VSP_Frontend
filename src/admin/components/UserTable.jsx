@@ -6,7 +6,7 @@ import ConfirmDeleteModal from './ConfirmDeleteModal';
 import Pagination from './Pagination';
 import { userApi } from '../api/userApi';
 import { videoApi } from '../api/videoApi';
-import { User, UserCheck, UserPlus, FilePlus, Eye, CircleDollarSign } from 'lucide-react';
+import { User, UserCheck, UserPlus, FilePlus, Eye, CircleDollarSign, Search } from 'lucide-react';
 
 const PAGE_SIZE = 10;
 
@@ -208,11 +208,13 @@ const UserTable = () => {
       {/* Filter bar */}
       <div className="flex gap-3 mb-4 flex-wrap items-center">
         <div className="relative flex-1 min-w-[200px]">
+          {/* Search icon added here */}
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search users by name or email…"
-            className="w-full pl-4 pr-4 py-2.5 rounded-xl border border-border bg-bg-el text-text-primary text-sm placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-bg-el text-text-primary text-sm placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
         <div className="flex gap-1 p-1 bg-bg-el border border-border rounded-xl">
