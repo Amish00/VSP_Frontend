@@ -173,11 +173,10 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     }
   }, [notifOpen, user]);
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('access_token');
-    sessionStorage.removeItem('refresh_token');
-    if (onLogout) onLogout();
-    navigate('/');
+  const handleLogout = async () => {
+    if (onLogout) {
+      await onLogout();
+    }
   };
 
   const handleNavClick = (item) => {

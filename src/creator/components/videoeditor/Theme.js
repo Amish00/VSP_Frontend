@@ -1,0 +1,15 @@
+export const videoTheme = {
+  base: '#080D18',
+  side: '#0A1020',
+  card: '#0F1724',
+  el: '#141E2E',
+  hov: '#192236',
+  border: '#1A2B42',
+  borderLight: '#243348',
+  text: '#FFFFFF',          
+  textSecondary: '#D1D5DB', 
+  textMuted: '#6B7A94',     
+  primary: '#2563EB',
+  primaryLight: '#60A5FA',
+  accent: '#0EA5E9',
+};

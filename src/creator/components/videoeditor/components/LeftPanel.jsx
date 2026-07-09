@@ -1,36 +1,90 @@
+// src/components/videoeditor/components/LeftPanel.js
 import React, { useState, useRef, useEffect } from 'react'
 import { X, Upload, Plus, Film, Music, Search, Loader } from 'lucide-react'
 import Picker from '@emoji-mart/react'
 import emojiData from '@emoji-mart/data'
 import { useStore } from '../store/store'
 import { PEXELS_KEY, TEXT_PRESETS, SHAPES, TRANSITIONS, EFFECTS, FONTS } from '../utils/constants'
+import { videoTheme } from '../theme'
 
+// Helper styles using theme
 const S = {
-  card: { padding: '8px 10px', borderRadius: 7, background: '#111', border: '1px solid #1a1a1a', cursor: 'pointer', transition: 'all 0.1s' },
-  cardHover: { background: '#181818', borderColor: '#2a2a2a' },
+  card: {
+    padding: '8px 10px',
+    borderRadius: 7,
+    background: videoTheme.el,
+    border: `1px solid ${videoTheme.border}`,
+    cursor: 'pointer',
+    transition: 'all 0.1s',
+  },
+  cardHover: {
+    background: videoTheme.hov,
+    borderColor: videoTheme.borderLight,
+  },
 }
 
 function Panel({ title, onClose, children }) {
   return (
-    <div style={{ width: 280, background: '#0d0d0d', borderRight: '1px solid #1a1a1a', display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 13px 9px', flexShrink: 0 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#e0e0e0' }}>{title}</span>
-        {onClose && <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 2 }}><X size={13} /></button>}
+    <div style={{
+      width: 280,
+      background: videoTheme.side,
+      borderRight: `1px solid ${videoTheme.border}`,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      flexShrink: 0,
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '11px 13px 9px',
+        flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: videoTheme.text }}>{title}</span>
+        {onClose && (
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: videoTheme.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 2 }}>
+            <X size={13} />
+          </button>
+        )}
       </div>
-      <div style={{ height: 1, background: '#1a1a1a', flexShrink: 0 }} />
-      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px 12px' }}>
-        {children}
-      </div>
+      <div style={{ height: 1, background: videoTheme.border, flexShrink: 0 }} />
+      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px 12px' }}>{children}</div>
     </div>
   )
 }
 
+// ---------- Tabs (improved contrast) ----------
 function Tabs({ tabs, active, onChange }) {
   return (
-    <div style={{ display: 'flex', background: '#141414', borderRadius: 7, padding: 3, gap: 2, marginBottom: 12 }}>
+    <div style={{
+      display: 'flex',
+      background: videoTheme.el,
+      borderRadius: 7,
+      padding: 3,
+      gap: 2,
+      marginBottom: 12,
+    }}>
       {tabs.map(t => (
-        <button key={t} onClick={() => onChange(t)}
-          style={{ flex: 1, padding: '4px 0', borderRadius: 5, border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 500, fontFamily: 'inherit', background: active === t ? '#252525' : 'transparent', color: active === t ? '#fff' : '#555', textTransform: 'capitalize', transition: 'all 0.1s' }}>
+        <button
+          key={t}
+          onClick={() => onChange(t)}
+          style={{
+            flex: 1,
+            padding: '4px 0',
+            borderRadius: 5,
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 10,
+            fontWeight: 600, // bolder
+            fontFamily: 'inherit',
+            background: active === t ? videoTheme.hov : 'transparent',
+            color: active === t ? videoTheme.text : videoTheme.textSecondary, // brighter for inactive
+            textTransform: 'capitalize',
+            transition: 'all 0.1s',
+            letterSpacing: '0.3px',
+          }}
+        >
           {t}
         </button>
       ))}
@@ -136,27 +190,42 @@ function MediaPanel() {
       {tab === 'upload' && (
         <>
           <input ref={fileRef} type="file" multiple accept="video/*,audio/*,image/*" style={{ display: 'none' }} onChange={e => handleFiles(e.target.files)} />
-          <div onClick={() => fileRef.current.click()}
+          <div
+            onClick={() => fileRef.current.click()}
             onDragOver={e => e.preventDefault()}
             onDrop={e => { e.preventDefault(); handleFiles(e.dataTransfer.files) }}
-            style={{ width: '100%', padding: '20px 0', borderRadius: 8, border: '1.5px dashed #222', background: '#0a0a0a', color: '#555', cursor: 'pointer', textAlign: 'center', marginBottom: 12 }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#3a3a3a'; e.currentTarget.style.color = '#888' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#222'; e.currentTarget.style.color = '#555' }}>
+            style={{
+              width: '100%',
+              padding: '20px 0',
+              borderRadius: 8,
+              border: `1.5px dashed ${videoTheme.border}`,
+              background: videoTheme.el,
+              color: videoTheme.textMuted,
+              cursor: 'pointer',
+              textAlign: 'center',
+              marginBottom: 12,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = videoTheme.borderLight; e.currentTarget.style.color = videoTheme.textSecondary }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = videoTheme.border; e.currentTarget.style.color = videoTheme.textMuted }}
+          >
             <Upload size={20} style={{ margin: '0 auto 8px', display: 'block' }} />
             <div style={{ fontSize: 12, fontWeight: 500 }}>Upload Media</div>
-            <div style={{ fontSize: 10, marginTop: 2, color: '#333' }}>Video · Audio · Images</div>
+            <div style={{ fontSize: 10, marginTop: 2, color: videoTheme.textMuted }}>Video · Audio · Images</div>
           </div>
-          {uploads.length === 0 && <div style={{ color: '#222', fontSize: 11, textAlign: 'center', padding: '8px 0' }}>No uploads yet</div>}
+          {uploads.length === 0 && <div style={{ color: videoTheme.textMuted, fontSize: 11, textAlign: 'center', padding: '8px 0' }}>No uploads yet</div>}
           {uploads.map((item, i) => (
-            <div key={i} style={{ ...S.card, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}
+            <div
+              key={i}
+              style={{ ...S.card, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}
               onMouseEnter={e => Object.assign(e.currentTarget.style, S.cardHover)}
-              onMouseLeave={e => Object.assign(e.currentTarget.style, S.card)}>
-              {item.type === 'image' ? <img src={item.url} alt="" style={{ width: 34, height: 26, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} /> : <div style={{ width: 34, height: 26, borderRadius: 4, background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{item.type === 'video' ? <Film size={12} color="#555" /> : <Music size={12} color="#555" />}</div>}
+              onMouseLeave={e => Object.assign(e.currentTarget.style, S.card)}
+            >
+              {item.type === 'image' ? <img src={item.url} alt="" style={{ width: 34, height: 26, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} /> : <div style={{ width: 34, height: 26, borderRadius: 4, background: videoTheme.base, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{item.type === 'video' ? <Film size={12} color={videoTheme.textMuted} /> : <Music size={12} color={videoTheme.textMuted} />}</div>}
               <div style={{ flex: 1, overflow: 'hidden' }}>
-                <div style={{ fontSize: 10, color: '#bbb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
-                <div style={{ fontSize: 9, color: '#444', marginTop: 1 }}>{item.type} · {item.dur?.toFixed(1)}s</div>
+                <div style={{ fontSize: 10, color: videoTheme.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                <div style={{ fontSize: 9, color: videoTheme.textMuted, marginTop: 1 }}>{item.type} · {item.dur?.toFixed(1)}s</div>
               </div>
-              <button onClick={() => placeClip(item.type, item.name, item.url, item.dur)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Plus size={12} /></button>
+              <button onClick={() => placeClip(item.type, item.name, item.url, item.dur)} style={{ background: 'none', border: 'none', color: videoTheme.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Plus size={12} /></button>
             </div>
           ))}
         </>
@@ -166,12 +235,27 @@ function MediaPanel() {
         <>
           <form onSubmit={search} style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
             <div style={{ flex: 1, position: 'relative' }}>
-              <Search size={11} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#444', pointerEvents: 'none' }} />
-              <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search…" style={{ width: '100%', background: '#111', border: '1px solid #222', borderRadius: 6, padding: '5px 8px 5px 24px', fontSize: 11, color: '#e0e0e0', outline: 'none', fontFamily: 'inherit' }} />
+              <Search size={11} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: videoTheme.textMuted, pointerEvents: 'none' }} />
+              <input
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search…"
+                style={{
+                  width: '100%',
+                  background: videoTheme.el,
+                  border: `1px solid ${videoTheme.border}`,
+                  borderRadius: 6,
+                  padding: '5px 8px 5px 24px',
+                  fontSize: 11,
+                  color: videoTheme.text,
+                  outline: 'none',
+                  fontFamily: 'inherit',
+                }}
+              />
             </div>
-            <button type="submit" style={{ padding: '0 10px', borderRadius: 6, border: '1px solid #222', background: '#161616', color: '#666', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Search size={11} /></button>
+            <button type="submit" style={{ padding: '0 10px', borderRadius: 6, border: `1px solid ${videoTheme.border}`, background: videoTheme.el, color: videoTheme.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Search size={11} /></button>
           </form>
-          {loading && <div style={{ textAlign: 'center', color: '#444', padding: 12 }}><Loader size={14} style={{ display: 'block', margin: '0 auto', animation: 'spin 1s linear infinite' }} /></div>}
+          {loading && <div style={{ textAlign: 'center', color: videoTheme.textMuted, padding: 12 }}><Loader size={14} style={{ display: 'block', margin: '0 auto', animation: 'spin 1s linear infinite' }} /></div>}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
             {items.map((item, i) => {
               const thumb = tab === 'photos' ? (item.src?.tiny || '') : (item.image || '')
@@ -184,19 +268,44 @@ function MediaPanel() {
                 }
               }
               return (
-                <div key={item.id || i} onClick={onClick}
-                  style={{ aspectRatio: tab === 'photos' ? '4/3' : '16/9', borderRadius: 6, overflow: 'hidden', cursor: 'pointer', background: '#0a0a0a', border: '1.5px solid transparent', transition: 'border-color 0.1s', position: 'relative' }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = '#3a3a3a'}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}>
+                <div
+                  key={item.id || i}
+                  onClick={onClick}
+                  style={{
+                    aspectRatio: tab === 'photos' ? '4/3' : '16/9',
+                    borderRadius: 6,
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    background: videoTheme.el,
+                    border: `1.5px solid transparent`,
+                    transition: 'border-color 0.1s',
+                    position: 'relative',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = videoTheme.borderLight}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}
+                >
                   <img src={thumb} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
-                  {tab === 'videos' && <div style={{ position: 'absolute', bottom: 3, right: 4, background: 'rgba(0,0,0,0.7)', color: '#aaa', fontSize: 8, padding: '1px 4px', borderRadius: 3, fontFamily: 'monospace' }}>{item.duration}s</div>}
+                  {tab === 'videos' && <div style={{ position: 'absolute', bottom: 3, right: 4, background: 'rgba(0,0,0,0.7)', color: videoTheme.textSecondary, fontSize: 8, padding: '1px 4px', borderRadius: 3, fontFamily: 'monospace' }}>{item.duration}s</div>}
                 </div>
               )
             })}
           </div>
           {items.length > 0 && !loading && (
-            <button onClick={() => { const np = page + 1; setPage(np); fetchPexels(query, np, tab === 'videos' ? 'videos' : 'photos') }}
-              style={{ width: '100%', marginTop: 8, padding: '6px', borderRadius: 6, border: '1px solid #222', background: '#0a0a0a', color: '#555', cursor: 'pointer', fontSize: 11, fontFamily: 'inherit' }}>
+            <button
+              onClick={() => { const np = page + 1; setPage(np); fetchPexels(query, np, tab === 'videos' ? 'videos' : 'photos') }}
+              style={{
+                width: '100%',
+                marginTop: 8,
+                padding: '6px',
+                borderRadius: 6,
+                border: `1px solid ${videoTheme.border}`,
+                background: videoTheme.el,
+                color: videoTheme.textMuted,
+                cursor: 'pointer',
+                fontSize: 11,
+                fontFamily: 'inherit',
+              }}
+            >
               Load more
             </button>
           )}
@@ -217,11 +326,17 @@ function TextPanel() {
   return (
     <>
       {TEXT_PRESETS.map((p, i) => (
-        <div key={i} onClick={() => place(p)} style={{ ...S.card, marginBottom: 5 }}
+        <div
+          key={i}
+          onClick={() => place(p)}
+          style={{ ...S.card, marginBottom: 5 }}
           onMouseEnter={e => Object.assign(e.currentTarget.style, S.cardHover)}
-          onMouseLeave={e => Object.assign(e.currentTarget.style, S.card)}>
-          <div style={{ fontSize: Math.min(15, p.fontSize / 5.5), fontWeight: p.fontWeight, color: p.textColor, lineHeight: 1.2 }}>{p.name}</div>
-          <div style={{ fontSize: 9, color: '#333', marginTop: 3 }}>{p.fontSize}px</div>
+          onMouseLeave={e => Object.assign(e.currentTarget.style, S.card)}
+        >
+          <div style={{ fontSize: Math.min(15, p.fontSize / 5.5), fontWeight: p.fontWeight || 700, color: p.textColor || videoTheme.text, lineHeight: 1.2, textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>
+            {p.name}
+          </div>
+          <div style={{ fontSize: 9, color: videoTheme.textMuted, marginTop: 3 }}>{p.fontSize}px</div>
         </div>
       ))}
     </>
@@ -239,21 +354,39 @@ function ShapesPanel() {
   }
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '7px 9px', background: '#0d0d0d', borderRadius: 7, border: '1px solid #1a1a1a' }}>
-        <span style={{ fontSize: 10, color: '#555' }}>Color</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '7px 9px', background: videoTheme.el, borderRadius: 7, border: `1px solid ${videoTheme.border}` }}>
+        <span style={{ fontSize: 10, color: videoTheme.textSecondary, fontWeight: 500 }}>Color</span>
         <input type="color" value={color} onChange={e => setColor(e.target.value)} style={{ width: 24, height: 20, border: 'none', cursor: 'pointer', borderRadius: 4, padding: 0 }} />
-        <input type="text" value={color} onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) setColor(e.target.value) }}
-          style={{ flex: 1, background: '#161616', border: '1px solid #222', borderRadius: 5, padding: '3px 7px', fontSize: 11, color: '#e0e0e0', outline: 'none', fontFamily: 'inherit' }} />
+        <input
+          type="text"
+          value={color}
+          onChange={e => { if (/^#[0-9a-f]{6}$/i.test(e.target.value)) setColor(e.target.value) }}
+          style={{
+            flex: 1,
+            background: videoTheme.el,
+            border: `1px solid ${videoTheme.border}`,
+            borderRadius: 5,
+            padding: '3px 7px',
+            fontSize: 11,
+            color: videoTheme.text,
+            outline: 'none',
+            fontFamily: 'inherit',
+          }}
+        />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
         {SHAPES.map(s => (
-          <div key={s.id} onClick={() => place(s)} style={{ ...S.card, textAlign: 'center', padding: '10px 8px' }}
+          <div
+            key={s.id}
+            onClick={() => place(s)}
+            style={{ ...S.card, textAlign: 'center', padding: '10px 8px' }}
             onMouseEnter={e => Object.assign(e.currentTarget.style, S.cardHover)}
-            onMouseLeave={e => Object.assign(e.currentTarget.style, S.card)}>
+            onMouseLeave={e => Object.assign(e.currentTarget.style, S.card)}
+          >
             <svg viewBox="0 0 100 100" width={32} height={32} style={{ display: 'block', margin: '0 auto 5px' }}>
               <path d={s.d} fill={color} />
             </svg>
-            <div style={{ fontSize: 9, color: '#666' }}>{s.name}</div>
+            <div style={{ fontSize: 9, color: videoTheme.textSecondary, fontWeight: 500 }}>{s.name}</div>
           </div>
         ))}
       </div>
@@ -280,7 +413,7 @@ function StickersPanel() {
 
   return (
     <div>
-      <div style={{ marginBottom: 9, padding: '8px 9px', borderRadius: 7, background: '#0d0d0d', border: '1px solid #1a1a1a', fontSize: 10, color: '#666', lineHeight: 1.4 }}>
+      <div style={{ marginBottom: 9, padding: '8px 9px', borderRadius: 7, background: videoTheme.el, border: `1px solid ${videoTheme.border}`, fontSize: 10, color: videoTheme.textSecondary, lineHeight: 1.4 }}>
         Quick stickers for speed. Open full picker when you need more.
       </div>
 
@@ -290,10 +423,10 @@ function StickersPanel() {
             key={label}
             onClick={() => place(emoji, label)}
             style={{
-              border: '1px solid #1f1f1f',
+              border: `1px solid ${videoTheme.border}`,
               borderRadius: 8,
-              background: '#111',
-              color: '#ddd',
+              background: videoTheme.el,
+              color: videoTheme.text,
               cursor: 'pointer',
               padding: '8px 4px',
               display: 'flex',
@@ -301,10 +434,11 @@ function StickersPanel() {
               alignItems: 'center',
               gap: 3,
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#1a1a1a' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#111' }}>
+            onMouseEnter={e => { e.currentTarget.style.background = videoTheme.hov }}
+            onMouseLeave={e => { e.currentTarget.style.background = videoTheme.el }}
+          >
             <span style={{ fontSize: 20, lineHeight: 1 }}>{emoji}</span>
-            <span style={{ fontSize: 8, color: '#666', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{label}</span>
+            <span style={{ fontSize: 8, color: videoTheme.textSecondary, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{label}</span>
           </button>
         ))}
       </div>
@@ -316,17 +450,19 @@ function StickersPanel() {
           marginBottom: 8,
           padding: '7px 8px',
           borderRadius: 7,
-          border: '1px solid #2a2a2a',
-          background: '#161616',
-          color: '#bbb',
+          border: `1px solid ${videoTheme.borderLight}`,
+          background: videoTheme.el,
+          color: videoTheme.textSecondary,
           cursor: 'pointer',
           fontSize: 11,
+          fontWeight: 500,
           fontFamily: 'inherit',
-        }}>
+        }}
+      >
         {showFullPicker ? 'Hide Full Emoji Picker' : 'Open Full Emoji Picker'}
       </button>
 
-      <div style={{ display: showFullPicker ? 'block' : 'none', borderRadius: 8, overflow: 'hidden', border: '1px solid #1a1a1a' }}>
+      <div style={{ display: showFullPicker ? 'block' : 'none', borderRadius: 8, overflow: 'hidden', border: `1px solid ${videoTheme.border}` }}>
         <Picker
           data={emojiData}
           onEmojiSelect={emoji => place(emoji?.native || '⭐', emoji?.name || 'Sticker')}
@@ -398,45 +534,64 @@ function AudioPanel() {
       {tab === 'upload' && (
         <>
           <input ref={fileRef} type="file" accept="audio/*" multiple style={{ display: 'none' }} onChange={e => handleAudio(e.target.files)} />
-          <div onClick={() => fileRef.current.click()}
-            onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); handleAudio(e.dataTransfer.files) }}
-            style={{ width: '100%', padding: '20px 0', borderRadius: 8, border: '1.5px dashed #222', background: '#0a0a0a', color: '#555', cursor: 'pointer', textAlign: 'center' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#3a3a3a'; e.currentTarget.style.color = '#888' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = '#222'; e.currentTarget.style.color = '#555' }}>
+          <div
+            onClick={() => fileRef.current.click()}
+            onDragOver={e => e.preventDefault()}
+            onDrop={e => { e.preventDefault(); handleAudio(e.dataTransfer.files) }}
+            style={{
+              width: '100%',
+              padding: '20px 0',
+              borderRadius: 8,
+              border: `1.5px dashed ${videoTheme.border}`,
+              background: videoTheme.el,
+              color: videoTheme.textMuted,
+              cursor: 'pointer',
+              textAlign: 'center',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = videoTheme.borderLight; e.currentTarget.style.color = videoTheme.textSecondary }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = videoTheme.border; e.currentTarget.style.color = videoTheme.textMuted }}
+          >
             <Music size={20} style={{ margin: '0 auto 8px', display: 'block' }} />
             <div style={{ fontSize: 12, fontWeight: 500 }}>Upload Audio</div>
-            <div style={{ fontSize: 10, marginTop: 2, color: '#333' }}>MP3 · WAV · AAC · OGG</div>
+            <div style={{ fontSize: 10, marginTop: 2, color: videoTheme.textMuted }}>MP3 · WAV · AAC · OGG</div>
           </div>
         </>
       )}
       {tab === 'music' && (
         <>
           {MUSIC.map((m, i) => (
-            <div key={i} onClick={() => placeAudio(m.name, null, m.dur)}
+            <div
+              key={i}
+              onClick={() => placeAudio(m.name, null, m.dur)}
               style={{ ...S.card, display: 'flex', alignItems: 'center', gap: 9, marginBottom: 4 }}
               onMouseEnter={e => Object.assign(e.currentTarget.style, S.cardHover)}
-              onMouseLeave={e => Object.assign(e.currentTarget.style, S.card)}>
+              onMouseLeave={e => Object.assign(e.currentTarget.style, S.card)}
+            >
               <div style={{ width: 28, height: 28, borderRadius: 6, background: m.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>♪</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: '#ccc', fontWeight: 500 }}>{m.name}</div>
-                <div style={{ fontSize: 9, color: '#444', marginTop: 1 }}>{m.genre} · {m.bpm}bpm</div>
+                <div style={{ fontSize: 11, color: videoTheme.textSecondary, fontWeight: 500 }}>{m.name}</div>
+                <div style={{ fontSize: 9, color: videoTheme.textMuted, marginTop: 1 }}>{m.genre} · {m.bpm}bpm</div>
               </div>
-              <button style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Plus size={11} /></button>
+              <button style={{ background: 'none', border: 'none', color: videoTheme.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Plus size={11} /></button>
             </div>
           ))}
-          <div style={{ padding: '8px 9px', borderRadius: 7, background: '#0a0a0a', border: '1px solid #1a1a1a', marginTop: 6 }}>
-            <div style={{ fontSize: 9, color: '#333', lineHeight: 1.5 }}>Free music: pixabay.com/music · freemusicarchive.org</div>
+          <div style={{ padding: '8px 9px', borderRadius: 7, background: videoTheme.el, border: `1px solid ${videoTheme.border}`, marginTop: 6 }}>
+            <div style={{ fontSize: 9, color: videoTheme.textMuted, lineHeight: 1.5 }}>Free music: pixabay.com/music · freemusicarchive.org</div>
           </div>
         </>
       )}
       {tab === 'sfx' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
           {SFX.map((s, i) => (
-            <div key={i} onClick={() => playSfx(s)} style={{ ...S.card, textAlign: 'center', padding: 10 }}
+            <div
+              key={i}
+              onClick={() => playSfx(s)}
+              style={{ ...S.card, textAlign: 'center', padding: 10 }}
               onMouseEnter={e => Object.assign(e.currentTarget.style, S.cardHover)}
-              onMouseLeave={e => Object.assign(e.currentTarget.style, S.card)}>
+              onMouseLeave={e => Object.assign(e.currentTarget.style, S.card)}
+            >
               <div style={{ fontSize: 18, marginBottom: 4 }}>♪</div>
-              <div style={{ fontSize: 10, color: '#ccc', fontWeight: 500 }}>{s.name}</div>
+              <div style={{ fontSize: 10, color: videoTheme.textSecondary, fontWeight: 500 }}>{s.name}</div>
             </div>
           ))}
         </div>
@@ -445,7 +600,7 @@ function AudioPanel() {
   )
 }
 
-// ---------- Transitions Panel ----------
+// ---------- Transitions Panel (FIXED CONTRAST) ----------
 function TransitionsPanel() {
   const { getSelectedClip, updateClip } = useStore()
   const clip = getSelectedClip()
@@ -453,31 +608,72 @@ function TransitionsPanel() {
 
   return (
     <>
-      {!clip && <div style={{ color: '#333', fontSize: 11, textAlign: 'center', padding: '24px 0' }}>Select a clip first</div>}
+      {!clip && <div style={{ color: videoTheme.textMuted, fontSize: 11, textAlign: 'center', padding: '24px 0' }}>Select a clip first</div>}
       {['In', 'Out'].map(dir => {
         const key = `trans${dir}`, dkey = `trans${dir}Dur`
         return (
           <div key={dir} style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 10, color: '#444', fontWeight: 600, letterSpacing: 0.8, marginBottom: 8 }}>TRANSITION {dir.toUpperCase()}</div>
+            <div style={{ fontSize: 10, color: videoTheme.textSecondary, fontWeight: 600, letterSpacing: 0.8, marginBottom: 8 }}>
+              TRANSITION {dir.toUpperCase()}
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {[{ id: null, name: 'None', icon: '—' }, ...TRANSITIONS].map(t => {
                 const active = clip?.[key] === t.id
                 return (
-                  <div key={t.id || 'none'} onClick={() => upd({ [key]: t.id })}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 7, background: active ? '#1a1a1a' : '#0d0d0d', border: `1px solid ${active ? '#2a2a2a' : 'transparent'}`, cursor: 'pointer', opacity: !clip ? 0.4 : 1, transition: 'all 0.1s' }}>
+                  <div
+                    key={t.id || 'none'}
+                    onClick={() => upd({ [key]: t.id })}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '7px 10px',
+                      borderRadius: 7,
+                      background: active ? videoTheme.hov : videoTheme.el,
+                      border: `1px solid ${active ? videoTheme.borderLight : 'transparent'}`,
+                      cursor: 'pointer',
+                      opacity: !clip ? 0.4 : 1,
+                      transition: 'all 0.1s',
+                    }}
+                  >
                     <span style={{ fontSize: 14, width: 18, textAlign: 'center' }}>{t.icon || '—'}</span>
-                    <span style={{ fontSize: 11, color: active ? '#e0e0e0' : '#666' }}>{t.name}</span>
-                    {active && <span style={{ marginLeft: 'auto', color: '#444', fontSize: 10 }}>✓</span>}
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: active ? 600 : 500,
+                      color: active ? videoTheme.text : videoTheme.textSecondary, // bright for inactive
+                      textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                    }}>
+                      {t.name}
+                    </span>
+                    {active && <span style={{ marginLeft: 'auto', color: videoTheme.textMuted, fontSize: 10 }}>✓</span>}
                   </div>
                 )
               })}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-              <span style={{ fontSize: 9, color: '#444', minWidth: 40 }}>Duration</span>
-              <input type="range" min={0.1} max={3} step={0.1} value={clip?.[dkey] ?? 0.5}
-                onChange={e => upd({ [dkey]: parseFloat(e.target.value) })} disabled={!clip}
-                style={{ flex: 1, WebkitAppearance: 'none', height: 2, background: '#2a2a2a', borderRadius: 99, outline: 'none', cursor: 'pointer', accentColor: '#fff' }} />
-              <span style={{ fontSize: 9, color: '#444', fontFamily: 'monospace', minWidth: 22 }}>{(clip?.[dkey] ?? 0.5).toFixed(1)}s</span>
+              <span style={{ fontSize: 9, color: videoTheme.textSecondary, fontWeight: 500, minWidth: 40 }}>Duration</span>
+              <input
+                type="range"
+                min={0.1}
+                max={3}
+                step={0.1}
+                value={clip?.[dkey] ?? 0.5}
+                onChange={e => upd({ [dkey]: parseFloat(e.target.value) })}
+                disabled={!clip}
+                style={{
+                  flex: 1,
+                  WebkitAppearance: 'none',
+                  height: 2,
+                  background: videoTheme.border,
+                  borderRadius: 99,
+                  outline: 'none',
+                  cursor: 'pointer',
+                  accentColor: videoTheme.text,
+                }}
+              />
+              <span style={{ fontSize: 9, color: videoTheme.textSecondary, fontFamily: 'monospace', fontWeight: 500, minWidth: 22 }}>
+                {(clip?.[dkey] ?? 0.5).toFixed(1)}s
+              </span>
             </div>
           </div>
         )
@@ -486,19 +682,35 @@ function TransitionsPanel() {
   )
 }
 
-// ---------- Effects Panel ----------
+// ---------- Effects Panel (FIXED CONTRAST) ----------
 function EffectsPanel() {
   const { getSelectedClip, updateClip } = useStore()
   const clip = getSelectedClip()
   return (
     <>
-      {!clip && <div style={{ color: '#333', fontSize: 11, textAlign: 'center', padding: '24px 0' }}>Select a clip first</div>}
+      {!clip && <div style={{ color: videoTheme.textMuted, fontSize: 11, textAlign: 'center', padding: '24px 0' }}>Select a clip first</div>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
         {EFFECTS.map(e => {
           const active = clip?.filter === e.id
           return (
-            <div key={e.id || 'none'} onClick={() => clip && updateClip(clip.id, { filter: e.id })}
-              style={{ padding: '8px', borderRadius: 7, background: active ? '#1a1a1a' : '#111', border: `1px solid ${active ? '#3a3a3a' : '#1a1a1a'}`, cursor: 'pointer', textAlign: 'center', fontSize: 11, color: active ? '#fff' : '#666', transition: 'all 0.1s', opacity: !clip && e.id ? 0.4 : 1 }}>
+            <div
+              key={e.id || 'none'}
+              onClick={() => clip && updateClip(clip.id, { filter: e.id })}
+              style={{
+                padding: '8px',
+                borderRadius: 7,
+                background: active ? videoTheme.hov : videoTheme.el,
+                border: `1px solid ${active ? videoTheme.borderLight : videoTheme.border}`,
+                cursor: 'pointer',
+                textAlign: 'center',
+                fontSize: 11,
+                fontWeight: active ? 600 : 500,
+                color: active ? videoTheme.text : videoTheme.textSecondary, // bright for inactive
+                textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                transition: 'all 0.1s',
+                opacity: !clip && e.id ? 0.4 : 1,
+              }}
+            >
               {e.name}
             </div>
           )

@@ -51,13 +51,13 @@ const PlatformStats = ({ stats, loading }) => {
     ];
 
     if (loading) {
-        return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6">
-            {[...Array(6)].map((_, i) => <div key={i} className="h-24 bg-bg-card border border-border rounded-xl animate-pulse" />)}
+        return <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mb-6">
+            {[...Array(6)].map((_, i) => <div key={i} className="h-28 bg-bg-card border border-border rounded-2xl animate-pulse" />)}
         </div>;
     }
 
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mb-6">
             {defaultStats.map(s => <StatCard key={s.label} {...s} />)}
         </div>
     );

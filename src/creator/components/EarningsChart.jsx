@@ -81,7 +81,7 @@ const EarningsChart = ({ range }) => {
                         }}
                         itemStyle={{ color: '#ECF0FB' }}
                         labelStyle={{ color: '#ECF0FB', fontWeight: 'bold' }}
-                        formatter={v => [`₹${v}`, 'Earnings']} 
+                        formatter={v => [`Rs.${v}`, 'Earnings']} 
                     />
                     <Bar dataKey="e" radius={[4, 4, 0, 0]}>
                         {data.map((_, i) => <Cell key={i} fill={i === data.length - 1 ? '#10B981' : '#2563EB'} fillOpacity={i === data.length - 1 ? 1 : .75} />)}

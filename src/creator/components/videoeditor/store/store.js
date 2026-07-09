@@ -1,3 +1,4 @@
+// src/components/videoeditor/store/store.js
 import { create } from 'zustand'
 
 let seq = 0
@@ -44,6 +45,9 @@ export const useStore = create((set, get) => ({
   selectedClipId: null,
   activeTool: 'select',
 
+  // ---------- NEW: preview zoom ----------
+  previewZoom: 1,
+
   setProjectName: n => set({ projectName: n }),
   setSize: (w, h) => set({ width: w, height: h }),
 
@@ -64,6 +68,10 @@ export const useStore = create((set, get) => ({
   setActiveTool: t => set({ activeTool: t }),
   selectClip: id => set({ selectedClipId: id }),
   clearSelection: () => set({ selectedClipId: null }),
+
+  // ---------- Preview zoom actions ----------
+  setPreviewZoom: (zoom) => set({ previewZoom: Math.max(0.1, Math.min(3, zoom)) }),
+  resetPreviewZoom: () => set({ previewZoom: 1 }),
 
   addTrack: (type, customLabel) => set(s => {
     const label = customLabel || getTrackLabel(type, s.tracks)

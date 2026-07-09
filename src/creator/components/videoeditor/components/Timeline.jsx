@@ -1,6 +1,8 @@
+// src/components/videoeditor/components/Timeline.js
 import React, { useRef, useEffect, useCallback, useState } from 'react'
 import { useStore } from '../store/store'
 import { Volume2, VolumeX, Lock, Unlock } from 'lucide-react'
+import { videoTheme } from '../theme'
 
 const LABEL_W = 130
 const TRACK_H = 48
@@ -127,7 +129,7 @@ function Clip({ clip, trackColor, zoom, scrollX, selected, trackLocked }) {
           top: 5, bottom: 5,
           borderRadius: 6,
           background: col.bg,
-          border: `1.5px solid ${selected ? '#fff' : col.border}`,
+          border: `1.5px solid ${selected ? videoTheme.text : col.border}`,
           cursor: activeTool === 'split' ? 'crosshair' : trackLocked ? 'not-allowed' : 'grab',
           overflow: 'hidden',
           userSelect: 'none',
@@ -162,16 +164,30 @@ function Clip({ clip, trackColor, zoom, scrollX, selected, trackLocked }) {
       {ctx && (
         <>
           <div style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={() => setCtx(null)} />
-          <div style={{ position: 'fixed', left: ctx.x, top: ctx.y, background: '#161616', border: '1px solid #2a2a2a', borderRadius: 9, padding: 4, zIndex: 1000, minWidth: 160, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
+          <div style={{ position: 'fixed', left: ctx.x, top: ctx.y, background: videoTheme.card, border: `1px solid ${videoTheme.border}`, borderRadius: 9, padding: 4, zIndex: 1000, minWidth: 160, boxShadow: '0 8px 24px rgba(0,0,0,0.6)' }}>
             {[
               ['✂ Split at playhead', () => splitClip(clip.id, currentTime)],
               ['⧉ Duplicate', () => duplicateClip(clip.id)],
               ['🗑 Delete', () => removeClip(clip.id)],
             ].map(([lbl, fn]) => (
-              <button key={lbl} onClick={() => { fn(); setCtx(null) }}
-                style={{ width: '100%', padding: '7px 10px', background: 'none', border: 'none', color: lbl.includes('Delete') ? '#f87171' : '#d0d0d0', cursor: 'pointer', textAlign: 'left', fontSize: 12, borderRadius: 6, fontFamily: 'inherit' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#222'}
-                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+              <button
+                key={lbl}
+                onClick={() => { fn(); setCtx(null) }}
+                style={{
+                  width: '100%',
+                  padding: '7px 10px',
+                  background: 'none',
+                  border: 'none',
+                  color: lbl.includes('Delete') ? '#f87171' : videoTheme.textSecondary,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: 12,
+                  borderRadius: 6,
+                  fontFamily: 'inherit',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = videoTheme.hov}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
                 {lbl}
               </button>
             ))}
@@ -190,14 +206,24 @@ function TrackRow({ track, zoom, scrollX, selectedClipId }) {
   }
 
   return (
-    <div style={{ display: 'flex', height: TRACK_H, borderBottom: '1px solid #161616', flexShrink: 0 }}>
-      <div style={{ width: LABEL_W, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px', background: '#0d0d0d', borderRight: '1px solid #1a1a1a' }}>
+    <div style={{ display: 'flex', height: TRACK_H, borderBottom: `1px solid ${videoTheme.border}`, flexShrink: 0 }}>
+      <div style={{
+        width: LABEL_W,
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '0 8px',
+        background: videoTheme.side,
+        borderRight: `1px solid ${videoTheme.border}`,
+        boxSizing: 'border-box', // <--- FIX: padding included in width
+      }}>
         <div style={{ width: 6, height: 6, borderRadius: 2, background: track.color, flexShrink: 0 }} />
-        <span style={{ flex: 1, fontSize: 11, color: '#666', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.label}</span>
-        <button onClick={() => muteTrack(track.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: track.muted ? '#ef4444' : '#2a2a2a', padding: 2, display: 'flex', alignItems: 'center' }}>
+        <span style={{ flex: 1, fontSize: 11, color: videoTheme.textMuted, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.label}</span>
+        <button onClick={() => muteTrack(track.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: track.muted ? '#ef4444' : videoTheme.border, padding: 2, display: 'flex', alignItems: 'center' }}>
           {track.muted ? <VolumeX size={11} /> : <Volume2 size={11} />}
         </button>
-        <button onClick={() => lockTrack(track.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: track.locked ? '#eab308' : '#2a2a2a', padding: 2, display: 'flex', alignItems: 'center' }}>
+        <button onClick={() => lockTrack(track.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: track.locked ? '#eab308' : videoTheme.border, padding: 2, display: 'flex', alignItems: 'center' }}>
           {track.locked ? <Lock size={11} /> : <Unlock size={11} />}
         </button>
       </div>
@@ -266,33 +292,60 @@ const Timeline = () => {
   const playheadX = LABEL_W + currentTime * zoom - scrollX
 
   return (
-    <div ref={outerRef} style={{ background: '#0a0a0a', flexShrink: 0, display: 'flex', flexDirection: 'column', borderTop: '1px solid #1a1a1a' }}>
-      <div style={{ height: 28, background: '#0d0d0d', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', padding: '0 8px', gap: 6 }}>
-        <div style={{ width: LABEL_W, flexShrink: 0, display: 'flex', gap: 4 }}>
+    <div ref={outerRef} style={{ background: videoTheme.base, flexShrink: 0, display: 'flex', flexDirection: 'column', borderTop: `1px solid ${videoTheme.border}` }}>
+      <div style={{ height: 28, background: videoTheme.side, borderBottom: `1px solid ${videoTheme.border}`, display: 'flex', alignItems: 'center', padding: '0 8px', gap: 6 }}>
+        <div style={{ width: LABEL_W, flexShrink: 0, display: 'flex', gap: 4, boxSizing: 'border-box' }}>
           {[['video', 'V'], ['audio', 'A'], ['text', 'T']].map(([type, lbl]) => (
             <button key={type} onClick={() => addTrack(type)}
-              style={{ padding: '1px 7px', borderRadius: 4, border: '1px solid #2a2a2a', background: '#141414', color: '#555', cursor: 'pointer', fontSize: 10, fontFamily: 'inherit' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#aaa' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#555' }}>
+              style={{
+                padding: '1px 7px',
+                borderRadius: 4,
+                border: `1px solid ${videoTheme.border}`,
+                background: videoTheme.el,
+                color: videoTheme.textMuted,
+                cursor: 'pointer',
+                fontSize: 10,
+                fontFamily: 'inherit',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = videoTheme.textSecondary }}
+              onMouseLeave={e => { e.currentTarget.style.color = videoTheme.textMuted }}
+            >
               +{lbl}
             </button>
           ))}
         </div>
-        <span style={{ fontSize: 9, color: '#333' }}>Zoom</span>
-        <input type="range" min={10} max={400} value={zoom} onChange={e => setZoom(+e.target.value)}
-          style={{ width: 70, WebkitAppearance: 'none', appearance: 'none', height: 2, background: '#2a2a2a', borderRadius: 99, cursor: 'pointer', outline: 'none', accentColor: '#fff' }} />
-        <span style={{ fontSize: 9, color: '#333', fontFamily: 'monospace', minWidth: 36 }}>{Math.round(zoom)}px/s</span>
+        <span style={{ fontSize: 9, color: videoTheme.textMuted }}>Zoom</span>
+        <input
+          type="range"
+          min={10}
+          max={400}
+          value={zoom}
+          onChange={e => setZoom(+e.target.value)}
+          style={{
+            width: 70,
+            WebkitAppearance: 'none',
+            appearance: 'none',
+            height: 2,
+            background: videoTheme.border,
+            borderRadius: 99,
+            cursor: 'pointer',
+            outline: 'none',
+            accentColor: videoTheme.text,
+          }}
+        />
+        <span style={{ fontSize: 9, color: videoTheme.textMuted, fontFamily: 'monospace', minWidth: 36 }}>{Math.round(zoom)}px/s</span>
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: 9, color: '#222', fontFamily: 'monospace' }}>
+        <span style={{ fontSize: 9, color: videoTheme.textMuted, fontFamily: 'monospace' }}>
           {tracks.flatMap(t => t.clips).length} clips · {tracks.length} tracks
         </span>
       </div>
 
       <div style={{ position: 'relative' }}>
         <div style={{ display: 'flex' }}>
-          <div style={{ width: LABEL_W, flexShrink: 0, height: RULER_H, background: '#0d0d0d', borderRight: '1px solid #1a1a1a', borderBottom: '1px solid #1a1a1a' }} />
-          <div data-ruler
-            style={{ flex: 1, height: RULER_H, background: '#0d0d0d', borderBottom: '1px solid #1a1a1a', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}
+          <div style={{ width: LABEL_W, flexShrink: 0, height: RULER_H, background: videoTheme.side, borderRight: `1px solid ${videoTheme.border}`, borderBottom: `1px solid ${videoTheme.border}`, boxSizing: 'border-box' }} />
+          <div
+            data-ruler
+            style={{ flex: 1, height: RULER_H, background: videoTheme.side, borderBottom: `1px solid ${videoTheme.border}`, position: 'relative', overflow: 'hidden', cursor: 'pointer' }}
             onMouseDown={e => {
               isDraggingPlayhead.current = true
               seekAt(e.clientX)
@@ -310,7 +363,7 @@ const Timeline = () => {
                 marks.push(
                   <React.Fragment key={t}>
                     <div style={{ position: 'absolute', left: x, top: 0, bottom: 0, width: 1, background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
-                    <span style={{ position: 'absolute', left: x + 3, top: 5, fontSize: 9, color: '#444', fontFamily: 'monospace', pointerEvents: 'none', whiteSpace: 'nowrap' }}>{fmtTime(t)}</span>
+                    <span style={{ position: 'absolute', left: x + 3, top: 5, fontSize: 9, color: videoTheme.textMuted, fontFamily: 'monospace', pointerEvents: 'none', whiteSpace: 'nowrap' }}>{fmtTime(t)}</span>
                   </React.Fragment>
                 )
               }
@@ -324,7 +377,7 @@ const Timeline = () => {
             <TrackRow key={track.id} track={track} zoom={zoom} scrollX={scrollX} selectedClipId={selectedClipId} />
           ))}
           {tracks.length === 0 && (
-            <div style={{ color: '#222', textAlign: 'center', padding: 20, fontSize: 12 }}>No tracks — click +V / +A / +T to add</div>
+            <div style={{ color: videoTheme.textMuted, textAlign: 'center', padding: 20, fontSize: 12 }}>No tracks — click +V / +A / +T to add</div>
           )}
         </div>
 
@@ -334,12 +387,12 @@ const Timeline = () => {
             top: 0, bottom: 0,
             left: playheadX,
             width: 2,
-            background: '#fff',
+            background: videoTheme.text,
             pointerEvents: 'none',
             zIndex: 100,
             boxShadow: '0 0 6px rgba(255,255,255,0.4)',
           }}>
-            <div style={{ position: 'absolute', top: -1, left: -5, width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '9px solid #fff' }} />
+            <div style={{ position: 'absolute', top: -1, left: -5, width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: `9px solid ${videoTheme.text}` }} />
           </div>
         )}
       </div>

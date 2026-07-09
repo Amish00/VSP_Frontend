@@ -133,8 +133,8 @@ const DashboardPage = ({ user }) => {
   ];
 
   return (
-    <div className="pb-6">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+    <div className="space-y-6 pb-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-text-primary mb-0.5">Dashboard</h1>
           <p className="text-sm text-text-secondary">
@@ -146,18 +146,18 @@ const DashboardPage = ({ user }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {STATS.map((s) => (
           <StatCard key={s.label} {...s} />
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ViewsChart />
         <EarningsChart />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ContentPieChart />
         <div className="bg-bg-card border border-border rounded-2xl p-5">
           <h3 className="font-display font-bold text-base mb-4 text-text-primary">Recent Activity</h3>

@@ -107,8 +107,8 @@ const RevenuePage = () => {
     ];
 
     return (
-        <div className="pb-6">
-            <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div className="space-y-6 pb-6">
+            <div className="flex items-center justify-between flex-wrap gap-3">
                 <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-text-primary">Revenue</h1>
                 <div className="flex gap-1 p-1 bg-bg-el border border-border rounded-xl">
                     {RANGES.map(r => (
@@ -120,11 +120,11 @@ const RevenuePage = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {stats.map(s => <StatCard key={s.label} {...s} />)}
             </div>
 
-            <div className="mb-6">
+            <div>
                 <RevenueChart data={monthlyData} />
             </div>
 
