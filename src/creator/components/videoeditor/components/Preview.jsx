@@ -1,7 +1,10 @@
+// src/components/videoeditor/components/Preview.js
 import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { useStore } from '../store/store'
-import { transitionCSS } from '../utils/constants'
+import { transitionCSS, EFFECTS } from '../utils/constants'
+import { videoTheme } from '../theme'
 
+// ---------- Helper: transition styles ----------
 function getTransStyle(clip, currentTime) {
   const rel = currentTime - clip.start
   const rem = clip.duration - rel
@@ -17,6 +20,7 @@ function getTransStyle(clip, currentTime) {
   return styles
 }
 
+// ---------- Video Element ----------
 function VideoEl({ clip, stageW, stageH, currentTime, playing, volume }) {
   const ref = useRef()
   useEffect(() => {
@@ -47,6 +51,7 @@ function VideoEl({ clip, stageW, stageH, currentTime, playing, volume }) {
   )
 }
 
+// ---------- Image Element ----------
 function ImageEl({ clip, currentTime }) {
   const ts = getTransStyle(clip, currentTime)
   return (
@@ -56,6 +61,7 @@ function ImageEl({ clip, currentTime }) {
   )
 }
 
+// ---------- Audio Element (hidden) ----------
 function AudioEl({ clip, currentTime, playing, volume }) {
   const ref = useRef()
   useEffect(() => {
@@ -80,6 +86,7 @@ function AudioEl({ clip, currentTime, playing, volume }) {
   return <audio ref={ref} src={clip.src} preload="auto" style={{ display: 'none' }} />
 }
 
+// ---------- Shape Paths (for overlay shapes) ----------
 const SHAPE_PATHS = {
   rect: 'M10,10 L90,10 L90,90 L10,90 Z',
   circle: 'M50,5 A45,45 0 1,1 49.99,5 Z',
@@ -97,6 +104,7 @@ const SHAPE_PATHS = {
   bolt: 'M58,2 L20,55 L42,55 L32,98 L80,40 L58,40 Z',
 }
 
+// ---------- Overlay Element (text, shape, sticker) ----------
 function OverlayEl({ clip, stageW, stageH, currentTime, selected, onSelect, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(clip.text || '')
@@ -264,16 +272,35 @@ function OverlayEl({ clip, stageW, stageH, currentTime, selected, onSelect, onUp
   )
 }
 
+// ---------- Main Preview Component ----------
 const Preview = () => {
-  const { tracks, currentTime, playing, volume, width, height, selectedClipId, selectClip, updateClip } = useStore()
+  const {
+    tracks,
+    currentTime,
+    playing,
+    volume,
+    width,
+    height,
+    selectedClipId,
+    selectClip,
+    updateClip,
+    previewZoom,
+    setPreviewZoom,
+    resetPreviewZoom,
+  } = useStore()
+
   const containerRef = useRef()
   const [stage, setStage] = useState({ w: 640, h: 360 })
 
+  // Fit stage to container (respect aspect ratio)
   useEffect(() => {
     const obs = new ResizeObserver(([e]) => {
       const { width: cw, height: ch } = e.contentRect
       const aspect = width / height
-      const sw = Math.min(cw - 24, (ch - 24) * aspect)
+      const pad = 60 // space for zoom controls
+      const availableW = Math.max(100, cw - pad)
+      const availableH = Math.max(100, ch - pad)
+      const sw = Math.min(availableW, availableH * aspect)
       const sh = sw / aspect
       setStage({ w: Math.max(1, Math.floor(sw)), h: Math.max(1, Math.floor(sh)) })
     })
@@ -281,6 +308,27 @@ const Preview = () => {
     return () => obs.disconnect()
   }, [width, height])
 
+  // Keyboard shortcuts for zoom
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === '=') {
+        e.preventDefault()
+        setPreviewZoom(Math.min(3, previewZoom + 0.1))
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+        e.preventDefault()
+        setPreviewZoom(Math.max(0.1, previewZoom - 0.1))
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+        e.preventDefault()
+        resetPreviewZoom()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [previewZoom, setPreviewZoom, resetPreviewZoom])
+
+  // Active clips at current time
   const activeLayers = tracks
     .filter(t => !t.muted)
     .flatMap(t => t.clips.filter(c => currentTime >= c.start && currentTime < c.start + c.duration))
@@ -291,42 +339,197 @@ const Preview = () => {
 
   const hasContent = mediaLayers.length > 0 || overlayLayers.length > 0
 
+  // Zoom handlers
+  const handleZoomIn = () => setPreviewZoom(Math.min(3, previewZoom + 0.1))
+  const handleZoomOut = () => setPreviewZoom(Math.max(0.1, previewZoom - 0.1))
+
   return (
-    <div ref={containerRef}
-      style={{ flex: 1, background: '#181818', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative', minHeight: 0 }}>
+    <div
+      ref={containerRef}
+      style={{
+        flex: 1,
+        background: videoTheme.base,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        position: 'relative',
+        minHeight: 0,
+      }}
+    >
+      {/* Stage container – scaled by previewZoom */}
       <div
-        style={{ width: stage.w, height: stage.h, background: '#000', position: 'relative', overflow: 'hidden', flexShrink: 0, boxShadow: '0 0 0 1px rgba(255,255,255,0.1), 0 20px 60px rgba(0,0,0,0.8)' }}
-        onMouseDown={e => { if (e.target === e.currentTarget) selectClip(null) }}>
+        style={{
+          width: stage.w,
+          height: stage.h,
+          background: '#000',
+          position: 'relative',
+          overflow: 'hidden',
+          flexShrink: 0,
+          boxShadow: `0 0 0 1px ${videoTheme.border}, 0 20px 60px rgba(0,0,0,0.8)`,
+          transform: `scale(${previewZoom})`,
+          transformOrigin: 'center center',
+        }}
+        onMouseDown={e => { if (e.target === e.currentTarget) selectClip(null) }}
+      >
         {mediaLayers.map(clip =>
           clip.type === 'video'
             ? <VideoEl key={clip.id} clip={clip} stageW={stage.w} stageH={stage.h} currentTime={currentTime} playing={playing} volume={volume} />
             : <ImageEl key={clip.id} clip={clip} currentTime={currentTime} />
         )}
         {overlayLayers.map(clip => (
-          <OverlayEl key={clip.id} clip={clip} stageW={stage.w} stageH={stage.h}
+          <OverlayEl
+            key={clip.id}
+            clip={clip}
+            stageW={stage.w}
+            stageH={stage.h}
             currentTime={currentTime}
             selected={clip.id === selectedClipId}
             onSelect={() => selectClip(clip.id)}
-            onUpdate={patch => updateClip(clip.id, patch)} />
+            onUpdate={patch => updateClip(clip.id, patch)}
+          />
         ))}
         {!hasContent && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#2a2a2a', userSelect: 'none' }}>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: videoTheme.textMuted,
+              userSelect: 'none',
+            }}
+          >
             <div style={{ fontSize: 36, marginBottom: 10 }}>▶</div>
             <div style={{ fontSize: 13, fontWeight: 500 }}>Import media or add text/shapes</div>
           </div>
         )}
       </div>
 
+      {/* Audio elements (hidden) */}
       {audioClips.map(clip => (
         <AudioEl key={clip.id} clip={clip} currentTime={currentTime} playing={playing} volume={volume} />
       ))}
 
-      <div style={{ position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.65)', color: '#888', padding: '2px 10px', borderRadius: 5, fontSize: 11, fontFamily: 'monospace', letterSpacing: 1, pointerEvents: 'none' }}>
-        {String(Math.floor(currentTime / 60)).padStart(2, '0')}:{String(Math.floor(currentTime % 60)).padStart(2, '0')}.{String(Math.floor((currentTime % 1) * 100)).padStart(2, '0')}
+      {/* Time display */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 10,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.65)',
+          color: videoTheme.textMuted,
+          padding: '2px 10px',
+          borderRadius: 5,
+          fontSize: 11,
+          fontFamily: 'monospace',
+          letterSpacing: 1,
+          pointerEvents: 'none',
+        }}
+      >
+        {String(Math.floor(currentTime / 60)).padStart(2, '0')}:
+        {String(Math.floor(currentTime % 60)).padStart(2, '0')}.
+        {String(Math.floor((currentTime % 1) * 100)).padStart(2, '0')}
       </div>
 
-      <div style={{ position: 'absolute', top: 8, right: 12, background: 'rgba(0,0,0,0.5)', color: '#333', padding: '2px 7px', borderRadius: 4, fontSize: 9, fontFamily: 'monospace', pointerEvents: 'none' }}>
+      {/* Resolution badge */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 8,
+          right: 12,
+          background: 'rgba(0,0,0,0.5)',
+          color: videoTheme.textMuted,
+          padding: '2px 7px',
+          borderRadius: 4,
+          fontSize: 9,
+          fontFamily: 'monospace',
+          pointerEvents: 'none',
+        }}
+      >
         {width}×{height}
+      </div>
+
+      {/* Zoom Controls – bottom right */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 14,
+          right: 14,
+          display: 'flex',
+          gap: 6,
+          alignItems: 'center',
+          background: 'rgba(0,0,0,0.7)',
+          padding: '4px 8px',
+          borderRadius: 8,
+          backdropFilter: 'blur(4px)',
+          border: `1px solid ${videoTheme.border}`,
+        }}
+      >
+        <button
+          onClick={handleZoomOut}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: videoTheme.textSecondary,
+            cursor: 'pointer',
+            fontSize: 14,
+            fontWeight: 600,
+            padding: '2px 6px',
+            lineHeight: 1,
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = videoTheme.text}
+          onMouseLeave={e => e.currentTarget.style.color = videoTheme.textSecondary}
+        >
+          −
+        </button>
+        <span
+          style={{
+            color: videoTheme.text,
+            fontSize: 11,
+            fontFamily: 'monospace',
+            minWidth: 42,
+            textAlign: 'center',
+          }}
+        >
+          {Math.round(previewZoom * 100)}%
+        </span>
+        <button
+          onClick={handleZoomIn}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: videoTheme.textSecondary,
+            cursor: 'pointer',
+            fontSize: 14,
+            fontWeight: 600,
+            padding: '2px 6px',
+            lineHeight: 1,
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = videoTheme.text}
+          onMouseLeave={e => e.currentTarget.style.color = videoTheme.textSecondary}
+        >
+          +
+        </button>
+        <button
+          onClick={resetPreviewZoom}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: videoTheme.textMuted,
+            cursor: 'pointer',
+            fontSize: 10,
+            padding: '2px 6px',
+            borderRadius: 4,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = videoTheme.hov; e.currentTarget.style.color = videoTheme.text }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = videoTheme.textMuted }}
+        >
+          Reset
+        </button>
       </div>
     </div>
   )

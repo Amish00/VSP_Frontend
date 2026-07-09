@@ -37,6 +37,8 @@ import ProfilePage from './user/pages/ProfilePage';
 import AnalyticsPage from "./creator/pages/AnalyticsPage";
 import ThumbnailEditor from './creator/pages/ThumbnailEditor';
 import { SnackbarProvider } from 'notistack';
+import { useSnackbar } from 'notistack';
+import { X } from 'lucide-react';
 import AllVideosPage from './user/pages/AllVideosPage';
 import SearchPage from './user/pages/SearchPage';
 import VideoEditor from './creator/pages/VideoEditor';
@@ -199,13 +201,33 @@ const ProtectedFallbackRoute = () => {
   return <Navigate to={user ? getRoleHomePath(user.role) : '/'} replace />;
 };
 
+const SnackbarCloseButton = ({ snackbarKey }) => {
+  const { closeSnackbar } = useSnackbar();
+
+  return (
+    <button
+      type="button"
+      onClick={() => closeSnackbar(snackbarKey)}
+      className="ml-3 inline-flex h-7 w-7 items-center justify-center rounded-full text-current/80 transition-colors hover:bg-white/15 hover:text-white"
+      aria-label="Close notification"
+    >
+      <X size={16} />
+    </button>
+  );
+};
+
 function App() {
   return (
-    <AuthProvider>
-      <LanguageProvider>
-        <PageTranslator />
-        <AuthLanguageLock />
-        <SnackbarProvider maxSnack={3} autoHideDuration={3000} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+    <SnackbarProvider
+      maxSnack={3}
+      autoHideDuration={3000}
+      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      action={(snackbarKey) => <SnackbarCloseButton snackbarKey={snackbarKey} />}
+    >
+      <AuthProvider>
+        <LanguageProvider>
+          <PageTranslator />
+          <AuthLanguageLock />
           <Routes>
         {/* Public routes */}
         <Route path="/login" element={<Navigate to="/signin?error=oauth_failed" replace />} />
@@ -290,9 +312,9 @@ function App() {
         {/* Fallback */}
         <Route path="*" element={<ProtectedFallbackRoute />} />
           </Routes>
-        </SnackbarProvider>
-      </LanguageProvider>
-    </AuthProvider>
+        </LanguageProvider>
+      </AuthProvider>
+    </SnackbarProvider>
   );
 }
 

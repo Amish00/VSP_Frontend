@@ -1,5 +1,6 @@
 // src/auth/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useSnackbar } from 'notistack';
 import { authApi } from '../api/authApi';
 import { setAppLanguage } from '../../context/LanguageContext';
 
@@ -8,6 +9,7 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { enqueueSnackbar } = useSnackbar();
 
   useEffect(() => {
     localStorage.removeItem('access_token');
@@ -58,6 +60,11 @@ export const AuthProvider = ({ children }) => {
     sessionStorage.removeItem('user');
     sessionStorage.removeItem('user_role');
     setUser(null);
+    enqueueSnackbar('Signed out successfully', {
+      variant: 'success',
+      autoHideDuration: 3000,
+      anchorOrigin: { vertical: 'top', horizontal: 'right' },
+    });
   };
 
   const setTokensAndUser = async (accessToken, refreshToken, userObj = null) => {

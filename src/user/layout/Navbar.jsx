@@ -414,7 +414,7 @@ const MobileDrawer = ({ user, onClose }) => {
         {user && (
           <div className="px-2 py-3 border-t border-border flex-shrink-0">
             <button
-              onClick={() => { logout(); navigate('/'); onClose(); }}
+              onClick={async () => { await logout(); navigate('/'); onClose(); }}
               className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-base font-semibold text-danger hover:bg-danger/8 transition-colors"
             >
               <LogOut size={16} /> Sign Out
@@ -718,7 +718,7 @@ const Navbar = () => {
 
                         <div className="border-t border-border py-1.5 px-1.5">
                           <button
-                            onClick={() => { logout(); navigate('/'); setProfOpen(false); }}
+                            onClick={async () => { await logout(); navigate('/'); setProfOpen(false); }}
                             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-danger text-base font-semibold hover:bg-danger/8 transition-colors text-left"
                           >
                             <LogOut size={14} /> Sign Out
