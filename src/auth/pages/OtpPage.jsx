@@ -1,6 +1,7 @@
 // src/auth/pages/OtpPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { FaEnvelope } from 'react-icons/fa';
 import { authApi } from '../api/authApi';
 import AuthCard from '../components/AuthCard';
 import { useSnackbar } from 'notistack';
@@ -91,7 +92,10 @@ const OtpPage = () => {
   return (
     <AuthCard>
       <div className="text-center mb-6">
-        <div className="text-5xl mb-3" aria-hidden>✉️</div>
+        {/* Icon container – centered using flex */}
+        <div className="flex justify-center mb-3">
+          <FaEnvelope className="text-5xl text-primary" />
+        </div>
         <h1 className="font-display text-xl font-bold mb-1.5 text-text-primary">Check Your Email</h1>
         <p className="text-sm text-text-secondary leading-relaxed">
           We sent a 6-digit code to <strong className="text-text-primary">{email || 'your email'}</strong>.

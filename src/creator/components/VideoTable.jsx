@@ -64,7 +64,7 @@ const VideoTable = ({ videos = [], onEdit, onDelete: externalOnDelete }) => {
                 <tr key={video.id} className="border-b border-border/50 last:border-0 hover:bg-bg-hov/30">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-14 h-8 rounded-lg bg-bg-el overflow-hidden flex items-center justify-center text-lg flex-shrink-0">
+                      <div className="w-14 h-8 rounded-sm bg-bg-el flex items-center justify-center text-lg flex-shrink-0 overflow-hidden">
                         {video.thumbnailUrl ? <img src={video.thumbnailUrl} alt="thumb" className="w-full h-full object-cover" /> : '🎬'}
                       </div>
                       <span className="font-medium text-text-primary line-clamp-1 max-w-[200px]">{toCamelCase(video.title)}</span>

@@ -5,7 +5,6 @@ import {
   Download,
   FileText,
   TrendingUp,
-  DollarSign,
   Users,
   Wallet,
   Landmark,
@@ -13,6 +12,8 @@ import {
   Banknote,
   Building,
 } from 'lucide-react';
+import { FaMoneyBillWave } from "react-icons/fa6";
+
 import { useNotification } from '../../hooks/useNotification';
 
 // ----- Helper: method display name & meta (icons + colors) -----
@@ -278,7 +279,7 @@ const Report = () => {
           </div>
           <div className="bg-bg-card border border-border rounded-xl p-4">
             <div className="flex items-center gap-2 text-text-secondary mb-1">
-              <DollarSign size={16} /> Total Pending Amount
+              <FaMoneyBillWave size={16} /> Total Pending Amount
             </div>
             <div className="text-2xl font-bold text-text-primary">
               Rs. {pendingRows.reduce((sum, p) => sum + (p.amount || 0), 0).toFixed(2)}
@@ -378,7 +379,7 @@ const Report = () => {
       <div className="flex gap-1 p-1 bg-bg-el border border-border rounded-xl w-fit mb-6">
         {[
           { id: 'revenue', label: 'Revenue Report', icon: <TrendingUp size={16} /> },
-          { id: 'earnings', label: 'Creator Earnings', icon: <DollarSign size={16} /> },
+          { id: 'earnings', label: 'Creator Earnings', icon: <FaMoneyBillWave size={16} /> },
           { id: 'payouts', label: 'Payout Requests', icon: <FileText size={16} /> },
         ].map(tab => (
           <button

@@ -303,7 +303,7 @@ const WatchPage = () => {
                 aria-pressed={liked}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-semibold transition-all ${
                   liked
-                    ? 'border-primary bg-bg-el text-text-secondary'
+                    ? 'border-border bg-bg-el text-text-secondary'
                     : 'border-border bg-bg-el text-text-secondary hover:bg-bg-hov'
                 }`}
               >
