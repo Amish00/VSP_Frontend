@@ -8,7 +8,7 @@ const OPTIONS = [
 
 const BillingToggle = ({ value, onChange }) => {
   return (
-    <div className="inline-flex gap-1 p-1 bg-bg-card border border-border rounded-xl mb-10">
+    <div className="inline-flex gap-1 p-1 bg-bg-card border border-border rounded-xl mb-1">
       {OPTIONS.map(({ key, label, sub }) => (
         <button
           key={key}

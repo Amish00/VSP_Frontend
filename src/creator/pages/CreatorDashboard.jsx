@@ -8,6 +8,7 @@ import { creatorApi } from '../api/creatorApi';
 import { getNotifications, markNotificationAsRead } from '../../user/api/Api'; 
 
 import { FiEye, FiDollarSign, FiUsers, FiFilm } from 'react-icons/fi';
+import { FaMoneyBillWave } from "react-icons/fa6";
 import { FaHeart } from 'react-icons/fa';
 import {
   CheckCircle,
@@ -60,7 +61,7 @@ const DashboardPage = ({ user }) => {
       VIDEO_APPROVED: <CheckCircle className="text-green-500" size={18} />,
       VIDEO_REJECTED: <XCircle className="text-red-500" size={18} />,
       NEW_VIDEO_UPLOAD: <VideoIcon className="text-blue-500" size={18} />,
-      PAYOUT_REQUEST: <FiDollarSign className="text-amber-500" size={18} />,
+      PAYOUT_REQUEST: <FaMoneyBillWave className="text-amber-500" size={18} />,
       MONTHLY_EARNINGS: <BarChart className="text-purple-500" size={18} />,
       MONTHLY_REVENUE_REPORT: <BarChart className="text-pink-500" size={18} />,
       NEW_SUBSCRIBER: <User className="text-teal-500" size={18} />,
@@ -127,7 +128,7 @@ const DashboardPage = ({ user }) => {
 
   const STATS = [
     { icon: <FiEye color="#60A5FA" />, label: 'Total Views', value: formatNumber(stats.totalViews), change: '+18% this month', color: '#60A5FA' },
-    { icon: <FiDollarSign color="#10B981" />, label: 'Earnings', value: `$${stats.totalEarnings.toLocaleString()}`, change: '+$180 this month', color: '#10B981' },
+    { icon: <FaMoneyBillWave color="#10B981" />, label: 'Earnings', value: `Rs.${stats.totalEarnings.toLocaleString()}`, change: '+$180 this month', color: '#10B981' },
     { icon: <FiUsers color="#F59E0B" />, label: 'Subscribers', value: formatNumber(stats.subscriberCount), change: '+340 this month', color: '#F59E0B' },
     { icon: <FaHeart color="#EF4444" />, label: 'Total Likes', value: formatNumber(stats.totalLikes), change: '+2.1K this month', color: '#EF4444' },
   ];

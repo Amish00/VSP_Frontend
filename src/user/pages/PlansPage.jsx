@@ -7,7 +7,9 @@ import BillingToggle from '../components/plans/BillingToggle';
 import Modal from '../components/ui/Modal';
 import { initiatePayment } from '../api/PaymentService';
 import { getCurrentUser, upgradeToFreePlan } from '../api/Api';
+import { FaCheckCircle, FaExclamationCircle, FaClock } from 'react-icons/fa';
 
+// Plan definitions (unchanged)
 export const PLANS = {
   monthly: [
     { id: 'free', name: 'Free', price: 0, period: 'forever', features: ['Watch FREE videos', '720p max quality', 'Ads shown', 'Basic history', 'Browse channels'] },
@@ -28,9 +30,57 @@ export const PLANS = {
 
 const PAYMENT_METHODS = ['eSewa', 'Khalti', 'Stripe', 'Connect IPS', 'Credit Card', 'Debit Card'];
 
+const normalizePlanId = (planId) => {
+  const value = (planId || '').toString().trim().toLowerCase();
+
+  if (['creator', 'create', 'view+create'].includes(value)) return 'creator';
+  if (['view only', 'view-only', 'viewonly'].includes(value)) return 'view';
+  if (value === 'free') return 'free';
+
+  return value;
+};
+
+const getPlanDisplayName = (planId) => {
+  switch (normalizePlanId(planId)) {
+    case 'creator':
+      return 'Create';
+    case 'view':
+      return 'View Only';
+    case 'free':
+      return 'Free';
+    default:
+      return 'Plan';
+  }
+};
+
+const getPlanFeatures = (planId) => {
+  const allPlans = PLANS.monthly;
+  const plan = allPlans.find(p => p.id === normalizePlanId(planId));
+  return plan ? plan.features : [];
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
+const getDaysLeft = (expiryDate) => {
+  if (!expiryDate) return null;
+  const now = new Date();
+  const expiry = new Date(expiryDate);
+  const diffTime = expiry.getTime() - now.getTime();
+  if (diffTime <= 0) return 0;
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
 const PlansPage = () => {
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
+  const [activeTab, setActiveTab] = useState('current');
   const [billing, setBilling] = useState('monthly');
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -59,19 +109,34 @@ const PlansPage = () => {
     fetchUser();
   }, [enqueueSnackbar]);
 
-  // Determine current plan id (default to 'free' if none)
   const currentPlanId = useMemo(() => {
     if (!user || !user.plan) return 'free';
-    return user.plan.toLowerCase(); // 'free', 'view', or 'creator'
+    return normalizePlanId(user.plan);
   }, [user]);
 
-  // Reorder plans: current plan first, then the rest in original order
-  const getOrderedPlans = (planList) => {
-    if (!user) return planList; // not logged in – keep original order
+  const isActivePaid = useMemo(() => {
+    return user && user.subscriptionExpiry && new Date(user.subscriptionExpiry) > new Date() && user.plan !== 'FREE';
+  }, [user]);
 
+  const isExpired = useMemo(() => {
+    return user && user.subscriptionExpiry && new Date(user.subscriptionExpiry) <= new Date() && user.plan === 'FREE';
+  }, [user]);
+
+  const daysLeft = useMemo(() => {
+    if (!user || !user.subscriptionExpiry) return null;
+    return getDaysLeft(user.subscriptionExpiry);
+  }, [user]);
+
+  const currentPlanFeatures = getPlanFeatures(currentPlanId);
+  const currentPlanName = getPlanDisplayName(currentPlanId);
+  const expiryDate = user?.subscriptionExpiry ? formatDate(user.subscriptionExpiry) : null;
+  const billingCycle = user?.billingCycle || '';
+  const previousPlanName = user?.previousPlan ? user.previousPlan.charAt(0).toUpperCase() + user.previousPlan.slice(1) : null;
+
+  const getOrderedPlans = (planList) => {
+    if (!user) return planList;
     const currentPlan = planList.find(p => p.id === currentPlanId);
     if (!currentPlan) return planList;
-
     const otherPlans = planList.filter(p => p.id !== currentPlanId);
     return [currentPlan, ...otherPlans];
   };
@@ -81,23 +146,25 @@ const PlansPage = () => {
     return getOrderedPlans(rawPlans);
   }, [billing, user, currentPlanId]);
 
-  const hasActivePaidPlan = user && user.subscriptionExpiry && new Date(user.subscriptionExpiry) > new Date() && user.plan !== 'FREE';
-  // Hide "Popular" badge if user is logged in (we'll show "Current Plan" instead)
-  const hidePopularBadge = !!user;
-
   const handleSelect = async (plan) => {
     const token = sessionStorage.getItem('access_token');
     if (!token) {
-      enqueueSnackbar('Please sign in to subscribe to a plan.', { variant: 'warning' });
+      enqueueSnackbar('Please sign in to purchase a plan.', { variant: 'warning' });
       navigate('/signin', { state: { from: '/plans' } });
       return;
     }
+
+    if (isActivePaid) {
+      enqueueSnackbar(
+        `You already have an active ${user.plan} plan until ${expiryDate}. Cannot subscribe to another plan.`,
+        { variant: 'warning' }
+      );
+      return;
+    }
+
     if (plan.id === 'free') {
-      if (hasActivePaidPlan) {
-        enqueueSnackbar(
-          `You have an active ${user.plan} plan until ${new Date(user.subscriptionExpiry).toLocaleDateString()}. You cannot switch to Free until it expires.`,
-          { variant: 'warning' }
-        );
+      if (currentPlanId === 'free') {
+        enqueueSnackbar('You are already on the Free plan.', { variant: 'info' });
         return;
       }
       try {
@@ -111,13 +178,7 @@ const PlansPage = () => {
       }
       return;
     }
-    if (hasActivePaidPlan) {
-      enqueueSnackbar(
-        `You already have an active ${user.plan} plan until ${new Date(user.subscriptionExpiry).toLocaleDateString()}. Cannot subscribe to another plan.`,
-        { variant: 'warning' }
-      );
-      return;
-    }
+
     setSelectedPlan(plan);
     setModalOpen(true);
   };
@@ -164,50 +225,188 @@ const PlansPage = () => {
 
   return (
     <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pt-[68px] md:pt-[92px] pb-[96px] md:pb-16">
-      <div className="max-w-[1100px] mx-auto text-center">
-        <h1 className="font-display text-3xl sm:text-4xl font-extrabold mb-2 text-text-primary">
-          Choose Your Plan
+      {/* Header: title left, tabs right */}
+      <div className="flex flex-wrap items-center justify-between mb-8 gap-4">
+        <h1 className="text-3xl font-bold text-text-primary">
+          Manage Your Plans
         </h1>
-        <p className="text-text-secondary text-base mb-8 max-w-md mx-auto leading-relaxed">
-          Unlock premium content or start creating and earning with ViriShare.
-        </p>
-
-        <div className="flex justify-center mb-10">
-          <BillingToggle value={billing} onChange={setBilling} />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-[900px] mx-auto text-left mb-10">
-          {plans.map((plan) => {
-            const isCurrentPlan = user && plan.id === currentPlanId;
-            const isCurrentPlanActive = isCurrentPlan && (!user.subscriptionExpiry || new Date(user.subscriptionExpiry) > new Date());
-            const disabled = (plan.id !== 'free' && hasActivePaidPlan) || (isCurrentPlan && isCurrentPlanActive);
-            // Show "Current Plan" badge instead of "Popular" for the user's plan
-            const planWithProps = {
-              ...plan,
-              popular: plan.popular && !hidePopularBadge && !isCurrentPlan, // hide popular if logged in or if it's the current plan
-              isCurrentPlan: isCurrentPlan && isCurrentPlanActive,
-            };
-            return (
-              <PlanCard
-                key={plan.id}
-                plan={planWithProps}
-                onSelect={handleSelect}
-                currencySymbol="Rs."
-                disabled={disabled}
-                isCurrentPlan={isCurrentPlan && isCurrentPlanActive}
-              />
-            );
-          })}
-        </div>
-
-        <div className="flex flex-wrap gap-5 justify-center text-sm text-text-muted">
-          {['✓ Cancel anytime', '✓ No credit card for Free', '✓ eSewa & Khalti accepted', '✓ Instant activation'].map(t => (
-            <span key={t}>{t}</span>
-          ))}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('current')}
+            className={`px-5 py-2 rounded-xl font-semibold text-sm transition-all ${
+              activeTab === 'current'
+                ? 'bg-primary text-white shadow-lg shadow-primary/30'
+                : 'bg-bg-el text-text-secondary hover:text-text-primary border border-border'
+            }`}
+          >
+            Your Current Plan
+          </button>
+          <button
+            onClick={() => setActiveTab('available')}
+            className={`px-5 py-2 rounded-xl font-semibold text-sm transition-all ${
+              activeTab === 'available'
+                ? 'bg-primary text-white shadow-lg shadow-primary/30'
+                : 'bg-bg-el text-text-secondary hover:text-text-primary border border-border'
+            }`}
+          >
+            Available Plans
+          </button>
         </div>
       </div>
 
-      {/* Payment Modal */}
+      {/* ========== TAB 1: CURRENT PLAN (Full width) ========== */}
+      {activeTab === 'current' && (
+        <div className="bg-bg-el border border-border rounded-3xl p-8 shadow-lg">
+          {user ? (
+            <div>
+              {/* Plan name and status */}
+              <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-2xl font-bold text-text-primary">{currentPlanName}</h2>
+                  {isActivePaid && (
+                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 flex items-center gap-1">
+                      <FaCheckCircle className="w-3 h-3" /> Active
+                    </span>
+                  )}
+                  {isExpired && (
+                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 flex items-center gap-1">
+                      <FaExclamationCircle className="w-3 h-3" /> Expired
+                    </span>
+                  )}
+                  {!isActivePaid && !isExpired && currentPlanId === 'free' && (
+                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gray-200 text-gray-700">
+                      Free
+                    </span>
+                  )}
+                </div>
+                {isActivePaid && daysLeft !== null && daysLeft > 0 && (
+                  <span className="flex items-center gap-1 text-sm font-medium text-primary-light bg-primary/10 px-3 py-1 rounded-full">
+                    <FaClock className="w-3 h-3" /> {daysLeft} day{daysLeft > 1 ? 's' : ''} left
+                  </span>
+                )}
+              </div>
+
+              {/* Two‑column: Features (left) – Details (right) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* LEFT: Features */}
+                <div>
+                  <p className="font-medium text-text-primary mb-3">Features included:</p>
+                  <ul className="space-y-2">
+                    {currentPlanFeatures.map((feature, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-text-secondary">
+                        <span className="text-success flex-shrink-0 mt-0.5">✓</span>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* RIGHT: Details */}
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-text-secondary">Duration / Billing Cycle</p>
+                    <p className="text-lg font-semibold text-text-primary">
+                      {currentPlanId === 'free' ? 'NA' : billingCycle ? billingCycle.charAt(0).toUpperCase() + billingCycle.slice(1) : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-text-secondary">Expiry Date</p>
+                    <p className="text-lg font-semibold text-text-primary">
+                      {expiryDate || 'Never expires'}
+                    </p>
+                  </div>
+                  {isExpired && previousPlanName && (
+                    <div>
+                      <p className="text-sm text-text-secondary">Previous Plan</p>
+                      <p className="text-lg font-semibold text-text-primary">{previousPlanName}</p>
+                    </div>
+                  )}
+                  {isActivePaid && (
+                    <div>
+                      <p className="text-sm text-text-secondary">Renewal</p>
+                      <p className="text-md text-text-secondary">Auto-renew at end of billing cycle</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Expired message or action */}
+              {isExpired && (
+                <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800">
+                  Your plan has expired. You've been reverted to the Free plan.
+                </div>
+              )}
+              {isActivePaid && (
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setActiveTab('available')}
+                    className="text-sm text-red-500 hover:text-red-700 font-medium"
+                  >
+                    Switch to Free Plan
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-text-secondary text-lg">Please log in to see your current plan.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========== TAB 2: AVAILABLE PLANS ========== */}
+      {activeTab === 'available' && (
+        <div>
+          {!user && (
+            <p className="text-center text-text-secondary text-sm sm:text-base mb-4">
+              Please sign in to view subscription details and purchase a plan.
+            </p>
+          )}
+
+          <div className="flex justify-center mb-4">
+            <BillingToggle value={billing} onChange={setBilling} />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 lg:gap-7 max-w-[900px] mx-auto text-left">
+            {plans.map((plan) => {
+              let badge = null;
+              if (user) {
+                if (plan.id === currentPlanId && isActivePaid) {
+                  badge = 'Current Plan';
+                } else if (plan.id === currentPlanId && isExpired) {
+                  badge = 'Expired';
+                } else if (plan.popular && !isActivePaid) {
+                  badge = 'Popular';
+                }
+              } else if (plan.popular) {
+                badge = 'Popular';
+              }
+
+              const isDisabled = isActivePaid || (plan.id === 'free' && currentPlanId === 'free');
+
+              return (
+                <PlanCard
+                  key={plan.id}
+                  plan={plan}
+                  onSelect={handleSelect}
+                  currencySymbol="Rs."
+                  disabled={isDisabled}
+                  badge={badge}
+                />
+              );
+            })}
+          </div>
+
+          <div className="flex flex-wrap gap-5 justify-center text-sm text-text-muted mt-8">
+            {['✓ Cancel anytime', '✓ No credit card for Free', '✓ eSewa & Khalti accepted', '✓ Instant activation'].map(t => (
+              <span key={t}>{t}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal (unchanged) */}
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={`Subscribe to ${selectedPlan?.name || ''}`} maxW={560}>
         <div className="bg-bg-el border border-border rounded-xl p-4 mb-5">
           <div className="flex justify-between border-b border-border pb-3 mb-3">
