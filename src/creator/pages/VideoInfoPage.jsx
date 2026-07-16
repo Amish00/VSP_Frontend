@@ -5,7 +5,6 @@ import {
   Upload, X, Edit, Save, Eye, Heart, MessageCircle,
   ThumbsUp, ArrowLeft, Film, CheckCircle, AlertCircle, XCircle, Clock
 } from 'lucide-react';
-import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
 import StatCard from '../components/ui/StatCard';
 import { creatorApi } from '../api/creatorApi';
@@ -244,7 +243,6 @@ const VideoInfoPage = () => {
   if (!video) return null;
 
   const isShort = video.type === 'SHORTS';
-  // Use the URL type param if present, otherwise derive from video.type
   const effectiveType = typeParam || (isShort ? 'short' : 'video');
   const isEditMode = mode === 'edit';
   const tagsArray = video.tags ? video.tags.split(',').map(t => t.trim()) : [];
@@ -256,18 +254,15 @@ const VideoInfoPage = () => {
   };
   const status = statusConfig[video.status] || { label: video.status, color: '#6B7280', bg: 'rgba(107,114,128,0.1)' };
 
-  // Helper to build navigation URLs that preserve the type param
   const buildUrl = (viewMode) => {
     const typeQuery = effectiveType === 'short' ? '&type=short' : '';
     return `/creator/video/${id}?mode=${viewMode}${typeQuery}`;
   };
 
-  // Navigate back to the appropriate list page
   const handleBackToList = () => {
     navigate(isShort ? '/creator/shorts' : '/creator/videos');
   };
 
-  // Render progress modal content
   const renderProgressContent = () => {
     if (uploadSuccess) {
       return (
@@ -299,7 +294,6 @@ const VideoInfoPage = () => {
       );
     }
 
-    // Progress (uploading)
     return (
       <div className="text-center">
         <Upload size={48} className="mx-auto mb-4 text-primary animate-pulse" />
@@ -327,7 +321,6 @@ const VideoInfoPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          {/* Persistent Back button – navigates to the correct list page */}
           <button
             onClick={handleBackToList}
             className="p-2 rounded-lg bg-bg-el border border-border text-text-secondary hover:text-text-primary transition"
@@ -351,7 +344,7 @@ const VideoInfoPage = () => {
         )}
       </div>
 
-      {/* Stats Row – each stat has its own colour, matching icons and smaller status label */}
+      {/* Stats Row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <StatCard 
           icon={<Eye size={24} color="#60A5FA" />} 
@@ -532,7 +525,9 @@ const VideoInfoPage = () => {
                 </div>
               ) : (
                 <div className={valueCard}>
-                  <Badge text={video.paid ? 'Paid' : 'Free'} type={video.paid ? 'paid' : 'free'} />
+                  <span className={video.paid ? 'text-amber-600 font-semibold' : 'text-green-600 font-semibold'}>
+                    {video.paid ? 'Paid' : 'Free'}
+                  </span>
                 </div>
               )}
             </div>
@@ -633,11 +628,11 @@ const VideoInfoPage = () => {
         </div>
       </Modal>
 
-      {/* Progress / Success / Error Modal */}
+      {/* Progress Modal */}
       <Modal
         open={showProgressModal}
         onClose={() => {
-          if (uploadSuccess) return; // prevent closing during success
+          if (uploadSuccess) return;
           if (uploadError) {
             setUploadError(null);
             setShowProgressModal(false);

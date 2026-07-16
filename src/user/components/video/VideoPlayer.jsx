@@ -7,10 +7,11 @@ import {
 
 const VideoPlayer = ({ video, onViewRecorded }) => {
   const videoRef = useRef(null);
+  const containerRef = useRef(null);
   const controlsTimeoutRef = useRef(null);
-  const watchStartTimeRef = useRef(null);  
-  const viewRecordedRef = useRef(false);       
-  const VIEW_THRESHOLD = 30;                  
+  const watchStartTimeRef = useRef(null);
+  const viewRecordedRef = useRef(false);
+  const VIEW_THRESHOLD = 30;
 
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -97,7 +98,6 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
     viewRecordedRef.current = false;
     watchStartTimeRef.current = null;
   }, [video.id]);
-
 
   useEffect(() => {
     const videoEl = videoRef.current;
@@ -187,7 +187,13 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
   };
 
   const handleFullscreen = () => {
-    if (videoRef.current) videoRef.current.requestFullscreen?.();
+    if (containerRef.current) {
+      if (!document.fullscreenElement) {
+        containerRef.current.requestFullscreen?.();
+      } else {
+        document.exitFullscreen?.();
+      }
+    }
   };
 
   const handlePictureInPicture = async () => {
@@ -266,9 +272,9 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [volume, togglePlay, handleFullscreen, handlePictureInPicture]);
 
-  // ----- Render (unchanged) -----
   return (
     <div
+      ref={containerRef}
       className="relative rounded-xl overflow-hidden bg-black group"
       style={{ aspectRatio: '16/9', boxShadow: '0 8px 40px rgba(0,0,0,.6)' }}
       onMouseMove={showControls}
@@ -285,6 +291,9 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
         onClick={togglePlay}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
+        preload="auto"               // <— load the video as soon as possible
+        playsInline                  // <— mobile optimisation
+        crossOrigin="anonymous"      // <— helps with CORS/caching
       />
 
       {buffering && (
@@ -300,9 +309,9 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
       >
         <button
           onClick={togglePlay}
-          className="pointer-events-auto w-14 h-14 rounded-full bg-primary/90 flex items-center justify-center hover:bg-primary transition-colors"
+          className="pointer-events-auto w-16 h-16 rounded-full bg-primary/90 flex items-center justify-center hover:bg-primary transition-colors"
         >
-          {playing ? <Pause size={22} className="text-white" /> : <Play size={22} className="text-white ml-1" />}
+          {playing ? <Pause size={28} className="text-white" /> : <Play size={28} className="text-white ml-1" />}
         </button>
       </div>
 
@@ -333,20 +342,20 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
             )}
           </div>
 
-          <div className="flex items-center gap-3 text-white text-sm">
+          <div className="flex items-center gap-4 text-white text-sm">
             <button onClick={togglePlay} className="hover:opacity-75">
-              {playing ? <Pause size={15} /> : <Play size={15} />}
+              {playing ? <Pause size={20} /> : <Play size={20} />}
             </button>
             <button onClick={() => skip(-10)} className="hover:opacity-75">
-              <SkipBack size={14} />
+              <SkipBack size={20} />
             </button>
             <button onClick={() => skip(10)} className="hover:opacity-75">
-              <SkipForward size={14} />
+              <SkipForward size={20} />
             </button>
 
             <div className="flex items-center gap-1.5 group/volume">
               <button onClick={toggleMute} className="hover:opacity-75">
-                {muted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                {muted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
               </button>
               <input
                 type="range"
@@ -362,7 +371,7 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
             <span className="tabular-nums">{formatTime(currentTime)} / {formatTime(duration)}</span>
 
             <button onClick={changePlaybackRate} className="hover:opacity-75 flex items-center gap-1">
-              <Gauge size={14} />
+              <Gauge size={20} />
               <span className="text-xs font-mono">{playbackRate}x</span>
             </button>
 
@@ -370,14 +379,14 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
 
             {document.pictureInPictureEnabled && (
               <button onClick={handlePictureInPicture} className="hover:opacity-75">
-                <PictureInPicture size={15} />
+                <PictureInPicture size={20} />
               </button>
             )}
             <button onClick={handleDownload} className="hover:opacity-75">
-              <Download size={15} />
+              <Download size={20} />
             </button>
             <button onClick={handleFullscreen} className="hover:opacity-75">
-              <Maximize2 size={15} />
+              <Maximize2 size={20} />
             </button>
           </div>
         </div>

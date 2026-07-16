@@ -338,7 +338,7 @@ const VideoTable = ({ search, setSearch, type }) => {
       )}
 
       {/* Reject Modal */}
-      <Modal open={showRejectModal} onClose={() => setShowRejectModal(false)} title="Reject Video" maxW={480}>
+      <Modal open={showRejectModal} onClose={() => setShowRejectModal(false)} title="Rejected Video" maxW={480}>
         <div className="space-y-4">
           <p className="text-text-secondary">Please provide a reason for rejection:</p>
           <textarea

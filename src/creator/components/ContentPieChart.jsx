@@ -24,50 +24,58 @@ const ContentPieChart = () => {
         fetchBreakdown();
     }, []);
 
-    if (loading) return <div className="bg-bg-card border border-border rounded-2xl p-5 animate-pulse h-64" />;
-    if (error) return <div className="bg-bg-card border border-border rounded-2xl p-5 text-danger">{error}</div>;
-    if (data.length === 0) return <div className="bg-bg-card border border-border rounded-2xl p-5 text-text-secondary">No content data available</div>;
-
     return (
         <div className="bg-bg-card border border-border rounded-2xl p-5">
             <h3 className="font-display font-bold text-base mb-2 text-text-primary">Content Breakdown</h3>
-            <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                    <Pie
-                        data={data}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={45}
-                        outerRadius={70}
-                        paddingAngle={3}
-                        dataKey="value"
-                    >
-                        {data.map((_, i) => (
-                            <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                        ))}
-                    </Pie>
-                    <Tooltip
-                        contentStyle={{
-                            background: '#0F1724',
-                            border: 'none',               // removes white border
-                            borderRadius: '12px',
-                            color: '#ECF0FB',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                            padding: '8px 12px',
-                        }}
-                        itemStyle={{ color: '#ECF0FB' }}
-                        formatter={(value, name) => [`${value}%`, name]}   // shows category name + percentage
-                    />
-                    <Legend
-                        iconType="circle"
-                        iconSize={8}
-                        wrapperStyle={{
-                            fontSize: '11px',
-                            color: '#94A3B8',
-                        }}
-                    />
-                </PieChart>
-            </ResponsiveContainer>
+
+            {/* Content area with fixed min-height and centered children */}
+            <div className="min-h-[180px] flex items-center justify-center">
+                {loading ? (
+                    <div className="w-full h-[180px] bg-bg-el rounded animate-pulse" />
+                ) : error ? (
+                    <div className="text-danger">{error}</div>
+                ) : data.length === 0 ? (
+                    <div className="text-text-secondary">No content data available</div>
+                ) : (
+                    <ResponsiveContainer width="100%" height={180}>
+                        <PieChart>
+                            <Pie
+                                data={data}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={45}
+                                outerRadius={70}
+                                paddingAngle={3}
+                                dataKey="value"
+                            >
+                                {data.map((_, i) => (
+                                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                                ))}
+                            </Pie>
+                            <Tooltip
+                                contentStyle={{
+                                    background: '#0F1724',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    color: '#ECF0FB',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                                    padding: '8px 12px',
+                                }}
+                                itemStyle={{ color: '#ECF0FB' }}
+                                formatter={(value, name) => [`${value}%`, name]}
+                            />
+                            <Legend
+                                iconType="circle"
+                                iconSize={8}
+                                wrapperStyle={{
+                                    fontSize: '11px',
+                                    color: '#94A3B8',
+                                }}
+                            />
+                        </PieChart>
+                    </ResponsiveContainer>
+                )}
+            </div>
         </div>
     );
 };
