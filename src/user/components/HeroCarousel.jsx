@@ -1,6 +1,6 @@
 // src/user/components/HeroCarousel.jsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { Eye, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Eye, Clock, ChevronLeft, ChevronRight, Film } from 'lucide-react';
 import { FaPlay } from 'react-icons/fa';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -31,7 +31,7 @@ const HeroCarousel = ({ videos = [], onWatch, loading = false }) => {
 
   if (loading) {
     return (
-      <section className="relative overflow-hidden bg-gradient-to-r from-gray-800 to-gray-900" style={{ height: 'clamp(300px,44vw,520px)' }}>
+      <section className="relative overflow-hidden bg-gradient-to-r from-gray-800 to-gray-900" style={{ height: 'clamp(350px, 48vw, 600px)' }}>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="animate-pulse flex flex-col items-center">
             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -44,7 +44,7 @@ const HeroCarousel = ({ videos = [], onWatch, loading = false }) => {
 
   if (!videos.length) {
     return (
-      <section className="relative overflow-hidden bg-gradient-to-r from-gray-800 to-gray-900" style={{ height: 'clamp(300px,44vw,520px)' }}>
+      <section className="relative overflow-hidden bg-gradient-to-r from-gray-800 to-gray-900" style={{ height: 'clamp(350px, 48vw, 600px)' }}>
         <div className="absolute inset-0 flex items-center justify-center">
           <p className="text-white/70 text-sm">No featured videos available</p>
         </div>
@@ -55,23 +55,23 @@ const HeroCarousel = ({ videos = [], onWatch, loading = false }) => {
   const video = videos[idx];
   if (!video) return null;
 
-
   const channelForAvatar = {
     name: video.username || 'Creator',
-    avatar: video.profilePicture || (video.username ? video.username.charAt(0).toUpperCase() : '🎬'),
-    profilePicture: video.profilePicture, // some Avatar components use this
+    avatar: video.profilePicture || (video.username ? video.username.charAt(0).toUpperCase() : 'U'),
+    profilePicture: video.profilePicture,
   };
 
   const toTitleCase = (str) => {
     if (!str) return '';
     return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
   };
+
   return (
     <section
       aria-label="Featured videos"
       aria-roledescription="carousel"
       className="relative overflow-hidden"
-      style={{ height: 'clamp(300px,44vw,520px)' }}
+      style={{ height: 'clamp(350px, 48vw, 600px)' }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={(e) => setTouchStart(e.touches[0].clientX)}
@@ -83,18 +83,22 @@ const HeroCarousel = ({ videos = [], onWatch, loading = false }) => {
         setTouchStart(null);
       }}
     >
-      {/* Background Image - much lighter now */}
+      {/* Background Image */}
       {video.thumbnailUrl && (
         <img
           src={video.thumbnailUrl}
           alt=""
           aria-hidden
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ opacity: 0.7, filter: 'brightness(0.7) saturate(1.1)' }}
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          style={{
+            opacity: 0.7,
+            filter: 'brightness(0.7) saturate(1.1)',
+            objectPosition: 'center',
+          }}
         />
       )}
 
-      {/* Gradients Overlays - made lighter and less intrusive */}
+      {/* Gradients Overlays */}
       <div
         className="absolute inset-0"
         aria-hidden
@@ -113,7 +117,6 @@ const HeroCarousel = ({ videos = [], onWatch, loading = false }) => {
       {/* Content Container */}
       <div className="absolute bottom-0 left-0 right-0 flex justify-between items-end px-4 sm:px-8 md:px-12 pb-4 sm:pb-8">
         <div className="max-w-xs sm:max-w-md lg:max-w-lg">
-          {/* Unified Badges Row */}
           <div className="flex gap-2 mb-2 sm:mb-3 items-center flex-wrap">
             <span className="px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-xs font-semibold tracking-wide shadow-sm">
               FEATURED
@@ -126,13 +129,12 @@ const HeroCarousel = ({ videos = [], onWatch, loading = false }) => {
 
           <h1
             className="font-display font-black text-white leading-tight mb-2 sm:mb-4 line-clamp-2 drop-shadow-md"
-            style={{ fontSize: 'clamp(16px, 3vw, 35px)' }}
+            style={{ fontSize: 'clamp(18px, 3.2vw, 38px)' }}
           >
             {toTitleCase(video.title)}
           </h1>
 
           <div className="hidden sm:flex items-center gap-3 mb-3 flex-wrap">
-            {/* Avatar now receives the proper channel object */}
             <Avatar channel={channelForAvatar} size={24} />
             <span className="text-sm font-semibold text-gray-200">{video.username || 'Anonymous'}</span>
             <span className="flex items-center gap-1 text-sm text-gray-300">

@@ -56,12 +56,10 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
   const [notifOpen, setNotifOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Real notifications state
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(false);
 
-  // Fetch admin user data
   useEffect(() => {
     const fetchUser = async () => {
       const token = sessionStorage.getItem('access_token');
@@ -84,7 +82,6 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     fetchUser();
   }, [navigate]);
 
-  // Notification API calls
   const fetchUnreadCount = async () => {
     if (!user) return;
     try {
@@ -145,7 +142,6 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     }
   };
 
-  // Poll unread count every 30 seconds
   useEffect(() => {
     if (!user) return;
     fetchUnreadCount();
@@ -153,7 +149,6 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Load notifications when panel opens
   useEffect(() => {
     if (notifOpen && user) {
       fetchNotifications();
@@ -166,7 +161,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
 
   if (loading) {
     return (
-      <header className="h-[68px] bg-bg-side border-b border-border flex items-center px-4 sm:px-5 gap-3 flex-shrink-0 z-50 relative">
+      <header className="h-[68px] bg-bg-side border-b border-border flex items-center px-6 sm:px-8 gap-3 flex-shrink-0 z-50 relative">
         <div className="animate-pulse w-8 h-8 rounded-full bg-bg-el" />
       </header>
     );
@@ -177,7 +172,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
   return (
     <>
       <header
-        className="h-[68px] bg-bg-side border-b border-border flex items-center px-4 sm:px-5 gap-3 flex-shrink-0 z-50 relative"
+        className="h-[68px] bg-bg-side border-b border-border flex items-center px-6 sm:px-8 gap-3 flex-shrink-0 z-50 relative"
         style={{
           boxShadow: '0 1px 0 rgba(255,255,255,.02),0 2px 12px rgba(0,0,0,.25)',
         }}
@@ -311,7 +306,6 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
               <div className="fixed inset-0 z-[148]" onClick={() => setProfOpen(false)} />
               <div
                 role="menu"
-                // Increased width from w-52 to w-64, same as creator nav
                 className="absolute top-[calc(100%+8px)] right-0 w-64 bg-bg-card border border-border rounded-2xl z-[149] shadow-drop overflow-visible"
               >
                 <div className="px-4 py-3.5 border-b border-border">
@@ -325,7 +319,6 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     )}
                     <div className="min-w-0">
                       <p className="font-semibold text-sm text-text-primary truncate">{user.username}</p>
-                      {/* Email: replaced break-all with truncate and max-w-[160px] to keep in one line */}
                       <p className="text-xs text-text-muted truncate max-w-[160px] leading-snug">{user.email}</p>
                     </div>
                   </div>
@@ -353,6 +346,10 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     <Settings size={13} className="text-text-muted" />
                     Settings
                   </button>
+                  {/* LanguageSwitcher added inside the dropdown */}
+                  <div className="mt-1 px-1">
+                    <LanguageSwitcher variant="dropdown" />
+                  </div>
                 </div>
                 <div className="border-t border-border py-1.5 px-1.5">
                   <button
@@ -370,7 +367,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
         </div>
       </header>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer – now only navigation, no LanguageSwitcher */}
       {drawerOpen && (
         <>
           <div className="fixed inset-0 z-[149] bg-black/60 md:hidden" onClick={() => setDrawerOpen(false)} />
@@ -378,7 +375,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
             className="fixed top-0 left-0 bottom-0 w-[220px] z-[150] bg-bg-side border-r border-border flex flex-col md:hidden"
             style={{ boxShadow: '4px 0 24px rgba(0,0,0,.5)' }}
           >
-            <div className="h-[60px] flex items-center px-4 gap-2.5 border-b border-border">
+            <div className="h-[60px] flex items-center px-4 gap-2.5 border-b border-border flex-shrink-0">
               <img src={logoUrl} alt="ViriShare" style={{ height: 22, width: 'auto' }} />
               <span className="font-display font-black text-base text-text-primary">ViriShare</span>
               <button
@@ -414,13 +411,11 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     >
                       {item.label}
                     </span>
-                    <div className="mt-1">
-                      <LanguageSwitcher variant="dropdown" />
-                    </div>
                   </button>
                 );
               })}
             </nav>
+            {/* LanguageSwitcher removed from here – now only in profile dropdown */}
           </div>
         </>
       )}

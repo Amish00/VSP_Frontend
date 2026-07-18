@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import PlatformStats from '../components/PlatformStats';
+import StatCard from '../components/ui/StatCard';
 import GrowthChart from '../components/GrowthChart';
 import RevenueChart from '../components/RevenueChart';
 import PendingVideosTable from '../components/PendingVideosTable';
 import { userApi } from '../api/userApi';
 import { videoApi } from '../api/videoApi';
 import { adminRevenueApi } from '../../creator/api/creatorApi';
+import { FiEye, FiUsers, FiFilm, FiClock } from 'react-icons/fi';
+import { FaMoneyBillWave, FaRegEye } from "react-icons/fa6";
 
 const AdminDashboard = () => {
     const [stats, setStats] = useState({
@@ -20,7 +22,6 @@ const AdminDashboard = () => {
     const [growthData, setGrowthData] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Helper to group by month
     const groupByMonth = (items, dateField) => {
         const groups = {};
         items.forEach(item => {
@@ -50,15 +51,13 @@ const AdminDashboard = () => {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                // Fetch users and all videos
                 const [users, allVideosRes, pendingVideosRes, revenueRes] = await Promise.all([
                     userApi.getAllUsers(),
-                    videoApi.getAllVideos(null, '', 0, 10000), // get all videos (adjust size as needed)
+                    videoApi.getAllVideos(null, '', 0, 10000),
                     videoApi.getAllVideos('PENDING', '', 0, 1),
                     adminRevenueApi.getMonthlyRevenue(12)
                 ]);
 
-                // Total views: sum viewCount from all videos
                 const allVideosContent = allVideosRes.content || [];
                 const totalViews = allVideosContent.reduce((sum, v) => sum + (v.viewCount || 0), 0);
 
@@ -79,7 +78,6 @@ const AdminDashboard = () => {
                 });
                 setMonthlyRevenue(monthlyData);
 
-                // Growth data: group users and videos by month
                 const userCounts = groupByMonth(users, 'createdAt');
                 const videoCounts = groupByMonth(allVideosContent, 'publishedAt');
                 const growth = buildGrowthData(userCounts, videoCounts);
@@ -94,6 +92,45 @@ const AdminDashboard = () => {
         fetchDashboardData();
     }, []);
 
+    const statCards = [
+        {
+            icon: <FiEye color="#60A5FA" size={24} />,
+            label: 'Total Views',
+            value: stats.totalViews.toLocaleString(),
+            color: '#60A5FA'
+        },
+        {
+            icon: <FiUsers color="#10B981" size={24} />,
+            label: 'Total Users',
+            value: stats.totalUsers.toLocaleString(),
+            color: '#10B981'
+        },
+        {
+            icon: <FiFilm color="#F59E0B" size={24} />,
+            label: 'Total Videos',
+            value: stats.totalVideos.toLocaleString(),
+            color: '#F59E0B'
+        },
+        {
+            icon: <FaMoneyBillWave color="#EF4444" size={24} />,
+            label: 'Total Revenue',
+            value: `Rs.${stats.totalRevenue.toLocaleString()}`,
+            color: '#EF4444'
+        },
+        {
+            icon: <FaRegEye color="#0EA5E9" size={24} />,
+            label: 'Creators',
+            value: stats.totalCreators.toLocaleString(),
+            color: '#0EA5E9'
+        },
+        {
+            icon: <FiClock color="#F59E0B" size={24} />,
+            label: 'Pending Review',
+            value: stats.pendingVideos.toLocaleString(),
+            color: '#F59E0B'
+        }
+    ];
+
     return (
         <div className="space-y-6 pb-6">
             <div className="flex items-center justify-between flex-wrap gap-3">
@@ -105,17 +142,32 @@ const AdminDashboard = () => {
                 </div>
             </div>
 
-            <PlatformStats stats={stats} loading={loading} />
+            {/* Stat Cards – now without extra padding, relies on layout */}
+            {loading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+                    {[...Array(6)].map((_, i) => (
+                        <div key={i} className="h-28 bg-bg-card border border-border rounded-2xl animate-pulse" />
+                    ))}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+                    {statCards.map((s) => (
+                        <StatCard key={s.label} {...s} />
+                    ))}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <GrowthChart data={growthData} />
                 <RevenueChart data={monthlyRevenue} />
             </div>
 
-            <h2 className="font-display font-bold text-lg mb-3 text-text-primary">
-                Pending Review ({stats.pendingVideos})
-            </h2>
-            <PendingVideosTable />
+            <div>
+                <h2 className="font-display font-bold text-lg mb-3 text-text-primary">
+                    Pending Review ({stats.pendingVideos})
+                </h2>
+                <PendingVideosTable />
+            </div>
         </div>
     );
 };

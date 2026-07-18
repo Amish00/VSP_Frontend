@@ -195,7 +195,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
 
   if (loading) {
     return (
-      <header className="h-[68px] bg-bg-side border-b border-border flex items-center px-4 sm:px-5 gap-3 flex-shrink-0 z-50 relative">
+      <header className="h-[68px] bg-bg-side border-b border-border flex items-center px-6 sm:px-8 gap-3 flex-shrink-0 z-50 relative">
         <div className="animate-pulse w-8 h-8 rounded-full bg-bg-el" />
       </header>
     );
@@ -206,7 +206,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
   return (
     <>
       <header
-        className="h-[68px] bg-bg-side border-b border-border flex items-center px-4 sm:px-5 gap-3 flex-shrink-0 z-50 relative"
+        className="h-[68px] bg-bg-side border-b border-border flex items-center px-6 sm:px-8 gap-3 flex-shrink-0 z-50 relative"
         style={{
           boxShadow: '0 1px 0 rgba(255,255,255,.02),0 2px 12px rgba(0,0,0,.25)',
         }}

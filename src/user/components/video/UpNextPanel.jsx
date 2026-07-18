@@ -26,13 +26,10 @@ const UpNextPanel = ({ videos = [], onWatch }) => {
 
   // Filter out shorts, then randomize
   const shuffledVideos = useMemo(() => {
-    // Safeguard
     if (!Array.isArray(videos) || videos.length === 0) {
       return [];
     }
-
     const onlyVideos = videos.filter(video => !isShortVideo(video));
-
     return shuffleArray(onlyVideos);
   }, [videos]);
 
@@ -47,7 +44,10 @@ const UpNextPanel = ({ videos = [], onWatch }) => {
 
   return (
     <aside aria-label="Up next">
-      <h2 className="font-display font-bold text-xl mb-4 hidden xl:block text-text-primary">Up Next</h2>
+      {/* Title now visible on all screens */}
+      <h2 className="font-display font-bold text-xl mb-4 text-text-primary">
+        Up Next
+      </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-2">
         {displayedVideos.map((video) => (
           <button

@@ -57,7 +57,7 @@ const AdminSidebar = ({ active, onSelect, className = '' }) => {
       }}
     >
       <div
-        className="flex items-center border-b border-border px-3 py-3 min-h-[52px] gap-2"
+        className="flex items-center border-b border-border px-4 py-3 min-h-[52px] gap-2"
         style={{ justifyContent: collapsed ? 'center' : 'space-between' }}
       >
         {!collapsed && (
@@ -77,7 +77,7 @@ const AdminSidebar = ({ active, onSelect, className = '' }) => {
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
         {NAV.map((item) => {
           const IconComponent = item.icon;
           const isActive = activeId === item.id;
@@ -87,7 +87,7 @@ const AdminSidebar = ({ active, onSelect, className = '' }) => {
               onClick={() => handleItemClick(item)}
               aria-current={isActive ? 'page' : undefined}
               className={`sbi w-full text-left ${isActive ? 'active' : ''} ${
-                collapsed ? 'justify-center !px-2' : ''
+                collapsed ? 'justify-center !px-2' : 'px-4'
               }`}
             >
               <IconComponent
