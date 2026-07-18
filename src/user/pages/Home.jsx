@@ -191,9 +191,9 @@ const Home = () => {
 
   return (
     <>
-      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
-        <HeroCarousel videos={carouselVideos} onWatch={handleWatch} loading={carouselLoading} />
-      </div>
+      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen pt-16">
+      <HeroCarousel videos={carouselVideos} onWatch={handleWatch} loading={carouselLoading} />
+    </div>
 
       <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pt-6 pb-[96px] md:pb-16 bg-gray-950">
         

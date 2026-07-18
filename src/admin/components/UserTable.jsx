@@ -208,7 +208,6 @@ const UserTable = () => {
       {/* Filter bar */}
       <div className="flex gap-3 mb-4 flex-wrap items-center">
         <div className="relative flex-1 min-w-[200px]">
-          {/* Search icon added here */}
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
             value={search}

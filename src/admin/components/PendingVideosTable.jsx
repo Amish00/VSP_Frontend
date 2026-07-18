@@ -123,7 +123,7 @@ const PendingVideosTable = () => {
     }
 
     if (videos.length === 0 && totalElements === 0) {
-        return <div className="bg-bg-card border border-border rounded-xl p-6 text-center text-text-secondary">No videos pending review 🎉</div>;
+        return <div className="bg-bg-card border border-border rounded-xl p-6 text-center text-text-secondary">No videos pending review</div>;
     }
 
     return (

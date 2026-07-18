@@ -1,4 +1,3 @@
-// RevenuePage.jsx
 import React, { useState, useEffect } from 'react';
 import StatCard from '../components/ui/StatCard';
 import RevenueChart from '../components/RevenueChart';
@@ -15,13 +14,12 @@ const getMonthsFromRange = (range) => {
     case '30 days': return 1;
     case '90 days': return 3;
     case '1 year': return 12;
-    default: return 12; // fallback
+    default: return 12;
   }
 };
 
 const RevenuePage = () => {
     const { showSuccess, showError } = useNotification();
-    // Default range set to '1 year'
     const [range, setRange] = useState('1 year');
     const [monthlyData, setMonthlyData] = useState([]);
     const [pendingPayouts, setPendingPayouts] = useState([]);
@@ -120,7 +118,8 @@ const RevenuePage = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {/* Stats Grid – now responsive: 1 col mobile, 2 tablet, 4 desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
                 {stats.map(s => <StatCard key={s.label} {...s} />)}
             </div>
 

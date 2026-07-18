@@ -3,6 +3,7 @@ import api from '../../api/Api';
 import CommentItem from './CommentItem';
 import Button from '../ui/Button';
 import { useAuth } from '../../../auth/context/AuthContext';
+import { MessageCircle } from 'lucide-react'; // <-- import icon
 
 const CommentSection = ({ videoId }) => {
   const { user } = useAuth();
@@ -153,8 +154,9 @@ const CommentSection = ({ videoId }) => {
     <section aria-label="Comments">
       <div className="flex items-center gap-3 mb-5">
         <div className="w-0.5 h-5 rounded-full bg-primary flex-shrink-0" aria-hidden />
-        <h2 className="font-display font-bold text-2xl text-text-primary">
-          💬 Comments ({totalComments})
+        <h2 className="font-display font-bold text-2xl text-text-primary flex items-center gap-2">
+          <MessageCircle size={24} className="text-primary" /> {/* <-- icon added */}
+          Comments ({totalComments})
         </h2>
       </div>
 
