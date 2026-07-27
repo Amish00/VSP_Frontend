@@ -60,28 +60,42 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(false);
 
+  // Fetch user data – extracted so we can call it again
+  const fetchUserData = async () => {
+    const token = sessionStorage.getItem('access_token');
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+    try {
+      const response = await api.get('/users/me');
+      setUser(response.data);
+    } catch (err) {
+      console.error('Failed to fetch admin user:', err);
+      sessionStorage.removeItem('access_token');
+      sessionStorage.removeItem('refresh_token');
+      navigate('/signin');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch + listen for profile updates
   useEffect(() => {
-    const fetchUser = async () => {
-      const token = sessionStorage.getItem('access_token');
-      if (!token) {
-        navigate('/');
-        return;
-      }
-      try {
-        const response = await api.get('/users/me');
-        setUser(response.data);
-      } catch (err) {
-        console.error('Failed to fetch admin user:', err);
-        sessionStorage.removeItem('access_token');
-        sessionStorage.removeItem('refresh_token');
-        navigate('/signin');
-      } finally {
-        setLoading(false);
-      }
+    fetchUserData();
+
+    const handleProfileUpdate = () => {
+      fetchUserData();
     };
-    fetchUser();
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
   }, [navigate]);
 
+  // Notification functions (unchanged)
   const fetchUnreadCount = async () => {
     if (!user) return;
     try {
@@ -194,7 +208,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
 
         <div className="flex-1" />
 
-        {/* Notifications */}
+        {/* Notifications – unchanged */}
         <div className="relative">
           <button
             onClick={() => {
@@ -277,7 +291,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
           )}
         </div>
 
-        {/* Profile dropdown */}
+        {/* Profile dropdown – unchanged */}
         <div className="relative">
           <button
             onClick={() => {
@@ -346,7 +360,6 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     <Settings size={13} className="text-text-muted" />
                     Settings
                   </button>
-                  {/* LanguageSwitcher added inside the dropdown */}
                   <div className="mt-1 px-1">
                     <LanguageSwitcher variant="dropdown" />
                   </div>
@@ -367,7 +380,7 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
         </div>
       </header>
 
-      {/* Mobile drawer – now only navigation, no LanguageSwitcher */}
+      {/* Mobile drawer – only navigation */}
       {drawerOpen && (
         <>
           <div className="fixed inset-0 z-[149] bg-black/60 md:hidden" onClick={() => setDrawerOpen(false)} />
@@ -415,7 +428,6 @@ const AdminNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                 );
               })}
             </nav>
-            {/* LanguageSwitcher removed from here – now only in profile dropdown */}
           </div>
         </>
       )}

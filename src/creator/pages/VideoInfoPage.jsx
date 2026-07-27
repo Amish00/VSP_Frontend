@@ -15,7 +15,7 @@ const sel = `${inp} appearance-none`;
 const area = `${inp} resize-none`;
 const valueCard = "bg-bg-el rounded-xl border border-border px-4 py-3 text-text-primary";
 
-const CATS = ['Technology', 'Design', 'Music', 'Gaming', 'Lifestyle', 'Business', 'Education', 'Sports', 'Finance', 'Comedy', 'Travel', 'Food'];
+const CATS = ['Technology', 'Design', 'Music', 'Gaming', 'Movies', 'Business', 'Education', 'Sports', 'Finance', 'Comedy', 'Travel', 'Food'];
 const VIDEO_TYPES = ['VIDEO', 'SHORTS'];
 
 const VideoInfoPage = () => {

@@ -1,3 +1,4 @@
+// src/components/videoeditor/components/RightPanel.js
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useStore } from '../store/store';
@@ -59,6 +60,7 @@ function Num({ v, onChange, min, max, step = 0.1 }) {
   );
 }
 
+// ----- FIXED Slider: shows value correctly (percentage or decimal) -----
 function Slider({ v, onChange, min = 0, max = 1, step = 0.01, label }) {
   return (
     <Row label={label}>
@@ -80,7 +82,9 @@ function Slider({ v, onChange, min = 0, max = 1, step = 0.01, label }) {
           accentColor: videoTheme.text,
         }}
       />
-      <span style={{ fontSize: 9, color: videoTheme.textMuted, minWidth: 28 }}>{Math.round(v * (max === 1 ? 100 : 1))}{max === 1 ? '%' : ''}</span>
+      <span style={{ fontSize: 9, color: videoTheme.textMuted, minWidth: 28 }}>
+        {max === 1 ? Math.round(v * 100) + '%' : v.toFixed(1)}
+      </span>
     </Row>
   );
 }
@@ -154,6 +158,7 @@ const RightPanel = () => {
 
         <Sec title="Playback">
           <Slider label="Opacity" v={clip.opacity ?? 1} onChange={v => upd({ opacity: v })} />
+          {/* FIXED: Volume slider now shows correct value (0.0 – 2.0) */}
           <Slider label="Volume" v={clip.volume ?? 1} onChange={v => upd({ volume: v })} max={2} step={0.01} />
           <Row label="Mute">
             <input type="checkbox" checked={clip.muted ?? false} onChange={e => upd({ muted: e.target.checked })} style={{ cursor: 'pointer', width: 14, height: 14, accentColor: videoTheme.text }} />
@@ -261,7 +266,7 @@ const RightPanel = () => {
         )}
 
         {clip.type !== 'audio' && (
-          <Sec title="Filter" open={false}>
+          <Sec title="Filter">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
               {EFFECTS.map(e => {
                 const active = clip.filter === e.id;
@@ -289,7 +294,7 @@ const RightPanel = () => {
         )}
 
         {clip.type !== 'audio' && (
-          <Sec title="Transitions" open={false}>
+          <Sec title="Transitions">
             {['In', 'Out'].map(dir => {
               const key = `trans${dir}`, dkey = `trans${dir}Dur`;
               return (
@@ -346,7 +351,7 @@ const RightPanel = () => {
           </Sec>
         )}
 
-        <Sec title="Actions" open={false}>
+        <Sec title="Actions">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <button onClick={() => splitClip(clip.id, currentTime)} style={actionBtn}>✂ Split at Playhead</button>
             <button onClick={() => duplicateClip(clip.id)} style={actionBtn}>⧉ Duplicate</button>
@@ -358,4 +363,4 @@ const RightPanel = () => {
   );
 };
 
-export default RightPanel
+export default RightPanel;

@@ -1,4 +1,3 @@
-// src/auth/api/authApi.js
 import axios from 'axios';
 
 const api = axios.create({

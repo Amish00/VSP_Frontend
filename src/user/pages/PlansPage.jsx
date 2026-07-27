@@ -262,7 +262,7 @@ const PlansPage = () => {
               {/* Plan name and status */}
               <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-2xl font-bold text-text-primary">{currentPlanName}</h2>
+                  <h2 className="text-2xl font-bold text-text-primary">{currentPlanName} Plan</h2>
                   {isActivePaid && (
                     <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 flex items-center gap-1">
                       <FaCheckCircle className="w-3 h-3" /> Active
@@ -334,16 +334,6 @@ const PlansPage = () => {
               {isExpired && (
                 <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800">
                   Your plan has expired. You've been reverted to the Free plan.
-                </div>
-              )}
-              {isActivePaid && (
-                <div className="mt-6 flex justify-end">
-                  <button
-                    onClick={() => setActiveTab('available')}
-                    className="text-sm text-red-500 hover:text-red-700 font-medium"
-                  >
-                    Switch to Free Plan
-                  </button>
                 </div>
               )}
             </div>

@@ -1,4 +1,3 @@
-// src/auth/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useSnackbar } from 'notistack';
 import { authApi } from '../api/authApi';

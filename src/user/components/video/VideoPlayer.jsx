@@ -11,6 +11,7 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
   const controlsTimeoutRef = useRef(null);
   const watchStartTimeRef = useRef(null);
   const viewRecordedRef = useRef(false);
+  const viewRecordingRef = useRef(false);
   const VIEW_THRESHOLD = 30;
 
   const [playing, setPlaying] = useState(false);
@@ -49,14 +50,31 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
   };
 
   const recordViewOnce = useCallback(async () => {
-    if (viewRecordedRef.current) return;
-    viewRecordedRef.current = true;
+    if (viewRecordedRef.current || viewRecordingRef.current) return;
+
+    const token = sessionStorage.getItem('access_token');
+    if (!token) {
+      // Guests cannot call protected engagement endpoints.
+      viewRecordedRef.current = true;
+      return;
+    }
+
+    viewRecordingRef.current = true;
+
     try {
       await api.post('/engagement/view', { videoId: video.id });
+      viewRecordedRef.current = true;
       onViewRecorded?.();
       console.log('View recorded for video', video.id);
     } catch (err) {
+      if (err?.response?.status === 401) {
+        // If auth still fails after refresh, stop retry spam for this playback.
+        viewRecordedRef.current = true;
+        return;
+      }
       console.error('Failed to record view', err);
+    } finally {
+      viewRecordingRef.current = false;
     }
   }, [video.id, onViewRecorded]);
 
@@ -96,6 +114,7 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
 
   useEffect(() => {
     viewRecordedRef.current = false;
+    viewRecordingRef.current = false;
     watchStartTimeRef.current = null;
   }, [video.id]);
 

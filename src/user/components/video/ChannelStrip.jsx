@@ -8,7 +8,7 @@ const ChannelStrip = ({ onChannelClick }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const scrollRef = useRef(null);
-  const [preview, setPreview] = useState(null); // { channel, x, y, anchorRect }
+  const [preview, setPreview] = useState(null);
   const previewTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -32,7 +32,6 @@ const ChannelStrip = ({ onChannelClick }) => {
   };
 
   const handleHoverLeave = () => {
-    // small delay to avoid flicker when moving between items
     previewTimeoutRef.current = setTimeout(() => setPreview(null), 80);
   };
 
@@ -59,16 +58,13 @@ const ChannelStrip = ({ onChannelClick }) => {
                 name: sub.username,
                 avatar: sub.profilePicture || sub.username?.[0]?.toUpperCase() || '?',
                 subs: formatSubscriberCount(infoRes.data.subscriberCount),
-                bg: getConsistentBgColor(sub.subscribedToId),
               };
             } catch (err) {
               return {
                 id: sub.subscribedToId,
                 name: sub.username,
-                handle: `@${sub.username}`,
                 avatar: sub.profilePicture || sub.username?.[0]?.toUpperCase() || '?',
                 subs: '?',
-                bg: getConsistentBgColor(sub.subscribedToId),
               };
             }
           })
@@ -110,9 +106,7 @@ const ChannelStrip = ({ onChannelClick }) => {
 
   return (
     <div className="relative mb-10 overflow-visible">
-      <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-bg-main to-transparent pointer-events-none z-10" />
-      <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-bg-main to-transparent pointer-events-none z-10" />
-      
+      {/* No gradient overlays – removed */}
       <div ref={scrollRef} className="flex gap-5 overflow-x-auto overflow-y-visible px-3 py-4 pb-6 scrollbar-hide snap-x">
         {channels.map((channel) => (
           <button
@@ -123,9 +117,9 @@ const ChannelStrip = ({ onChannelClick }) => {
             onMouseLeave={() => handleHoverLeave()}
             className="flex-shrink-0 relative z-20 flex flex-col items-center gap-2 cursor-pointer p-4 rounded-2xl border border-border bg-bg-card w-32 hover:z-50 hover:scale-105 hover:border-primary hover:shadow-lg transition-all duration-200 snap-start origin-center"
           >
-            {/* Avatar - much larger and with gradient border */}
+            {/* Avatar – solid background, no gradient */}
             <div className="relative">
-              <div className="w-20 h-20 rounded-full ring-2 ring-primary/20 ring-offset-2 ring-offset-bg-card overflow-hidden bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-3xl font-bold shadow-md">
+              <div className="w-20 h-20 rounded-full ring-2 ring-primary/20 ring-offset-2 ring-offset-bg-card overflow-hidden bg-primary flex items-center justify-center text-3xl font-bold shadow-md">
                 {channel.avatar?.startsWith('http') ? (
                   <img 
                     src={channel.avatar} 
@@ -138,11 +132,9 @@ const ChannelStrip = ({ onChannelClick }) => {
               </div>
             </div>
             
-            {/* Channel name - larger & bolder */}
             <p className="text-sm font-bold text-text-primary truncate w-full text-center mt-1">
               {channel.name}
             </p>
-
           </button>
         ))}
       </div>
@@ -172,7 +164,8 @@ const ChannelPreviewPortal = ({ preview }) => {
   return createPortal(
     <div style={style} className="bg-bg-card border border-border rounded-2xl p-4 shadow-2xl text-text-primary">
       <div className="flex items-center gap-3">
-        <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-2xl font-bold">
+        {/* Avatar – solid background, no gradient */}
+        <div className="w-16 h-16 rounded-full overflow-hidden bg-primary flex items-center justify-center text-2xl font-bold">
           {preview.channel.avatar?.startsWith('http') ? (
             <img src={preview.channel.avatar} alt={preview.channel.name} className="w-full h-full object-cover" />
           ) : (
@@ -189,24 +182,11 @@ const ChannelPreviewPortal = ({ preview }) => {
   );
 };
 
-// Helper: format subscriber count like "128K"
+// Helper: format subscriber count
 const formatSubscriberCount = (num) => {
   if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + 'M';
   if (num >= 1_000) return (num / 1_000).toFixed(1) + 'K';
   return num?.toString() || '0';
-};
-
-// Helper: generate a consistent but nicer bg color (softer, modern)
-const getConsistentBgColor = (id) => {
-  const colors = [
-    'from-indigo-500 to-purple-600',
-    'from-blue-500 to-cyan-500',
-    'from-emerald-500 to-teal-500',
-    'from-rose-500 to-pink-600',
-    'from-amber-500 to-orange-500',
-    'from-violet-500 to-fuchsia-500',
-  ];
-  return colors[id % colors.length];
 };
 
 export default ChannelStrip;

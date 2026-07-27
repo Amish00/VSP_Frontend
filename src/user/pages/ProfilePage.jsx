@@ -1,4 +1,3 @@
-// src/pages/ProfilePage.jsx
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Camera, Save, Eye, Shield } from 'lucide-react'
@@ -13,7 +12,6 @@ import { creatorApi } from '../../creator/api/creatorApi'
 const GENDERS = ['Male', 'Female', 'Non-binary', 'Prefer not to say']
 const COUNTRIES = ['Nepal', 'India', 'USA', 'UK', 'Canada', 'Australia', 'Germany', 'Japan', 'Other']
 
-// Input styles – no white backgrounds, forced ring removal
 const inp =
   "w-full bg-bg-el text-text-primary text-base rounded-xl border border-border px-4 py-3 placeholder:text-text-muted focus:outline-none focus:ring-0 focus:border-primary transition-all"
 const sel = `${inp} appearance-none bg-bg-el`
@@ -73,11 +71,10 @@ const ProfilePage = () => {
   const [pendingAvatarFile, setPendingAvatarFile] = useState(null)
   const [pendingBannerFile, setPendingBannerFile] = useState(null)
 
-  // Snackbar state
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
-    severity: 'success', // 'success' | 'error' | 'info' | 'warning'
+    severity: 'success',
   })
 
   const showSnackbar = (message, severity = 'success') => {
@@ -179,6 +176,8 @@ const ProfilePage = () => {
       const res = await userApi.uploadProfilePicture(pendingAvatarFile)
       setAvatarUrl(res.profilePicture)
       showSnackbar('Profile picture updated', 'success')
+      // 🔔 Dispatch event to notify navbar
+      window.dispatchEvent(new CustomEvent('profileUpdated'))
     } catch (err) {
       console.error('Avatar upload failed', err)
       showSnackbar('Failed to upload profile picture', 'error')
@@ -223,7 +222,7 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-bg-base">
-      {/* Banner – increased to h-64 on mobile, h-80 on small screens */}
+      {/* Banner */}
       <div className="h-64 sm:h-80 relative overflow-hidden">
         {bannerUrl ? (
           <img src={bannerUrl} alt="Channel banner" className="w-full h-full object-cover" />
@@ -241,9 +240,7 @@ const ProfilePage = () => {
         </label>
       </div>
 
-      {/* Main content – adjust negative margin to match taller banner */}
       <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pb-[96px] md:pb-16">
-        {/* Avatar + header – increased negative margin to overlap more */}
         <div className="relative z-10 -mt-24 sm:-mt-28 mb-6 pb-6 border-b border-border">
           <div className="inline-flex flex-col sm:flex-row items-start sm:items-end gap-4 px-4 py-3 rounded-2xl bg-bg-base/70 backdrop-blur-sm border border-border/70 shadow-[0_8px_22px_rgba(0,0,0,0.28)]">
             <div className="relative">
@@ -263,15 +260,12 @@ const ProfilePage = () => {
             </div>
 
             <div className="min-w-0 sm:mb-2">
-              {/* Reduced username font size */}
               <h1 className="font-display text-xl sm:text-2xl font-extrabold text-text-primary mb-0.5 [text-shadow:0_2px_14px_rgba(0,0,0,0.65)]">
                 {profile.fullName || profile.username}
               </h1>
               <p className="text-sm text-text-muted mb-2 [text-shadow:0_1px_10px_rgba(0,0,0,0.55)]">@{profile.username}</p>
               <div className="flex flex-wrap gap-2">
-                {user?.role === 'CREATOR' && (
-                  <Badge text="Creator" type="pro" />
-                )}
+                {user?.role === 'CREATOR' && <Badge text="Creator" type="pro" />}
                 {user?.role === 'VIEWER' && (
                   <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-bg-el border border-border text-text-secondary text-xs font-medium">
                     <Eye size={12} /> Viewer
@@ -288,7 +282,7 @@ const ProfilePage = () => {
           </div>
         </div>
 
-        {/* Form sections */}
+        {/* Form sections – unchanged */}
         <div className="w-full mb-10">
           <div className="bg-bg-card border border-border rounded-2xl p-6 mb-5">
             <div className="flex items-center justify-between mb-5">
@@ -299,6 +293,7 @@ const ProfilePage = () => {
               </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Fields remain the same */}
               <div>
                 <label className="block text-sm font-semibold text-text-secondary mb-1.5">Full Name (Display Name)</label>
                 <input value={profile.fullName} onChange={e => upd('fullName', e.target.value)} className={inp} placeholder="Your display name" />

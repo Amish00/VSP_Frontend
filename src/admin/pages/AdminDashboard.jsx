@@ -9,6 +9,16 @@ import { adminRevenueApi } from '../../creator/api/creatorApi';
 import { FiEye, FiUsers, FiFilm, FiClock } from 'react-icons/fi';
 import { FaMoneyBillWave, FaRegEye } from "react-icons/fa6";
 
+// ---- helper: format large numbers with K, M, B ----
+const formatNumber = (num) => {
+  if (num == null) return '0';
+  const n = Number(num);
+  if (n < 1000) return n.toString();
+  if (n < 1_000_000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  if (n < 1_000_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+  return (n / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B';
+};
+
 const AdminDashboard = () => {
     const [stats, setStats] = useState({
         totalViews: 0,
@@ -16,7 +26,9 @@ const AdminDashboard = () => {
         totalVideos: 0,
         totalRevenue: 0,
         totalCreators: 0,
-        pendingVideos: 0
+        pendingVideos: 0,
+        newUsersThisMonth: 0,
+        newVideosThisMonth: 0
     });
     const [monthlyRevenue, setMonthlyRevenue] = useState([]);
     const [growthData, setGrowthData] = useState([]);
@@ -68,18 +80,26 @@ const AdminDashboard = () => {
                 const monthlyData = revenueRes.data || [];
                 const totalRevenue = monthlyData.reduce((sum, m) => sum + (m.total || 0), 0);
 
+                // ---- compute new users & new videos for current month ----
+                const now = new Date();
+                const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                const userCounts = groupByMonth(users, 'joined');
+                const videoCounts = groupByMonth(allVideosContent, 'publishedAt');
+                const newUsersThisMonth = userCounts[currentMonthKey] || 0;
+                const newVideosThisMonth = videoCounts[currentMonthKey] || 0;
+
                 setStats({
                     totalViews,
                     totalUsers,
                     totalVideos,
                     totalRevenue,
                     totalCreators: creators,
-                    pendingVideos
+                    pendingVideos,
+                    newUsersThisMonth,
+                    newVideosThisMonth
                 });
                 setMonthlyRevenue(monthlyData);
 
-                const userCounts = groupByMonth(users, 'createdAt');
-                const videoCounts = groupByMonth(allVideosContent, 'publishedAt');
                 const growth = buildGrowthData(userCounts, videoCounts);
                 setGrowthData(growth);
             } catch (err) {
@@ -92,42 +112,56 @@ const AdminDashboard = () => {
         fetchDashboardData();
     }, []);
 
+    // ---- define all stat cards with formatted numbers ----
     const statCards = [
         {
             icon: <FiEye color="#60A5FA" size={24} />,
             label: 'Total Views',
-            value: stats.totalViews.toLocaleString(),
+            value: formatNumber(stats.totalViews),
             color: '#60A5FA'
         },
         {
             icon: <FiUsers color="#10B981" size={24} />,
             label: 'Total Users',
-            value: stats.totalUsers.toLocaleString(),
+            value: formatNumber(stats.totalUsers),
             color: '#10B981'
         },
         {
             icon: <FiFilm color="#F59E0B" size={24} />,
             label: 'Total Videos',
-            value: stats.totalVideos.toLocaleString(),
+            value: formatNumber(stats.totalVideos),
             color: '#F59E0B'
         },
         {
             icon: <FaMoneyBillWave color="#EF4444" size={24} />,
             label: 'Total Revenue',
-            value: `Rs.${stats.totalRevenue.toLocaleString()}`,
+            value: `Rs. ${formatNumber(stats.totalRevenue)}`,
             color: '#EF4444'
         },
         {
             icon: <FaRegEye color="#0EA5E9" size={24} />,
             label: 'Creators',
-            value: stats.totalCreators.toLocaleString(),
+            value: formatNumber(stats.totalCreators),
             color: '#0EA5E9'
         },
         {
             icon: <FiClock color="#F59E0B" size={24} />,
             label: 'Pending Review',
-            value: stats.pendingVideos.toLocaleString(),
+            value: formatNumber(stats.pendingVideos),
             color: '#F59E0B'
+        },
+        // ---- two new stats ----
+        {
+            icon: <FiUsers color="#8B5CF6" size={24} />,
+            label: 'New Users (this month)',
+            value: formatNumber(stats.newUsersThisMonth),
+            color: '#8B5CF6'
+        },
+        {
+            icon: <FiFilm color="#EC4899" size={24} />,
+            label: 'New Videos (this month)',
+            value: formatNumber(stats.newVideosThisMonth),
+            color: '#EC4899'
         }
     ];
 
@@ -142,10 +176,10 @@ const AdminDashboard = () => {
                 </div>
             </div>
 
-            {/* Stat Cards – now without extra padding, relies on layout */}
+            {/* Stat Cards – now 4 per row on large screens */}
             {loading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-                    {[...Array(6)].map((_, i) => (
+                    {[...Array(8)].map((_, i) => (
                         <div key={i} className="h-28 bg-bg-card border border-border rounded-2xl animate-pulse" />
                     ))}
                 </div>

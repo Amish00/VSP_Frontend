@@ -11,10 +11,21 @@ import {
   CreditCard,
   Banknote,
   Building,
+  Clock,
 } from 'lucide-react';
 import { FaMoneyBillWave } from "react-icons/fa6";
-
 import { useNotification } from '../../hooks/useNotification';
+import StatCard from '../components/ui/StatCard'; // ← imported
+
+// ---- helper: format large numbers with K, M, B ----
+const formatNumber = (num) => {
+  if (num == null) return '0';
+  const n = Number(num);
+  if (n < 1000) return n.toString();
+  if (n < 1_000_000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  if (n < 1_000_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+  return (n / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B';
+};
 
 // ----- Helper: method display name & meta (icons + colors) -----
 const getMethodDisplayName = (method) => {
@@ -45,12 +56,6 @@ const getMethodMeta = (method) => {
     return { icon: Banknote, color: 'text-sky-500' };
   }
   return { icon: Building, color: 'text-gray-400' };
-};
-
-// ----- Helper: format date for API -----
-const formatDate = (dateStr) => {
-  if (!dateStr) return null;
-  return dateStr; // already YYYY-MM-DD from input
 };
 
 const Report = () => {
@@ -97,7 +102,6 @@ const Report = () => {
   const fetchEarningsReport = async () => {
     setLoading(true);
     try {
-      // Assuming API accepts startDate and endDate as query params
       const res = await adminRevenueApi.getAllCreatorEarnings?.(startDate, endDate);
       setEarningsData(res?.data || []);
     } catch (err) {
@@ -112,7 +116,6 @@ const Report = () => {
   const fetchPayoutsReport = async () => {
     setLoading(true);
     try {
-      // Assuming API accepts startDate and endDate
       const res = await adminRevenueApi.getPendingPayouts(startDate, endDate);
       setPayoutsData(res.data || []);
     } catch (err) {
@@ -196,21 +199,15 @@ const Report = () => {
   };
 
   const renderEarningsReport = () => {
-    // Filter earnings data based on date range (client-side fallback if API doesn't filter)
     const filtered = earningsData.filter(item => {
       if (!startDate || !endDate) return true;
-      const itemDate = item.monthYear || item.date; // adjust field name
+      const itemDate = item.monthYear || item.date;
       if (!itemDate) return true;
       return itemDate >= startDate && itemDate <= endDate;
     });
 
     return (
       <div>
-        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-6">
-          <p className="text-yellow-400 text-sm">
-            Note: This report aggregates all creators' monthly earnings. You can view individual creator earnings in the Creator Management page.
-          </p>
-        </div>
         <div className="flex justify-end mb-4">
           <button
             onClick={() => exportToCSV(filtered, 'creator_earnings_report')}
@@ -257,7 +254,6 @@ const Report = () => {
 
   const renderPayoutsReport = () => {
     const payoutRows = normalizeList(payoutsData);
-    // Client-side date filtering (if API doesn't support)
     const filteredPayouts = payoutRows.filter(p => {
       if (!startDate || !endDate) return true;
       const date = new Date(p.requestedAt);
@@ -267,25 +263,27 @@ const Report = () => {
     });
 
     const pendingRows = filteredPayouts.filter(p => p.status === 'PENDING');
+    const pendingCount = pendingRows.length;
+    const pendingAmount = pendingRows.reduce((sum, p) => sum + (p.amount || 0), 0);
 
     return (
       <div>
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center gap-2 text-text-secondary mb-1">
-              <Users size={16} /> Pending Requests
-            </div>
-            <div className="text-2xl font-bold text-text-primary">{pendingRows.length}</div>
-          </div>
-          <div className="bg-bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center gap-2 text-text-secondary mb-1">
-              <FaMoneyBillWave size={16} /> Total Pending Amount
-            </div>
-            <div className="text-2xl font-bold text-text-primary">
-              Rs. {pendingRows.reduce((sum, p) => sum + (p.amount || 0), 0).toFixed(2)}
-            </div>
-          </div>
+        {/* ---- Replace custom divs with StatCard components ---- */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 mb-6">
+          <StatCard
+            icon={<Clock size={24} color="#F59E0B" />}
+            label="Pending Requests"
+            value={formatNumber(pendingCount)}
+            color="#F59E0B"
+          />
+          <StatCard
+            icon={<FaMoneyBillWave size={24} color="#F59E0B" />}
+            label="Total Pending Amount"
+            value={`Rs. ${formatNumber(pendingAmount)}`}
+            color="#F59E0B"
+          />
         </div>
+
         <div className="flex justify-end mb-4">
           <button
             onClick={() => exportToCSV(filteredPayouts, 'payout_requests_report')}

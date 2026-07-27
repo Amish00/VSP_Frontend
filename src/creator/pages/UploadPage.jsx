@@ -29,7 +29,7 @@ const Toggle = ({ value, onChange, label, desc }) => (
   </div>
 );
 
-const CATS = ['Technology','Design','Music','Gaming','Lifestyle','Business','Education','Sports','Finance','Comedy','Travel','Food'];
+const CATS = ['Technology','Design','Music','Gaming','Movies','Business','Education','Sports','Finance','Comedy','Travel','Food'];
 const LANGUAGES = ['English','Nepali','Hindi','Maithili','Bhojpuri','Newari','Tamang'];
 
 const UploadPage = () => {
