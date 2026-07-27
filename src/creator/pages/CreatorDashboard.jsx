@@ -127,10 +127,10 @@ const DashboardPage = ({ user }) => {
   };
 
   const STATS = [
-    { icon: <FiEye color="#60A5FA" />, label: 'Total Views', value: formatNumber(stats.totalViews), change: '+18% this month', color: '#60A5FA' },
-    { icon: <FaMoneyBillWave color="#10B981" />, label: 'Earnings', value: `Rs.${stats.totalEarnings.toLocaleString()}`, change: '+$180 this month', color: '#10B981' },
-    { icon: <FiUsers color="#F59E0B" />, label: 'Subscribers', value: formatNumber(stats.subscriberCount), change: '+340 this month', color: '#F59E0B' },
-    { icon: <FaHeart color="#EF4444" />, label: 'Total Likes', value: formatNumber(stats.totalLikes), change: '+2.1K this month', color: '#EF4444' },
+    { icon: <FiEye color="#60A5FA" />, label: 'Total Views', value: formatNumber(stats.totalViews), color: '#60A5FA' },
+    { icon: <FaMoneyBillWave color="#10B981" />, label: 'Earnings', value: `Rs.${stats.totalEarnings.toLocaleString()}`,  color: '#10B981' },
+    { icon: <FiUsers color="#F59E0B" />, label: 'Subscribers', value: formatNumber(stats.subscriberCount),  color: '#F59E0B' },
+    { icon: <FaHeart color="#EF4444" />, label: 'Total Likes', value: formatNumber(stats.totalLikes), color: '#EF4444' },
   ];
 
   return (

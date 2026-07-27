@@ -1,10 +1,10 @@
 // src/pages/SubscriptionsPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Lock } from 'lucide-react';
 import VideoGrid from '../components/VideoGrid';
 import ShortsCard from '../components/shorts/ShortsCard';
 import api from '../api/Api';
-import { Lock } from 'lucide-react';
 import ChannelStrip from '../components/video/ChannelStrip';
 
 const formatNumber = (num) => {
@@ -91,8 +91,12 @@ const SubscriptionsPage = () => {
     return (
       <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pt-[68px] md:pt-[92px] pb-[96px] md:pb-16">
         <h1 className="text-3xl font-bold mb-6">Subscriptions</h1>
-        <div className="text-center py-12">
-          <p className="text-text-secondary">Please log in to see your subscribed channels and videos.</p>
+        {/* Card‑style sign‑in prompt with background and extra height */}
+        <div className="bg-bg-el border border-border rounded-3xl p-10 sm:p-12 flex flex-col items-center justify-center text-center min-h-[340px] py-16">
+          <Lock className="w-10 h-10 text-text-muted mb-4" />
+          <p className="text-text-secondary text-base sm:text-lg">
+            Please log in to see your subscribed channels and videos.
+          </p>
         </div>
       </div>
     );
@@ -120,11 +124,7 @@ const SubscriptionsPage = () => {
 
       <ChannelStrip onChannelClick={handleChannelClick} />
 
-      {subscribedVideos.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-text-secondary">No videos from subscribed channels yet.</p>
-        </div>
-      )}
+      {/* Removed the duplicate "No videos from subscribed channels yet." message */}
 
       {videos.length === 0 && shorts.length === 0 ? null : (
         <div className="mb-10">

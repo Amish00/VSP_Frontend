@@ -480,11 +480,98 @@ function StickersPanel() {
   )
 }
 
-// ---------- Audio Panel ----------
+// ---------- Audio Panel (with audio generation) ----------
 function AudioPanel() {
   const { tracks, addClip, addTrack } = useStore()
   const fileRef = useRef()
   const [tab, setTab] = useState('upload')
+
+  // Helper: generate AudioBuffer for music or SFX
+  const generateAudioBuffer = async (type, params) => {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const sampleRate = ctx.sampleRate
+    let duration = params.duration || 2
+    let buffer = ctx.createBuffer(2, duration * sampleRate, sampleRate)
+    let left = buffer.getChannelData(0)
+    let right = buffer.getChannelData(1)
+
+    if (type === 'sfx') {
+      // Simple tone
+      const freq = params.freq || 440
+      const amp = 0.3
+      for (let i = 0; i < left.length; i++) {
+        const t = i / sampleRate
+        const env = t < 0.01 ? t / 0.01 : (t < duration - 0.01 ? 1 : (duration - t) / 0.01)
+        const val = amp * env * Math.sin(2 * Math.PI * freq * t)
+        left[i] = val
+        right[i] = val
+      }
+    } else if (type === 'music') {
+      // Simple chord progression (C - G - Am - F)
+      const chords = [
+        [261.63, 329.63, 392.00], // C
+        [392.00, 493.88, 587.33], // G
+        [440.00, 523.25, 659.25], // A
+        [349.23, 440.00, 523.25], // F
+      ]
+      const chordDuration = duration / chords.length
+      for (let i = 0; i < left.length; i++) {
+        const t = i / sampleRate
+        const chordIdx = Math.min(Math.floor(t / chordDuration), chords.length - 1)
+        const chord = chords[chordIdx]
+        let sum = 0
+        for (const f of chord) {
+          sum += Math.sin(2 * Math.PI * f * t)
+        }
+        const env = t < 0.05 ? t / 0.05 : (t > duration - 0.05 ? (duration - t) / 0.05 : 1)
+        const val = 0.15 * env * sum / chord.length
+        left[i] = val
+        right[i] = val
+      }
+    }
+
+    // Close context to free resources
+    ctx.close()
+    return buffer
+  }
+
+  // Helper: convert AudioBuffer to WAV blob URL
+  const audioBufferToWav = (buffer) => {
+    const numChannels = buffer.numberOfChannels
+    const sampleRate = buffer.sampleRate
+    const length = buffer.length * numChannels * 2
+    const dataView = new DataView(new ArrayBuffer(44 + length))
+    // Write WAV header
+    const writeString = (offset, string) => {
+      for (let i = 0; i < string.length; i++) {
+        dataView.setUint8(offset + i, string.charCodeAt(i))
+      }
+    }
+    writeString(0, 'RIFF')
+    dataView.setUint32(4, 36 + length, true)
+    writeString(8, 'WAVE')
+    writeString(12, 'fmt ')
+    dataView.setUint32(16, 16, true)
+    dataView.setUint16(20, 1, true)
+    dataView.setUint16(22, numChannels, true)
+    dataView.setUint32(24, sampleRate, true)
+    dataView.setUint32(28, sampleRate * numChannels * 2, true)
+    dataView.setUint16(32, numChannels * 2, true)
+    dataView.setUint16(34, 16, true)
+    writeString(36, 'data')
+    dataView.setUint32(40, length, true)
+
+    const offset = 44
+    for (let i = 0; i < buffer.length; i++) {
+      for (let ch = 0; ch < numChannels; ch++) {
+        const sample = buffer.getChannelData(ch)[i] * 0x7fff
+        dataView.setInt16(offset + (i * numChannels + ch) * 2, sample, true)
+      }
+    }
+
+    const blob = new Blob([dataView], { type: 'audio/wav' })
+    return URL.createObjectURL(blob)
+  }
 
   const placeAudio = (name, src, dur) => {
     let t = tracks.find(tr => tr.type === 'audio')
@@ -502,30 +589,33 @@ function AudioPanel() {
     }
   }
 
-  const MUSIC = [
-    { name: 'Upbeat Pop', bpm: 128, genre: 'Pop', color: '#2563eb', dur: 180 },
-    { name: 'Lo-Fi Chill', bpm: 75, genre: 'Lo-Fi', color: '#16a34a', dur: 180 },
-    { name: 'Cinematic', bpm: 72, genre: 'Ambient', color: '#7c3aed', dur: 240 },
-    { name: 'Hip Hop', bpm: 90, genre: 'Hip Hop', color: '#d97706', dur: 150 },
-    { name: 'Rock', bpm: 140, genre: 'Rock', color: '#dc2626', dur: 200 },
-    { name: 'Jazz', bpm: 110, genre: 'Jazz', color: '#0891b2', dur: 220 },
+  // Music presets (now generate audio)
+  const MUSIC_PRESETS = [
+    { name: 'Upbeat Pop', genre: 'Pop', bpm: 128, dur: 5 },
+    { name: 'Lo-Fi Chill', genre: 'Lo-Fi', bpm: 75, dur: 5 },
+    { name: 'Cinematic', genre: 'Ambient', bpm: 72, dur: 6 },
+    { name: 'Hip Hop', genre: 'Hip Hop', bpm: 90, dur: 5 },
+    { name: 'Rock', genre: 'Rock', bpm: 140, dur: 5 },
+    { name: 'Jazz', genre: 'Jazz', bpm: 110, dur: 5 },
   ]
 
-  const SFX = [
-    { name: 'Beep', freq: 880, dur: 0.15 }, { name: 'Click', freq: 1200, dur: 0.05 },
-    { name: 'Pop', freq: 500, dur: 0.1 }, { name: 'Swoosh', freq: 300, dur: 0.3 },
-    { name: 'Chime', freq: 1760, dur: 0.4 }, { name: 'Deep Hit', freq: 60, dur: 0.5 },
+  const SFX_PRESETS = [
+    { name: 'Beep', freq: 880, dur: 0.15 },
+    { name: 'Click', freq: 1200, dur: 0.05 },
+    { name: 'Pop', freq: 500, dur: 0.1 },
+    { name: 'Swoosh', freq: 300, dur: 0.3 },
+    { name: 'Chime', freq: 1760, dur: 0.4 },
+    { name: 'Deep Hit', freq: 60, dur: 0.5 },
   ]
 
-  const playSfx = async sfx => {
+  const generateAndPlace = async (type, params) => {
     try {
-      const { default: Tone } = await import('https://cdn.skypack.dev/tone')
-      await Tone.start()
-      const s = new Tone.Synth().toDestination()
-      s.triggerAttackRelease(sfx.freq, sfx.dur)
-      setTimeout(() => s.dispose(), 2000)
-    } catch { /* tone not available */ }
-    placeAudio(sfx.name, null, sfx.dur + 0.3)
+      const buffer = await generateAudioBuffer(type, params)
+      const url = audioBufferToWav(buffer)
+      placeAudio(params.name, url, params.dur || buffer.duration)
+    } catch (err) {
+      console.error('Audio generation failed', err)
+    }
   }
 
   return (
@@ -559,15 +649,15 @@ function AudioPanel() {
       )}
       {tab === 'music' && (
         <>
-          {MUSIC.map((m, i) => (
+          {MUSIC_PRESETS.map((m, i) => (
             <div
               key={i}
-              onClick={() => placeAudio(m.name, null, m.dur)}
+              onClick={() => generateAndPlace('music', m)}
               style={{ ...S.card, display: 'flex', alignItems: 'center', gap: 9, marginBottom: 4 }}
               onMouseEnter={e => Object.assign(e.currentTarget.style, S.cardHover)}
               onMouseLeave={e => Object.assign(e.currentTarget.style, S.card)}
             >
-              <div style={{ width: 28, height: 28, borderRadius: 6, background: m.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>♪</div>
+              <div style={{ width: 28, height: 28, borderRadius: 6, background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13, color: '#fff' }}>♪</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 11, color: videoTheme.textSecondary, fontWeight: 500 }}>{m.name}</div>
                 <div style={{ fontSize: 9, color: videoTheme.textMuted, marginTop: 1 }}>{m.genre} · {m.bpm}bpm</div>
@@ -582,10 +672,10 @@ function AudioPanel() {
       )}
       {tab === 'sfx' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-          {SFX.map((s, i) => (
+          {SFX_PRESETS.map((s, i) => (
             <div
               key={i}
-              onClick={() => playSfx(s)}
+              onClick={() => generateAndPlace('sfx', s)}
               style={{ ...S.card, textAlign: 'center', padding: 10 }}
               onMouseEnter={e => Object.assign(e.currentTarget.style, S.cardHover)}
               onMouseLeave={e => Object.assign(e.currentTarget.style, S.card)}

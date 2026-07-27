@@ -1,4 +1,3 @@
-// src/pages/TrendingPage.jsx
 import React, { useState, useEffect } from 'react';
 import { Lock, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -193,22 +192,24 @@ const TrendingPage = () => {
         )}
       </div>
 
-      {/* Paid Videos Section */}
+      {/* Paid Videos Section - updated to match Home layout */}
       <div>
-        <div className="flex justify-between items-center mb-2">
-          <h1 className="text-3xl font-bold">Trending Paid</h1>
-          <a
-            href="/all-videos?type=paid"
-            className="text-blue-500 hover:text-blue-600 flex items-center gap-1 text-sm font-semibold"
-          >
-            View all paid <ArrowRight size={16} />
-          </a>
+        <div className="flex flex-wrap items-center justify-between mb-2 mt-4 gap-2">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Trending Paid</h1>
+          <div className="flex items-center gap-3">
+            {!user && (
+              <span className="hidden sm:flex items-center gap-1 text-sm text-gray-500">
+                <Lock size={13} /> Sign in to watch
+              </span>
+            )}
+            <a
+              href="/all-videos?type=paid"
+              className="text-xs sm:text-sm text-blue-500 hover:text-blue-400 flex items-center gap-1 transition-colors"
+            >
+              View more <ArrowRight size={16} />
+            </a>
+          </div>
         </div>
-        {!user && (
-          <p className="flex items-center gap-1.5 text-sm text-text-muted mb-3">
-            <Lock size={13} /> Log in to watch paid videos
-          </p>
-        )}
         {paidVideos.length === 0 ? (
           <div className="text-center py-8 text-text-secondary">No paid videos available.</div>
         ) : (

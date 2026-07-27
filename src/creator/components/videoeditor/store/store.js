@@ -1,4 +1,3 @@
-// src/components/videoeditor/store/store.js
 import { create } from 'zustand'
 
 let seq = 0
@@ -44,8 +43,6 @@ export const useStore = create((set, get) => ({
   activePanel: 'media',
   selectedClipId: null,
   activeTool: 'select',
-
-  // ---------- NEW: preview zoom ----------
   previewZoom: 1,
 
   setProjectName: n => set({ projectName: n }),
@@ -69,7 +66,6 @@ export const useStore = create((set, get) => ({
   selectClip: id => set({ selectedClipId: id }),
   clearSelection: () => set({ selectedClipId: null }),
 
-  // ---------- Preview zoom actions ----------
   setPreviewZoom: (zoom) => set({ previewZoom: Math.max(0.1, Math.min(3, zoom)) }),
   resetPreviewZoom: () => set({ previewZoom: 1 }),
 
@@ -97,6 +93,8 @@ export const useStore = create((set, get) => ({
     if (startTime === undefined) {
       startTime = track.clips.reduce((max, c) => Math.max(max, c.start + c.duration), 0)
     }
+    // FIX: store source duration for media clips
+    const srcDuration = data.srcDuration !== undefined ? data.srcDuration : data.duration
     const clip = {
       id: id(),
       trackId,
@@ -105,6 +103,7 @@ export const useStore = create((set, get) => ({
       src: data.src || null,
       start: startTime,
       duration: data.duration || 5,
+      srcDuration: srcDuration, // <-- new field
       offset: 0,
       volume: 1,
       muted: false,
@@ -163,13 +162,24 @@ export const useStore = create((set, get) => ({
     if (!c) return
     const rel = time - c.start
     if (rel <= 0.05 || rel >= c.duration - 0.05) return
+
+    // FIX: ensure offset doesn't exceed source duration
+    const srcDur = c.srcDuration || c.duration
+    const newOffset = Math.min(c.offset + rel, srcDur)
+    const newDuration = Math.min(c.duration - rel, srcDur - newOffset)
+    if (newDuration <= 0.05) return
+
+    // Update original clip (first part)
     get().updateClip(clipId, { duration: rel })
+
+    // Add second part
     get().addClip(c.trackId, {
       ...c,
       id: undefined,
       start: c.start + rel,
-      duration: c.duration - rel,
-      offset: c.offset + rel
+      duration: newDuration,
+      offset: newOffset,
+      srcDuration: srcDur,
     })
     get().recomputeDuration()
   },

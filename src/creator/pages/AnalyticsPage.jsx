@@ -45,10 +45,10 @@ const AnalyticsPage = () => {
   }, [currentDays]);
 
   const stats = [
-    { icon: <FiEye color="#60A5FA" />, label: 'Views', value: summary.views.toLocaleString(), change: '+12%', color: '#60A5FA' },
-    { icon: <FiClock color="#10B981" />, label: 'Watch time', value: `${summary.watchTimeHours.toLocaleString()} hrs`, change: '+8%', color: '#10B981' },
-    { icon: <FiUsers color="#F59E0B" />, label: 'New subs', value: `+${summary.newSubscribers.toLocaleString()}`, change: '+22%', color: '#F59E0B' },
-    { icon: <FiTrendingUp color="#0EA5E9" />, label: 'CTR', value: `${summary.ctr}%`, change: '+0.3%', color: '#0EA5E9' },
+    { icon: <FiEye color="#60A5FA" />, label: 'Views', value: summary.views.toLocaleString(), color: '#60A5FA' },
+    { icon: <FiClock color="#10B981" />, label: 'Watch time', value: `${summary.watchTimeHours.toLocaleString()} hrs`, color: '#10B981' },
+    { icon: <FiUsers color="#F59E0B" />, label: 'New subs', value: `+${summary.newSubscribers.toLocaleString()}`, color: '#F59E0B' },
+    { icon: <FiTrendingUp color="#0EA5E9" />, label: 'CTR', value: `${summary.ctr}%`, color: '#0EA5E9' },
   ];
 
   // Custom tooltip

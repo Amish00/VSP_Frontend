@@ -78,28 +78,43 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
   };
   const currentActiveNav = activeNav || getActiveNavFromPath();
 
+  // Fetch user data – extracted so we can call it again
+  const fetchUserData = async () => {
+    const token = sessionStorage.getItem('access_token');
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      navigate('/');
+      return;
+    }
+    try {
+      const response = await api.get('/users/me');
+      setUser(response.data);
+    } catch (err) {
+      console.error('Failed to fetch user:', err);
+      sessionStorage.removeItem('access_token');
+      sessionStorage.removeItem('refresh_token');
+      navigate('/signin');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch + listen for profile updates
   useEffect(() => {
-    const fetchUser = async () => {
-      const token = sessionStorage.getItem('access_token');
-      if (!token) {
-        navigate('/');
-        return;
-      }
-      try {
-        const response = await api.get('/users/me');
-        setUser(response.data);
-      } catch (err) {
-        console.error('Failed to fetch user:', err);
-        sessionStorage.removeItem('access_token');
-        sessionStorage.removeItem('refresh_token');
-        navigate('/signin');
-      } finally {
-        setLoading(false);
-      }
+    fetchUserData();
+
+    const handleProfileUpdate = () => {
+      fetchUserData();
     };
-    fetchUser();
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
   }, [navigate]);
 
+  // Notification functions (unchanged)
   const fetchUnreadCount = async () => {
     if (!user) return;
     try {
@@ -240,7 +255,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
           Home
         </button>
 
-        {/* Notifications */}
+        {/* Notifications – unchanged */}
         <div className="relative">
           <button
             onClick={() => {
@@ -323,7 +338,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
           )}
         </div>
 
-        {/* Profile dropdown */}
+        {/* Profile dropdown – unchanged */}
         <div className="relative">
           <button
             onClick={() => {
@@ -395,7 +410,6 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
                     YouTube
                   </button>
 
-                  {/* ViraShare with icon – opens modal */}
                   <button
                     role="menuitem"
                     onClick={() => {
@@ -436,7 +450,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
         </div>
       </header>
 
-      {/* Mobile drawer */}
+      {/* Mobile drawer – only navigation */}
       {drawerOpen && (
         <>
           <div className="fixed inset-0 z-[149] bg-black/60 md:hidden" onClick={() => setDrawerOpen(false)} />
@@ -485,7 +499,7 @@ const CreatorNav = ({ onLogout, onGoHome, onNavSelect, activeNav }) => {
         </>
       )}
 
-      {/* ViraShare Modal – now uses Film icon in title */}
+      {/* ViraShare Modal */}
       <Modal
         open={viraModalOpen}
         onClose={() => setViraModalOpen(false)}

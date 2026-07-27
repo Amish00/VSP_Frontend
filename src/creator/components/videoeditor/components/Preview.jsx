@@ -1,10 +1,14 @@
-// src/components/videoeditor/components/Preview.js
 import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { useStore } from '../store/store'
-import { transitionCSS, EFFECTS } from '../utils/constants'
+import { transitionCSS, EFFECTS, SHAPES } from '../utils/constants'
 import { videoTheme } from '../theme'
 
-// ---------- Helper: transition styles ----------
+// Helper: get filter CSS from EFFECTS
+const getFilterCss = (filterId) => {
+  const found = EFFECTS.find(e => e.id === filterId)
+  return found?.css || 'none'
+}
+
 function getTransStyle(clip, currentTime) {
   const rel = currentTime - clip.start
   const rem = clip.duration - rel
@@ -15,27 +19,29 @@ function getTransStyle(clip, currentTime) {
   }
   if (clip.transOut && rem < clip.transOutDur) {
     const p = rem / clip.transOutDur
-    Object.assign(styles, transitionCSS(clip.transOut, 1 - p, 'in'))
+    const outStyle = transitionCSS(clip.transOut, 1 - p, 'in')
+    styles.opacity = (styles.opacity ?? 1) * (outStyle.opacity ?? 1)
+    if (outStyle.transform) styles.transform = outStyle.transform
   }
   return styles
 }
 
 // ---------- Video Element ----------
-function VideoEl({ clip, stageW, stageH, currentTime, playing, volume }) {
+function VideoEl({ clip, stageW, stageH, currentTime, playing, volume, onSelect }) {
   const ref = useRef()
   useEffect(() => {
     const v = ref.current
     if (!v) return
     const rel = currentTime - clip.start + (clip.offset || 0)
     if (Math.abs(v.currentTime - rel) > 0.25) v.currentTime = Math.max(0, rel)
-  }, [currentTime])
+  }, [currentTime, clip])
   useEffect(() => {
     const v = ref.current
     if (!v) return
     const active = currentTime >= clip.start && currentTime < clip.start + clip.duration
     if (playing && active) { v.play().catch(() => {}) }
     else { v.pause() }
-  }, [playing, currentTime])
+  }, [playing, currentTime, clip])
   useEffect(() => {
     const v = ref.current
     if (!v) return
@@ -43,19 +49,41 @@ function VideoEl({ clip, stageW, stageH, currentTime, playing, volume }) {
     v.muted = clip.muted ?? false
     if (clip.speed) v.playbackRate = clip.speed
   }, [clip.volume, clip.muted, clip.speed, volume])
+
+  const filterCss = getFilterCss(clip.filter)
   const ts = getTransStyle(clip, currentTime)
+
+  // FIX: select clip on click
+  const handleClick = (e) => {
+    e.stopPropagation()
+    onSelect()
+  }
+
   return (
-    <div style={{ position: 'absolute', inset: 0, opacity: clip.opacity ?? 1, filter: clip.filter || 'none', ...ts, overflow: 'hidden' }}>
+    <div
+      style={{ position: 'absolute', inset: 0, opacity: clip.opacity ?? 1, filter: filterCss, ...ts, overflow: 'hidden', cursor: 'pointer' }}
+      onClick={handleClick}
+    >
       <video ref={ref} src={clip.src} playsInline preload="auto" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
     </div>
   )
 }
 
 // ---------- Image Element ----------
-function ImageEl({ clip, currentTime }) {
+function ImageEl({ clip, currentTime, onSelect }) {
+  const filterCss = getFilterCss(clip.filter)
   const ts = getTransStyle(clip, currentTime)
+
+  const handleClick = (e) => {
+    e.stopPropagation()
+    onSelect()
+  }
+
   return (
-    <div style={{ position: 'absolute', inset: 0, opacity: clip.opacity ?? 1, filter: clip.filter || 'none', ...ts }}>
+    <div
+      style={{ position: 'absolute', inset: 0, opacity: clip.opacity ?? 1, filter: filterCss, ...ts, cursor: 'pointer' }}
+      onClick={handleClick}
+    >
       <img src={clip.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
     </div>
   )
@@ -69,7 +97,7 @@ function AudioEl({ clip, currentTime, playing, volume }) {
     if (!a || !clip.src) return
     const rel = currentTime - clip.start + (clip.offset || 0)
     if (Math.abs(a.currentTime - rel) > 0.25) a.currentTime = Math.max(0, rel)
-  }, [currentTime])
+  }, [currentTime, clip])
   useEffect(() => {
     const a = ref.current
     if (!a || !clip.src) return
@@ -86,25 +114,7 @@ function AudioEl({ clip, currentTime, playing, volume }) {
   return <audio ref={ref} src={clip.src} preload="auto" style={{ display: 'none' }} />
 }
 
-// ---------- Shape Paths (for overlay shapes) ----------
-const SHAPE_PATHS = {
-  rect: 'M10,10 L90,10 L90,90 L10,90 Z',
-  circle: 'M50,5 A45,45 0 1,1 49.99,5 Z',
-  triangle: 'M50,5 L95,95 L5,95 Z',
-  diamond: 'M50,2 L98,50 L50,98 L2,50 Z',
-  star: 'M50,5 L61,35 L95,35 L68,57 L79,91 L50,70 L21,91 L32,57 L5,35 L39,35 Z',
-  heart: 'M50,75 C25,55 5,42 5,28 C5,15 15,5 28,5 C36,5 43,9 50,17 C57,9 64,5 72,5 C85,5 95,15 95,28 C95,42 75,55 50,75Z',
-  pentagon: 'M50,5 L93,35 L77,92 L23,92 L7,35 Z',
-  hexagon: 'M25,8 L75,8 L97,50 L75,92 L25,92 L3,50 Z',
-  octagon: 'M30,3 L70,3 L97,30 L97,70 L70,97 L30,97 L3,70 L3,30 Z',
-  'arrow-r': 'M10,30 L58,30 L58,15 L92,50 L58,85 L58,70 L10,70 Z',
-  'arrow-l': 'M90,30 L42,30 L42,15 L8,50 L42,85 L42,70 L90,70 Z',
-  cloud: 'M30,77 L75,77 C88,77 95,68 95,57 C95,47 88,39 78,38 C76,24 65,15 51,15 C37,15 25,24 22,37 C12,38 5,46 5,56 C5,69 15,77 30,77 Z',
-  speech: 'M14,15 L86,15 C92,15 96,19 96,25 L96,63 C96,69 92,73 86,73 L44,73 L25,92 L27,73 L14,73 C8,73 4,69 4,63 L4,25 C4,19 8,15 14,15 Z',
-  bolt: 'M58,2 L20,55 L42,55 L32,98 L80,40 L58,40 Z',
-}
-
-// ---------- Overlay Element (text, shape, sticker) ----------
+// ---------- Overlay Element ----------
 function OverlayEl({ clip, stageW, stageH, currentTime, selected, onSelect, onUpdate }) {
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(clip.text || '')
@@ -232,10 +242,12 @@ function OverlayEl({ clip, stageW, stageH, currentTime, selected, onSelect, onUp
     }
   } else if (clip.type === 'shape') {
     const size = Math.min(w, h)
+    const shapeDef = SHAPES.find(s => s.id === clip.shapePath)
+    const pathData = shapeDef?.d || SHAPES[0].d
     content = (
       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <svg viewBox="0 0 100 100" width={size} height={size} preserveAspectRatio="xMidYMid meet">
-          <path d={SHAPE_PATHS[clip.shapePath || 'rect'] || SHAPE_PATHS.rect} fill={clip.shapeColor || '#3b82f6'} />
+          <path d={pathData} fill={clip.shapeColor || '#3b82f6'} />
         </svg>
       </div>
     )
@@ -292,12 +304,11 @@ const Preview = () => {
   const containerRef = useRef()
   const [stage, setStage] = useState({ w: 640, h: 360 })
 
-  // Fit stage to container (respect aspect ratio)
   useEffect(() => {
     const obs = new ResizeObserver(([e]) => {
       const { width: cw, height: ch } = e.contentRect
       const aspect = width / height
-      const pad = 60 // space for zoom controls
+      const pad = 60
       const availableW = Math.max(100, cw - pad)
       const availableH = Math.max(100, ch - pad)
       const sw = Math.min(availableW, availableH * aspect)
@@ -308,7 +319,6 @@ const Preview = () => {
     return () => obs.disconnect()
   }, [width, height])
 
-  // Keyboard shortcuts for zoom
   useEffect(() => {
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === '=') {
@@ -328,7 +338,6 @@ const Preview = () => {
     return () => window.removeEventListener('keydown', onKey)
   }, [previewZoom, setPreviewZoom, resetPreviewZoom])
 
-  // Active clips at current time
   const activeLayers = tracks
     .filter(t => !t.muted)
     .flatMap(t => t.clips.filter(c => currentTime >= c.start && currentTime < c.start + c.duration))
@@ -339,7 +348,6 @@ const Preview = () => {
 
   const hasContent = mediaLayers.length > 0 || overlayLayers.length > 0
 
-  // Zoom handlers
   const handleZoomIn = () => setPreviewZoom(Math.min(3, previewZoom + 0.1))
   const handleZoomOut = () => setPreviewZoom(Math.max(0.1, previewZoom - 0.1))
 
@@ -357,7 +365,6 @@ const Preview = () => {
         minHeight: 0,
       }}
     >
-      {/* Stage container – scaled by previewZoom */}
       <div
         style={{
           width: stage.w,
@@ -374,8 +381,8 @@ const Preview = () => {
       >
         {mediaLayers.map(clip =>
           clip.type === 'video'
-            ? <VideoEl key={clip.id} clip={clip} stageW={stage.w} stageH={stage.h} currentTime={currentTime} playing={playing} volume={volume} />
-            : <ImageEl key={clip.id} clip={clip} currentTime={currentTime} />
+            ? <VideoEl key={clip.id} clip={clip} stageW={stage.w} stageH={stage.h} currentTime={currentTime} playing={playing} volume={volume} onSelect={() => selectClip(clip.id)} />
+            : <ImageEl key={clip.id} clip={clip} currentTime={currentTime} onSelect={() => selectClip(clip.id)} />
         )}
         {overlayLayers.map(clip => (
           <OverlayEl
@@ -408,12 +415,10 @@ const Preview = () => {
         )}
       </div>
 
-      {/* Audio elements (hidden) */}
       {audioClips.map(clip => (
         <AudioEl key={clip.id} clip={clip} currentTime={currentTime} playing={playing} volume={volume} />
       ))}
 
-      {/* Time display */}
       <div
         style={{
           position: 'absolute',
@@ -435,7 +440,6 @@ const Preview = () => {
         {String(Math.floor((currentTime % 1) * 100)).padStart(2, '0')}
       </div>
 
-      {/* Resolution badge */}
       <div
         style={{
           position: 'absolute',
@@ -453,7 +457,6 @@ const Preview = () => {
         {width}×{height}
       </div>
 
-      {/* Zoom Controls – bottom right */}
       <div
         style={{
           position: 'absolute',

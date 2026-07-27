@@ -1,4 +1,3 @@
-// src/user/components/Navbar.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -57,15 +56,14 @@ const canAccessStudio = (user) => {
 };
 
 // ----------------------------------------------------------------------
-// Notification Panel (updated with single-read and sorting)
+// Notification Panel
 // ----------------------------------------------------------------------
 const NotifPanel = ({ onClose, notifications: initialNotifs, onMarkAllRead, unreadCount, onNotificationClick }) => {
   const [notifications, setNotifications] = useState(initialNotifs);
 
-  // Sort: unread first, then newest first
   const sortNotifications = (list) => {
     return [...list].sort((a, b) => {
-      if (a.read !== b.read) return a.read ? 1 : -1; // unread first
+      if (a.read !== b.read) return a.read ? 1 : -1;
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
   };
@@ -81,7 +79,7 @@ const NotifPanel = ({ onClose, notifications: initialNotifs, onMarkAllRead, unre
         n.id === id ? { ...n, read: true } : n
       );
       setNotifications(sortNotifications(updated));
-      if (onNotificationClick) onNotificationClick(); // to refresh unread count
+      if (onNotificationClick) onNotificationClick();
     } catch (err) {
       console.error('Failed to mark notification as read:', err);
     }
@@ -314,7 +312,7 @@ const SearchOverlay = ({ onClose }) => {
 };
 
 // ----------------------------------------------------------------------
-// Mobile Drawer (unchanged)
+// Mobile Drawer
 // ----------------------------------------------------------------------
 const MobileDrawer = ({ user, onClose }) => {
   const { logout } = useAuth();
@@ -406,7 +404,6 @@ const MobileDrawer = ({ user, onClose }) => {
           )}
         </nav>
 
-        {/* Language Switcher in mobile drawer */}
         <div className="px-3 py-3 border-t border-border flex-shrink-0">
           <LanguageSwitcher variant="dropdown" />
         </div>
@@ -442,7 +439,7 @@ const Navbar = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Fetch current user from API if token exists
+  // Fetch current user from API if token exists – plus listen for profile updates
   useEffect(() => {
     const fetchRealUser = async () => {
       const token = sessionStorage.getItem('access_token');
@@ -461,13 +458,23 @@ const Navbar = () => {
         setLoadingUser(false);
       }
     };
+
     fetchRealUser();
+
+    // 👇 Listen for profile updates (avatar, banner, etc.)
+    const handleProfileUpdate = () => {
+      fetchRealUser();
+    };
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
   }, [authUser]);
 
   const displayUser = realUser || authUser;
   const profileImageSrc = displayUser?.profilePicture?.trim();
 
-  // Profile picture fallback handler
   const handleProfileImageError = (e) => {
     e.target.style.display = 'none';
     const fallback = e.target.nextElementSibling;
@@ -476,7 +483,7 @@ const Navbar = () => {
     }
   };
 
-  // Notification fetching functions
+  // Notification functions
   const fetchUnreadCount = async () => {
     if (!displayUser) return;
     try {
@@ -509,7 +516,6 @@ const Navbar = () => {
     }
   };
 
-  // Refresh unread count after marking a single notification as read
   const refreshUnreadCount = async () => {
     await fetchUnreadCount();
   };
@@ -527,7 +533,6 @@ const Navbar = () => {
     }
   }, [notifOpen, displayUser]);
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClick = e => {
       if (!e.target.closest('[data-dd]')) {
@@ -617,7 +622,6 @@ const Navbar = () => {
 
               {displayUser ? (
                 <>
-                  {/* Notification button */}
                   <div className="relative" data-dd>
                     <button
                       onClick={() => { setNotifOpen(p => !p); setProfOpen(false); }}
@@ -641,14 +645,12 @@ const Navbar = () => {
                     )}
                   </div>
 
-                  {/* Creator Studio button */}
                   {canAccessStudio(displayUser) && (
                     <Link to="/creator" className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-primary/35 bg-primary/8 text-primary-light text-sm font-semibold hover:bg-primary/15 hover:border-primary/55 transition-all">
                       <Video size={15} /> Studio
                     </Link>
                   )}
 
-                  {/* Profile dropdown */}
                   <div className="relative" data-dd>
                     <button
                       onClick={() => { setProfOpen(p => !p); setNotifOpen(false); }}

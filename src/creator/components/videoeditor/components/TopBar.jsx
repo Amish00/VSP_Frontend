@@ -1,25 +1,112 @@
-import React, { useState } from 'react'
-import { Film, Download, Share2, Scissors, ChevronUp, ChevronDown, X, Check, Loader, AlertCircle, Undo2, Redo2, ArrowLeft, Copy, Youtube, Instagram, Twitter, Facebook } from 'lucide-react'
+import React, { useState, useRef } from 'react'
+import {
+  Film, Download, Share2, Scissors, ChevronUp, ChevronDown, X, Check,
+  Loader, AlertCircle, Undo2, Redo2, ArrowLeft, Copy,
+  Youtube, Instagram, Twitter, Facebook
+} from 'lucide-react'
 import { useStore } from '../store/store'
-import { CANVAS_PRESETS, EFFECTS, transitionCSS } from '../utils/constants'
+import { CANVAS_PRESETS, EFFECTS, TRANSITIONS, SHAPES, transitionCSS } from '../utils/constants'
 import logoUrl from '../../../../assets/logo.svg'
 import { useNavigate } from 'react-router-dom'
 import { videoTheme } from '../theme'
 
-// ... (helper functions: clamp, getTransitionOpacity, drawOverlay, drawMediaCover – same as before, just use videoTheme in modals)
+// ---------- Helper functions for export ----------
+const getFilterCss = (filterId) => {
+  const found = EFFECTS.find(e => e.id === filterId)
+  return found?.css || 'none'
+}
 
-// ----- ShareModal (using theme) -----
+function getTransStyle(clip, currentTime) {
+  const rel = currentTime - clip.start
+  const rem = clip.duration - rel
+  let styles = {}
+  if (clip.transIn && rel < clip.transInDur) {
+    const p = rel / clip.transInDur
+    Object.assign(styles, transitionCSS(clip.transIn, p, 'in'))
+  }
+  if (clip.transOut && rem < clip.transOutDur) {
+    const p = rem / clip.transOutDur
+    const outStyle = transitionCSS(clip.transOut, 1 - p, 'in')
+    styles.opacity = (styles.opacity ?? 1) * (outStyle.opacity ?? 1)
+    if (outStyle.transform) styles.transform = outStyle.transform
+  }
+  return styles
+}
+
+function drawMediaCover(ctx, source, canvasW, canvasH) {
+  const aspect = source.videoWidth / source.videoHeight || 16/9
+  let dw, dh, dx, dy
+  const canvasAspect = canvasW / canvasH
+  if (canvasAspect > aspect) {
+    dh = canvasH
+    dw = canvasH * aspect
+    dx = (canvasW - dw) / 2
+    dy = 0
+  } else {
+    dw = canvasW
+    dh = canvasW / aspect
+    dx = 0
+    dy = (canvasH - dh) / 2
+  }
+  ctx.drawImage(source, dx, dy, dw, dh)
+}
+
+function drawOverlay(ctx, clip, canvasW, canvasH) {
+  const x = ((clip.overlayX ?? 50) / 100) * canvasW
+  const y = ((clip.overlayY ?? 50) / 100) * canvasH
+  const w = ((clip.overlayW ?? 40) / 100) * canvasW
+  const h = ((clip.overlayH ?? 20) / 100) * canvasH
+  const scale = canvasW / 1920
+
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  if (clip.type === 'text') {
+    const fontSize = (clip.fontSize || 72) * scale
+    ctx.font = `${clip.fontWeight || 700} ${fontSize}px "${clip.fontFamily || 'Inter'}"`
+    ctx.fillStyle = clip.textColor || '#ffffff'
+    ctx.shadowColor = 'rgba(0,0,0,0.6)'
+    ctx.shadowBlur = 8
+    const lines = (clip.text || 'Text').split('\n')
+    const lineHeight = fontSize * 1.2
+    const totalHeight = lines.length * lineHeight
+    lines.forEach((line, i) => {
+      ctx.fillText(line, 0, -totalHeight/2 + i * lineHeight + lineHeight/2)
+    })
+  } else if (clip.type === 'shape') {
+    const size = Math.min(w, h)
+    ctx.fillStyle = clip.shapeColor || '#3b82f6'
+    const shapeDef = SHAPES.find(s => s.id === clip.shapePath)
+    const pathData = shapeDef?.d || SHAPES[0].d
+    const path = new Path2D(pathData)
+    const scaleFactor = size / 100
+    ctx.translate(-50 * scaleFactor, -50 * scaleFactor)
+    ctx.scale(scaleFactor, scaleFactor)
+    ctx.fill(path)
+  } else if (clip.type === 'sticker') {
+    const fontSize = Math.min(w, h) * 0.8
+    ctx.font = `${fontSize}px sans-serif`
+    ctx.fillStyle = '#ffffff'
+    ctx.fillText(clip.sticker || '⭐', 0, 0)
+  }
+  ctx.restore()
+}
+
+// ---------- ShareModal ----------
 function ShareModal({ onClose }) {
   const { projectName } = useStore()
   const [copied, setCopied] = useState(false)
   const shareableLink = `${window.location.origin}/project/${projectName.replace(/\s/g, '-').toLowerCase()}`
 
+  // Social links now point to the platform's homepage (not share intent)
   const socialLinks = [
-    { name: 'YouTube', icon: Youtube, color: '#FF0000', url: `https://www.youtube.com/share?url=${encodeURIComponent(shareableLink)}` },
-    { name: 'TikTok', icon: () => <span style={{ fontSize: 18 }}>🎵</span>, color: '#000000', url: `https://www.tiktok.com/share/video?url=${encodeURIComponent(shareableLink)}` },
-    { name: 'Instagram', icon: Instagram, color: '#E4405F', url: `https://www.instagram.com/create/story/?url=${encodeURIComponent(shareableLink)}` },
-    { name: 'Twitter', icon: Twitter, color: '#1DA1F2', url: `https://twitter.com/intent/tweet?text=Check%20out%20my%20video%20project%20"${encodeURIComponent(projectName)}"&url=${encodeURIComponent(shareableLink)}` },
-    { name: 'Facebook', icon: Facebook, color: '#1877F2', url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareableLink)}` },
+    { name: 'YouTube', icon: Youtube, color: '#FF0000', url: 'https://youtube.com' },
+    { name: 'TikTok', icon: () => <span style={{ fontSize: 18 }}>🎵</span>, color: '#000000', url: 'https://tiktok.com' },
+    { name: 'Instagram', icon: Instagram, color: '#E4405F', url: 'https://instagram.com' },
+    { name: 'Twitter', icon: Twitter, color: '#1DA1F2', url: 'https://twitter.com' },
+    { name: 'Facebook', icon: Facebook, color: '#1877F2', url: 'https://facebook.com' },
   ]
 
   const handleCopyLink = () => {
@@ -96,20 +183,15 @@ function ShareModal({ onClose }) {
   )
 }
 
-// ----- ExportModal (using theme) -----
+// ---------- ExportModal (fully working) ----------
 function ExportModal({ onClose }) {
-  // ... same logic as before, but replace all inline styles with videoTheme variables
-  // For brevity, I'll show the outer container and the key style changes.
-  // The full code can be adapted similarly.
-  // (The helper functions clamp, getTransitionOpacity, drawOverlay, drawMediaCover remain unchanged)
-
-  const { tracks, duration, width, height, fps, projectName, volume } = useStore()
+  const { tracks, duration, width, height, fps, projectName } = useStore()
   const [format, setFormat] = useState('mp4')
   const [resIdx, setResIdx] = useState(0)
   const [status, setStatus] = useState('idle')
   const [progress, setProgress] = useState(0)
   const [msg, setMsg] = useState('')
-  const abort = React.useRef(false)
+  const abort = useRef(false)
 
   const RES = [
     { label: 'Project', w: width, h: height },
@@ -121,15 +203,240 @@ function ExportModal({ onClose }) {
   const res = RES[resIdx]
   const activeTracks = tracks.filter(t => !t.muted)
   const clips = activeTracks.flatMap(t => t.clips)
-  const exportDuration = Math.max(0, ...clips.map(c => c.start + c.duration), duration)
+
+  let maxEnd = 0
+  for (const clip of clips) {
+    const end = clip.start + clip.duration
+    if (end > maxEnd) maxEnd = end
+  }
+  const exportDuration = Math.max(0.1, maxEnd)
 
   const doExport = async () => {
-    // ... unchanged logic
+    abort.current = false
+    const outW = res.w, outH = res.h
+    const mediaCache = {}
+    const timers = []
+    let audioContext = null
+
+    try {
+      setStatus('loading')
+      setProgress(0)
+      setMsg('Loading media…')
+
+      const canvas = document.createElement('canvas')
+      canvas.width = outW
+      canvas.height = outH
+      const ctx = canvas.getContext('2d')
+
+      for (const track of activeTracks) {
+        for (const clip of track.clips) {
+          if (!clip.src) continue
+          if (clip.type === 'video') {
+            const vid = document.createElement('video')
+            vid.crossOrigin = 'anonymous'
+            vid.playsInline = true
+            vid.muted = true
+            vid.src = clip.src
+            vid.preload = 'auto'
+            await new Promise(resolve => {
+              vid.onloadedmetadata = resolve
+              vid.onerror = resolve
+              setTimeout(resolve, 5000)
+            })
+            mediaCache[clip.id] = vid
+          } else if (clip.type === 'image') {
+            const img = new Image()
+            img.crossOrigin = 'anonymous'
+            img.src = clip.src
+            await new Promise(resolve => {
+              if (img.complete) resolve()
+              img.onload = resolve
+              img.onerror = resolve
+              setTimeout(resolve, 5000)
+            })
+            mediaCache[clip.id] = img
+          } else if (clip.type === 'audio') {
+            const audio = document.createElement('audio')
+            audio.crossOrigin = 'anonymous'
+            audio.src = clip.src
+            audio.preload = 'auto'
+            await new Promise(resolve => {
+              audio.onloadedmetadata = resolve
+              audio.onerror = resolve
+              setTimeout(resolve, 5000)
+            })
+            mediaCache[clip.id] = audio
+          }
+        }
+      }
+
+      if (abort.current) throw new Error('__canceled__')
+
+      let audioDestination = null
+      const soundClips = activeTracks.flatMap(t =>
+        t.clips.filter(c => (c.type === 'audio' || c.type === 'video') && c.src && !c.muted && mediaCache[c.id])
+      )
+
+      if (soundClips.length > 0) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)()
+        audioDestination = audioContext.createMediaStreamDestination()
+        for (const clip of soundClips) {
+          const el = mediaCache[clip.id]
+          try {
+            const node = audioContext.createMediaElementSource(el)
+            const gain = audioContext.createGain()
+            gain.gain.value = clip.volume ?? 1
+            node.connect(gain)
+            gain.connect(audioDestination)
+            el.muted = false
+          } catch {
+            // element already tapped or unsupported
+          }
+        }
+      }
+
+      const canvasStream = canvas.captureStream(fps)
+      let combinedStream = canvasStream
+      if (audioDestination) {
+        const audioTrack = audioDestination.stream.getAudioTracks()[0]
+        if (audioTrack) {
+          combinedStream = new MediaStream([...canvasStream.getVideoTracks(), audioTrack])
+        }
+      }
+
+      const mimeType = format === 'mp4' ? 'video/mp4' : 'video/webm'
+      const mime = MediaRecorder.isTypeSupported(mimeType) ? mimeType : 'video/webm'
+      const recorder = new MediaRecorder(combinedStream, { mimeType: mime, videoBitsPerSecond: 8000000 })
+      const chunks = []
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data) }
+
+      const scheduleClip = (clip) => {
+        const el = mediaCache[clip.id]
+        if (!el || (clip.type !== 'video' && clip.type !== 'audio')) return
+        const startMs = clip.start * 1000
+        const endMs = (clip.start + clip.duration) * 1000
+        if (clip.start <= 0) {
+          el.currentTime = clip.offset || 0
+          el.play().catch(() => {})
+        } else {
+          timers.push(setTimeout(() => {
+            el.currentTime = clip.offset || 0
+            el.play().catch(() => {})
+          }, startMs))
+        }
+        timers.push(setTimeout(() => { try { el.pause() } catch {} }, endMs))
+      }
+
+      setMsg('Recording…')
+      recorder.start(1000)
+      if (audioContext) await audioContext.resume()
+      for (const track of activeTracks) {
+        for (const clip of track.clips) scheduleClip(clip)
+      }
+      const wallStart = performance.now()
+
+      await new Promise(resolve => {
+        const draw = () => {
+          const t = (performance.now() - wallStart) / 1000
+          if (abort.current || t >= exportDuration) { resolve(); return }
+
+          setProgress((t / exportDuration) * 100)
+          setMsg(`Rendering ${t.toFixed(1)}s / ${exportDuration.toFixed(1)}s`)
+
+          ctx.fillStyle = '#000'
+          ctx.fillRect(0, 0, outW, outH)
+
+          const activeClips = []
+          for (const track of activeTracks) {
+            for (const clip of track.clips) {
+              if (t >= clip.start && t < clip.start + clip.duration) activeClips.push(clip)
+            }
+          }
+
+          for (const clip of activeClips) {
+            if (clip.muted) continue
+
+            const opacity = clip.opacity ?? 1
+            const filterCss = getFilterCss(clip.filter)
+            const trans = getTransStyle(clip, t)
+            const transOpacity = trans.opacity ?? 1
+            if (transOpacity === 0) continue
+
+            ctx.save()
+            ctx.globalAlpha = opacity * transOpacity
+            if (filterCss !== 'none') ctx.filter = filterCss
+
+            if (trans.transform) {
+              const matchX = trans.transform.match(/translateX\(([^)]+)\)/)
+              if (matchX) ctx.translate(parseFloat(matchX[1]) / 100 * outW, 0)
+              const matchY = trans.transform.match(/translateY\(([^)]+)\)/)
+              if (matchY) ctx.translate(0, parseFloat(matchY[1]) / 100 * outH)
+            }
+
+            if (clip.type === 'video' || clip.type === 'image') {
+              const source = mediaCache[clip.id]
+              if (source) drawMediaCover(ctx, source, outW, outH)
+            } else if (clip.type === 'text' || clip.type === 'shape' || clip.type === 'sticker') {
+              drawOverlay(ctx, clip, outW, outH)
+            }
+
+            ctx.restore()
+          }
+
+          requestAnimationFrame(draw)
+        }
+        requestAnimationFrame(draw)
+      })
+
+      timers.forEach(clearTimeout)
+      for (const track of activeTracks) {
+        for (const clip of track.clips) {
+          const el = mediaCache[clip.id]
+          if (el && el.pause) el.pause()
+        }
+      }
+      recorder.stop()
+      await new Promise(resolve => recorder.onstop = resolve)
+      if (audioContext) await audioContext.close()
+      audioContext = null
+
+      if (abort.current) throw new Error('__canceled__')
+
+      const blob = new Blob(chunks, { type: recorder.mimeType })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${projectName || 'video'}.${format === 'mp4' ? 'mp4' : 'webm'}`
+      a.click()
+      URL.revokeObjectURL(url)
+
+      setStatus('done')
+      setMsg('Export completed!')
+    } catch (err) {
+      timers.forEach(clearTimeout)
+      if (audioContext) { try { await audioContext.close() } catch {} }
+      if (err?.message === '__canceled__') {
+        setStatus('idle')
+        setMsg('Export canceled')
+      } else {
+        console.error('Export failed:', err)
+        setStatus('idle')
+        setMsg(`Export failed: ${err?.message || 'unknown error'}`)
+      }
+    } finally {
+      for (const key in mediaCache) {
+        const el = mediaCache[key]
+        if (el.pause) el.pause()
+        if (el.src) el.src = ''
+      }
+    }
   }
 
+  // ----- UI -----
   return (
     <div onClick={e => e.target === e.currentTarget && onClose()} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: videoTheme.card, border: `1px solid ${videoTheme.border}`, borderRadius: 12, padding: 22, width: 360, boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
+      {/* Increased width to 480, and added responsive max-width */}
+      <div style={{ background: videoTheme.card, border: `1px solid ${videoTheme.border}`, borderRadius: 12, padding: 22, width: 480, maxWidth: '95vw', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
           <div><div style={{ fontWeight: 600, fontSize: 14, color: videoTheme.text }}>Export</div><div style={{ fontSize: 10, color: videoTheme.textMuted, marginTop: 1 }}>"{projectName}"</div></div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: videoTheme.textMuted, cursor: 'pointer' }}><X size={15} /></button>
@@ -151,16 +458,19 @@ function ExportModal({ onClose }) {
         </div>
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 9, color: videoTheme.textMuted, fontWeight: 600, letterSpacing: 0.8, marginBottom: 7 }}>RESOLUTION</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 4 }}>
+          {/* Responsive single row: flex with nowrap, each item flex:1 and min-width:0 to shrink */}
+          <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 4, overflow: 'hidden' }}>
             {RES.map((r, i) => (
               <div key={r.label} onClick={() => setResIdx(i)} style={{
-                padding: '6px 4px', borderRadius: 7, cursor: 'pointer',
+                flex: '1 1 0', minWidth: 0, // allow shrinking
+                padding: '6px 2px', borderRadius: 7, cursor: 'pointer',
                 border: `1.5px solid ${resIdx === i ? videoTheme.borderLight : videoTheme.border}`,
                 background: resIdx === i ? videoTheme.hov : videoTheme.el,
                 textAlign: 'center',
+                whiteSpace: 'nowrap',
               }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: resIdx === i ? videoTheme.text : videoTheme.textMuted }}>{r.label}</div>
-                <div style={{ fontSize: 8, color: videoTheme.textMuted, fontFamily: 'monospace', marginTop: 1 }}>{r.w}×{r.h}</div>
+                <div style={{ fontSize: 8, color: videoTheme.textMuted, fontFamily: 'monospace' }}>{r.w}×{r.h}</div>
               </div>
             ))}
           </div>
@@ -213,7 +523,7 @@ function ExportModal({ onClose }) {
   )
 }
 
-// ----- PresetModal -----
+// ---------- PresetModal ----------
 function PresetModal({ onClose }) {
   const { setSize, width, height } = useStore()
   const [cw, setCw] = useState(width)
@@ -248,7 +558,7 @@ function PresetModal({ onClose }) {
   )
 }
 
-// ----- TopBar Main -----
+// ---------- TopBar Main ----------
 const TopBar = () => {
   const navigate = useNavigate()
   const { projectName, setProjectName, width, height, getSelectedClip, tracks, splitClip, currentTime } = useStore()
@@ -388,16 +698,25 @@ const TopBar = () => {
           <Download size={13} /> Export
         </button>
 
-        <button onClick={() => setShowShare(true)}
+        <button
+          onClick={() => setShowShare(true)}
           style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '6px 14px', borderRadius: 6,
-            border: 'none', background: videoTheme.text,
-            color: videoTheme.base,
-            cursor: 'pointer', fontSize: 12, fontWeight: 600, marginLeft: 6,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 14px',
+            borderRadius: 6,
+            border: 'none',
+            background: '#3b82f6',
+            color: '#ffffff',
+            cursor: 'pointer',
+            fontSize: 12,
+            fontWeight: 600,
+            marginLeft: 6,
+            transition: 'background 0.15s ease',
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = videoTheme.textSecondary }}
-          onMouseLeave={e => { e.currentTarget.style.background = videoTheme.text }}
+          onMouseEnter={e => { e.currentTarget.style.background = '#2563eb' }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#3b82f6' }}
         >
           <Share2 size={13} /> Share
         </button>
