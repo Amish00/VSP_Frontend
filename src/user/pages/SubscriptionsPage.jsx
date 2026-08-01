@@ -1,4 +1,3 @@
-// src/pages/SubscriptionsPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
@@ -30,6 +29,61 @@ const formatRelativeDate = (isoDate) => {
 
 const isShort = (video) => video.type === 'SHORT' || video.type === 'SHORTS' || video.isShort;
 
+// ─── Skeleton Loader ──────────────────────────────────────────────
+const SkeletonLoader = () => {
+  // Skeleton items for shorts (5 items) and videos (8 items)
+  const shortSkeletons = Array(5).fill(0);
+  const videoSkeletons = Array(8).fill(0);
+
+  return (
+    <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pt-[68px] md:pt-[92px] pb-[96px] md:pb-16">
+      {/* Page title */}
+      <div className="h-9 w-48 bg-bg-el/60 rounded-xl animate-pulse mb-6" />
+
+      {/* Channel Strip skeleton */}
+      <div className="flex gap-4 mb-8 overflow-hidden">
+        {Array(6).fill(0).map((_, i) => (
+          <div key={i} className="flex-shrink-0 w-24 h-24 rounded-full bg-bg-el/60 animate-pulse" />
+        ))}
+      </div>
+
+      {/* Shorts section */}
+      <div className="mb-10">
+        <div className="flex justify-between items-center mb-4">
+          <div className="h-8 w-32 bg-bg-el/60 rounded-lg animate-pulse" />
+          <div className="h-5 w-8 bg-bg-el/60 rounded animate-pulse" />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {shortSkeletons.map((_, i) => (
+            <div key={i} className="aspect-[9/16] bg-bg-el/60 rounded-xl animate-pulse" />
+          ))}
+        </div>
+      </div>
+
+      {/* Videos section */}
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <div className="h-8 w-32 bg-bg-el/60 rounded-lg animate-pulse" />
+          <div className="h-5 w-8 bg-bg-el/60 rounded animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {videoSkeletons.map((_, i) => (
+            <div key={i} className="bg-bg-el/60 rounded-xl overflow-hidden animate-pulse">
+              <div className="aspect-video bg-bg-el/80" />
+              <div className="p-3 space-y-2">
+                <div className="h-4 bg-bg-el/80 rounded w-3/4" />
+                <div className="h-3 bg-bg-el/80 rounded w-1/2" />
+                <div className="h-3 bg-bg-el/80 rounded w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Main Component ──────────────────────────────────────────────
 const SubscriptionsPage = () => {
   const navigate = useNavigate();
   const [subscribedVideos, setSubscribedVideos] = useState([]);
@@ -79,8 +133,9 @@ const SubscriptionsPage = () => {
     navigate(`/search?q=${encodeURIComponent(channel.name)}`);
   };
 
+  // ─── Loading State ──────────────────────────────────────────────
   if (loading) {
-    return <div className="p-8 text-center text-text-muted">Loading subscriptions...</div>;
+    return <SkeletonLoader />;
   }
 
   if (error) {
@@ -91,7 +146,6 @@ const SubscriptionsPage = () => {
     return (
       <div className="max-w-[1760px] mx-auto px-4 sm:px-6 lg:px-12 pt-[68px] md:pt-[92px] pb-[96px] md:pb-16">
         <h1 className="text-3xl font-bold mb-6">Subscriptions</h1>
-        {/* Card‑style sign‑in prompt with background and extra height */}
         <div className="bg-bg-el border border-border rounded-3xl p-10 sm:p-12 flex flex-col items-center justify-center text-center min-h-[340px] py-16">
           <Lock className="w-10 h-10 text-text-muted mb-4" />
           <p className="text-text-secondary text-base sm:text-lg">
@@ -124,8 +178,6 @@ const SubscriptionsPage = () => {
 
       <ChannelStrip onChannelClick={handleChannelClick} />
 
-      {/* Removed the duplicate "No videos from subscribed channels yet." message */}
-
       {videos.length === 0 && shorts.length === 0 ? null : (
         <div className="mb-10">
           {shorts.length > 0 && (
@@ -134,7 +186,8 @@ const SubscriptionsPage = () => {
                 <h2 className="text-3xl font-bold">Shorts</h2>
                 <span className="text-sm text-text-muted">{shorts.length}</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {/*   Shorts grid – now more columns + smaller gap */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                 {shorts.map((short) => (
                   <ShortsCard key={short.id} short={short} onPlay={handleShortPlay} />
                 ))}

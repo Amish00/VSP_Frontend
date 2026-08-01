@@ -1,4 +1,3 @@
-// src/admin/layout/AdminLayout.js
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/context/AuthContext';
@@ -19,17 +18,31 @@ const AdminLayout = () => {
     navigate('/');
   };
 
-  // Map current path to nav id
-  const pathToNavId = {
-    '/admin': 'dashboard',
-    '/admin/dashboard': 'dashboard',
-    '/admin/videos': 'videos',
-    '/admin/users': 'users',
-    '/admin/revenue': 'revenue',
-    '/admin/reports': 'reports',
-    '/admin/settings': 'settings',
+  // Determine active nav id based on current path
+  const getActiveNav = () => {
+    const path = location.pathname;
+    // Check for exact matches first
+    const exactMatch = {
+      '/admin': 'dashboard',
+      '/admin/dashboard': 'dashboard',
+      '/admin/videos': 'videos',
+      '/admin/users': 'users',
+      '/admin/revenue': 'revenue',
+      '/admin/reports': 'reports',
+      '/admin/settings': 'settings',
+    }[path];
+    if (exactMatch) return exactMatch;
+
+    if (path.startsWith('/admin/video')) return 'videos';
+    if (path.startsWith('/admin/users')) return 'users';
+    if (path.startsWith('/admin/revenue')) return 'revenue';
+    if (path.startsWith('/admin/reports')) return 'reports';
+    if (path.startsWith('/admin/settings')) return 'settings';
+
+    return null;
   };
-  const activeNav = pathToNavId[location.pathname] || null;
+
+  const activeNav = getActiveNav();
 
   const onNavSelect = (navId) => {
     const routeMap = {

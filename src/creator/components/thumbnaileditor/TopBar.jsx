@@ -73,7 +73,7 @@ const TopBar = () => {
 
   return (
     <>
-      <div className="topbar" style={{ height: 48, display: 'flex', alignItems: 'center', padding: '0 12px', gap: 4, flexShrink: 0, background: editorTheme.side, borderBottom: `1px solid ${editorTheme.border}`, zIndex: 30 }}>
+      <div className="topbar" style={{ height: 56, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 4, flexShrink: 0, background: editorTheme.side, borderBottom: `1px solid ${editorTheme.border}`, zIndex: 30 }}>
         {/* Back button */}
         <button onClick={() => navigate('/creator/dashboard')} title="Back to Dashboard" style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: editorTheme.textSecondary, cursor: 'pointer', padding: '4px 8px', borderRadius: 6, fontSize: 13, marginRight: 8 }} onMouseEnter={e => { e.currentTarget.style.background = editorTheme.hov; e.currentTarget.style.color = editorTheme.text; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = editorTheme.textSecondary; }}>
           <ArrowLeft size={16} />

@@ -4,6 +4,8 @@ import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 import useEditorStore from './useEditorStore';
 
+import { editorTheme } from './theme';
+
 // ---------- Shared constants ----------
 const FONTS = ['Inter', 'Arial', 'Georgia', 'Courier New', 'Impact', 'Trebuchet MS', 'Times New Roman', 'Garamond', 'Comic Sans MS'];
 const SOLID_COLORS = [

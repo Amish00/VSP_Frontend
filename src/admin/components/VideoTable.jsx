@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSnackbar } from 'notistack';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../auth/context/AuthContext';
 import Badge from './ui/Badge';
-import VideoDataModal from './VideoDataModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 import Modal from '../components/ui/Modal';
 import Pagination from './Pagination';
@@ -19,11 +20,12 @@ const FETCH_SIZE = 10000;
 
 const VideoTable = ({ search, setSearch, type }) => {
   const { enqueueSnackbar } = useSnackbar();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
   const [allVideos, setAllVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('All');
-  const [selectedVideo, setSelectedVideo] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [videoToDelete, setVideoToDelete] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -42,7 +44,19 @@ const VideoTable = ({ search, setSearch, type }) => {
     autoHideDuration: 3000,
   };
 
-  // Debounce search
+  // Determine base path based on role
+  const getVideoBasePath = () => {
+    const role = user?.role?.toLowerCase();
+    if (role === 'admin') {
+      return '/admin/video';
+    } else if (role === 'creator') {
+      return '/creator/video';
+    }
+    // fallback – shouldn't happen for protected routes
+    return '/creator/video';
+  };
+
+  // Debounce search – unchanged
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
@@ -137,9 +151,11 @@ const VideoTable = ({ search, setSearch, type }) => {
       .join(" ");
   };
 
-  const handleEdit = (video) => {
-    setSelectedVideo(video);
-    setModalOpen(true);
+  // Navigation helper – uses role‑based base path
+  const navigateToVideo = (video, mode = 'view') => {
+    const base = getVideoBasePath();
+    const typeParam = video.type === 'SHORTS' ? 'short' : 'video';
+    navigate(`${base}/${video.id}?mode=${mode}&type=${typeParam}`);
   };
 
   const handleDeleteClick = (video) => {
@@ -161,16 +177,11 @@ const VideoTable = ({ search, setSearch, type }) => {
     }
   };
 
-  const handleVideoUpdated = () => {
-    fetchVideos();
-  };
-
   return (
     <div>
-      {/* Filter bar */}
+      {/* Filter bar – unchanged */}
       <div className="flex gap-3 mb-4 flex-wrap items-center">
         <div className="relative flex-1 min-w-[200px]">
-          {/* Search icon added here */}
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
             value={search}
@@ -228,7 +239,7 @@ const VideoTable = ({ search, setSearch, type }) => {
                 const isPending = video.status === 'PENDING';
                 return (
                   <tr key={video.id} className="border-b border-border/50 last:border-0 hover:bg-bg-hov/30 transition-colors">
-                    {/* Video cell */}
+                    {/* Video cell – title links to view page */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-14 h-8 rounded-sm bg-bg-el flex items-center justify-center text-lg flex-shrink-0 overflow-hidden">
@@ -240,7 +251,7 @@ const VideoTable = ({ search, setSearch, type }) => {
                         </div>
                         <div className="min-w-0">
                           <button
-                            onClick={() => handleEdit(video)}
+                            onClick={() => navigateToVideo(video, 'view')}
                             className="font-medium text-text-primary line-clamp-1 max-w-[180px] hover:text-primary transition text-left"
                           >
                             {toCamelCase(video.title)}
@@ -303,7 +314,7 @@ const VideoTable = ({ search, setSearch, type }) => {
                       ) : (
                         <div className="flex gap-1.5">
                           <button
-                            onClick={() => handleEdit(video)}
+                            onClick={() => navigateToVideo(video, 'edit')}
                             className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors"
                           >
                             Edit
@@ -325,7 +336,7 @@ const VideoTable = ({ search, setSearch, type }) => {
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination – unchanged */}
       {totalPages > 1 && (
         <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
           <div className="text-sm text-text-muted">
@@ -337,7 +348,7 @@ const VideoTable = ({ search, setSearch, type }) => {
         </div>
       )}
 
-      {/* Reject Modal */}
+      {/* Reject Modal – unchanged */}
       <Modal open={showRejectModal} onClose={() => setShowRejectModal(false)} title="Rejected Video" maxW={480}>
         <div className="space-y-4">
           <p className="text-text-secondary">Please provide a reason for rejection:</p>
@@ -359,15 +370,7 @@ const VideoTable = ({ search, setSearch, type }) => {
         </div>
       </Modal>
 
-      {/* Edit Modal */}
-      <VideoDataModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        video={selectedVideo}
-        onVideoUpdated={handleVideoUpdated}
-      />
-
-      {/* Delete Modal */}
+      {/* Delete Modal – unchanged */}
       <ConfirmDeleteModal
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}

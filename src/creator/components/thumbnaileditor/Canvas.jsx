@@ -159,7 +159,7 @@ const Canvas = () => {
   return (
     <div
       ref={wrapRef}
-      style={{ flex: 1, overflow: 'hidden', position: 'relative', background: '#1e1e24', cursor }}
+      style={{ flex: 1, overflow: 'hidden', position: 'relative', background: '080D18', cursor }}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}

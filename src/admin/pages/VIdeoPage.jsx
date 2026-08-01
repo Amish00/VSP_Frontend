@@ -42,7 +42,7 @@ const VideosPage = () => {
 
   const handleTypeChange = (type) => {
     setContentType(type);
-    setSearch(''); // optional: reset search when switching type
+    setSearch('');
   };
 
   return (

@@ -87,10 +87,10 @@ export const clearHistory = () => {
   return api.delete('/history');
 };
 
-// ---------- Video API ----------
 export const recordWatch = (videoId) => {
-  return api.post(`/videos/${videoId}/watch`);
+  return api.post(`/history/${videoId}`);
 };
+
 
 // ---------- User API ----------
 export const getCurrentUser = async () => {

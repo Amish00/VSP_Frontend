@@ -18,7 +18,7 @@ const useEditorStore = create((set, get) => ({
   selectedLayerIds: [],
   activeTool: 'select',
   activePanel: null,
-  zoom: 0.5,
+  zoom: 0.75,
   clipboard: null,
   showGrid: false,
   canvasRef: null,
