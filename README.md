@@ -1,6 +1,43 @@
 # ViriShare Frontend
 
-React + Vite frontend for ViriShare — A Localized Video Sharing Platform for Nepal.
+React + Vite frontend for ViriShare — A Localized Video Sharing Platform for Nepal, built as a Final Year Project (CPP501) at Virinchi College / Asia e University.
+
+## About
+
+ViriShare is a localized video sharing platform built for Nepali creators and viewers. The frontend is a single-page application with three role-based portals — User, Creator, and Admin — and focuses on solving real gaps in the Nepali market: local payment gateway support (eSewa and Khalti), low-barrier creator monetization, multi-language UI, and regional content visibility.
+
+## Features
+
+**User Portal**
+- Browse and search videos — free and paid
+- Adaptive video playback with view sync
+- Shorts feed with vertical scroll player
+- Like, comment, and subscribe to creators
+- Purchase subscription plans via eSewa, Khalti, or Stripe
+- Watch history, notifications, and profile management
+- YouTube API video playback integration
+- Multi-language UI switching (Nepali, Maithili, and more)
+
+**Creator Portal**
+- Drag-and-drop video and Shorts upload with real-time progress bar
+- Analytics dashboard — views, watch time, CTR, subscriber growth (Recharts)
+- My Videos and My Shorts with status filter (Pending / Approved / Rejected)
+- Built-in Video Editor and Thumbnail Studio (text, shapes, emojis, PNG export)
+- Monthly earnings breakdown and payout request (eSewa / Khalti)
+
+**Admin Portal**
+- Platform dashboard — total views, users, videos, and revenue
+- Video moderation — approve or reject with reason modal
+- Videos and Shorts toggle with status filter and search
+- User management — update role, subscription plan, and account status
+- Revenue reports with date range filter and CSV export
+- Pending payout review and processing
+
+**Authentication**
+- Email/password sign-up and sign-in
+- Google, GitHub, and Outlook OAuth2 login
+- OTP-based two-factor authentication
+- JWT access and refresh token management via Axios interceptor
 
 ## Tech Stack
 
