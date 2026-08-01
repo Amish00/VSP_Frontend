@@ -1,7 +1,7 @@
-// src/pages/PlansPage.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
+import { Lock } from 'lucide-react';
 import PlanCard from '../components/plans/PlanCard';
 import BillingToggle from '../components/plans/BillingToggle';
 import Modal from '../components/ui/Modal';
@@ -254,7 +254,7 @@ const PlansPage = () => {
         </div>
       </div>
 
-      {/* ========== TAB 1: CURRENT PLAN (Full width) ========== */}
+      {/* ========== TAB 1: CURRENT PLAN ========== */}
       {activeTab === 'current' && (
         <div className="bg-bg-el border border-border rounded-3xl p-8 shadow-lg">
           {user ? (
@@ -338,8 +338,12 @@ const PlansPage = () => {
               )}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <p className="text-text-secondary text-lg">Please log in to see your current plan.</p>
+            // 🔁 Consistent login card – same as SubscriptionsPage
+            <div className="flex flex-col items-center justify-center text-center min-h-[340px] py-16">
+              <Lock className="w-10 h-10 text-text-muted mb-4" />
+              <p className="text-text-secondary text-base sm:text-lg">
+                Please log in to see your current plan.
+              </p>
             </div>
           )}
         </div>
@@ -348,12 +352,7 @@ const PlansPage = () => {
       {/* ========== TAB 2: AVAILABLE PLANS ========== */}
       {activeTab === 'available' && (
         <div>
-          {!user && (
-            <p className="text-center text-text-secondary text-sm sm:text-base mb-4">
-              Please sign in to view subscription details and purchase a plan.
-            </p>
-          )}
-
+          {/* ❌ Removed the login message – plans are always visible */}
           <div className="flex justify-center mb-4">
             <BillingToggle value={billing} onChange={setBilling} />
           </div>

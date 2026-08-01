@@ -366,17 +366,21 @@ const MobileDrawer = ({ user, onClose }) => {
         )}
 
         <nav className="px-2 py-3 flex-1">
-          {NAV_LINKS.map(({ to, label, icon: Icon }) => (
-            <button
-              key={to}
-              onClick={() => go(to)}
-              className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-base font-medium mb-0.5 transition-colors text-left
-                ${location.pathname === to ? 'bg-primary/12 text-primary-light font-semibold' : 'text-text-secondary hover:bg-bg-hov hover:text-text-primary'}`}
-            >
-              <Icon size={18} className="text-text-muted flex-shrink-0" />
-              {label}
-            </button>
-          ))}
+          {NAV_LINKS.map(({ to, label, icon: Icon }) => {
+            // Fix: Home link active also on "/home"
+            const isActive = location.pathname === to || (to === '/' && location.pathname === '/home');
+            return (
+              <button
+                key={to}
+                onClick={() => go(to)}
+                className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-base font-medium mb-0.5 transition-colors text-left
+                  ${isActive ? 'bg-primary/12 text-primary-light font-semibold' : 'text-text-secondary hover:bg-bg-hov hover:text-text-primary'}`}
+              >
+                <Icon size={18} className="text-text-muted flex-shrink-0" />
+                {label}
+              </button>
+            );
+          })}
 
           {user && (
             <>
@@ -602,17 +606,21 @@ const Navbar = () => {
             </Link>
 
             <nav className="flex items-center gap-1 flex-1 justify-center">
-              {NAV_LINKS.map(({ to, label }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  className={`relative px-5 py-2.5 rounded-xl text-base font-semibold transition-all whitespace-nowrap
-                    ${location.pathname === to ? 'text-text-primary bg-bg-el' : 'text-text-secondary hover:text-text-primary hover:bg-bg-el/50'}`}
-                >
-                  {label}
-                  {location.pathname === to && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-primary" />}
-                </Link>
-              ))}
+              {NAV_LINKS.map(({ to, label }) => {
+                // Fix: Home link active also on "/home"
+                const isActive = location.pathname === to || (to === '/' && location.pathname === '/home');
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    className={`relative px-5 py-2.5 rounded-xl text-base font-semibold transition-all whitespace-nowrap
+                      ${isActive ? 'text-text-primary bg-bg-el' : 'text-text-secondary hover:text-text-primary hover:bg-bg-el/50'}`}
+                  >
+                    {label}
+                    {isActive && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-primary" />}
+                  </Link>
+                );
+              })}
             </nav>
 
             <div className="flex items-center gap-2 flex-shrink-0">

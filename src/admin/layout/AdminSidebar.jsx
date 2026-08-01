@@ -28,8 +28,11 @@ const AdminSidebar = ({ active, onSelect, className = '' }) => {
 
   const getActiveFromPath = () => {
     const pathname = location.pathname;
-    if (pathname === '/admin') return 'dashboard';
-    if (pathname.startsWith('/admin/videos')) return 'videos';
+    // Exact matches
+    if (pathname === '/admin' || pathname === '/admin/dashboard') return 'dashboard';
+    // Partial matches (starts with)
+    if (pathname.startsWith('/admin/video')) return 'videos';      // includes /admin/video/:id
+    if (pathname.startsWith('/admin/videos')) return 'videos';     // for safety
     if (pathname.startsWith('/admin/users')) return 'users';
     if (pathname.startsWith('/admin/revenue')) return 'revenue';
     if (pathname.startsWith('/admin/reports')) return 'reports';

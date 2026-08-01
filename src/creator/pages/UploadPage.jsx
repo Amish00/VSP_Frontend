@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
-import { Upload, X, Film, CheckCircle, AlertCircle, Eye, Heart, Clock } from 'lucide-react';
+import { Upload, X, Film, CheckCircle, AlertCircle, Eye, Heart, Clock, User } from 'lucide-react';
 import DropZone from '../components/upload/DropZone';
 import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
@@ -262,9 +262,9 @@ const UploadPage = () => {
   const canSubmit = Boolean(file && form.title.trim());
 
   // Fake metadata for preview
-  const fakeViews = 0;
-  const fakeLikes = 0;
-  const fakeTime = 'just now';
+  const fakeViews = 100;
+  const fakeLikes = 10;
+  const fakeTime = '1 min';
 
   return (
     <div className="pb-6 w-full">
@@ -418,22 +418,20 @@ const UploadPage = () => {
             <h2 className="font-display font-bold text-sm text-text-muted uppercase tracking-wider mb-4">Preview Card</h2>
             <div className="rounded-xl overflow-hidden border border-border">
               <div className="aspect-video bg-bg-el flex items-center justify-center relative overflow-hidden">
-                {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : <Film size={48} className="text-text-muted" />}
-                <span className="absolute bottom-2 right-2 bg-black/85 text-white px-2 py-0.5 rounded-md text-xs font-semibold">0:00</span>
-                <div className="absolute top-2 left-2">
+                {thumb ? <img src={thumb} alt="" className="w-full h-full object-cover" /> : <Film size={48} className="text-text-muted" />}                <div className="absolute top-2 left-2">
                   <Badge text={form.paid ? 'PAID' : 'FREE'} type={form.paid ? 'paid' : 'free'} small />
                 </div>
               </div>
               <div className="p-3">
                 <div className="flex items-start gap-2">
                   <div className="w-7 h-7 rounded-full bg-gray-700 border border-gray-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-                    Y
+                    <User size={16} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-text-primary line-clamp-2 mb-0.5">
                       {form.title || 'Your video title will appear here'}
                     </p>
-                    <p className="text-xs text-text-muted truncate">You</p>
+                    <p className="text-xs text-text-muted truncate">John Doe</p>
                   </div>
                 </div>
                 {/* Metadata row with fake data */}

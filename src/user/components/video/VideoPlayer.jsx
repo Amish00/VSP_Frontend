@@ -12,7 +12,15 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
   const watchStartTimeRef = useRef(null);
   const viewRecordedRef = useRef(false);
   const viewRecordingRef = useRef(false);
+  const historyRecordedRef = useRef(false);
+  const historyRecordingRef = useRef(false);
   const VIEW_THRESHOLD = 30;
+
+  // watch-time tracking refs
+  const watchTimeAccumulatorRef = useRef(0);
+  const lastReportTimeRef = useRef(Date.now());
+  const watchIntervalRef = useRef(null);
+  const endFlushDoneRef = useRef(false); // prevent multiple flushes at end
 
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -51,24 +59,14 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
 
   const recordViewOnce = useCallback(async () => {
     if (viewRecordedRef.current || viewRecordingRef.current) return;
-
-    const token = sessionStorage.getItem('access_token');
-    if (!token) {
-      // Guests cannot call protected engagement endpoints.
-      viewRecordedRef.current = true;
-      return;
-    }
-
     viewRecordingRef.current = true;
-
     try {
       await api.post('/engagement/view', { videoId: video.id });
       viewRecordedRef.current = true;
       onViewRecorded?.();
       console.log('View recorded for video', video.id);
     } catch (err) {
-      if (err?.response?.status === 401) {
-        // If auth still fails after refresh, stop retry spam for this playback.
+      if (err?.response?.status === 400 || err?.response?.status === 401) {
         viewRecordedRef.current = true;
         return;
       }
@@ -78,27 +76,142 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
     }
   }, [video.id, onViewRecorded]);
 
+  const recordHistoryOnce = useCallback(async () => {
+    if (historyRecordedRef.current || historyRecordingRef.current) return;
+    historyRecordingRef.current = true;
+    try {
+      await api.post(`/history/${video.id}`);
+      historyRecordedRef.current = true;
+    } catch (err) {
+      if (err?.response?.status === 401) {
+        historyRecordedRef.current = true;
+        return;
+      }
+      console.error('Failed to record watch history', err);
+    } finally {
+      historyRecordingRef.current = false;
+    }
+  }, [video.id]);
+
+  // Send accumulated watch time to backend
+  const sendWatchTime = useCallback(async () => {
+    const seconds = watchTimeAccumulatorRef.current;
+    if (seconds <= 0) return;
+
+    watchTimeAccumulatorRef.current = 0; // reset immediately
+
+    try {
+      await api.post('/engagement/watch', {
+        videoId: video.id,
+        watchTimeSeconds: Math.min(seconds, 600)
+      });
+      // Optional: log success
+      // console.log(`📊 Watch time sent: ${Math.min(seconds, 600)}s for video ${video.id}`);
+    } catch (err) {
+      if (err?.response?.status === 401) {
+        if (watchIntervalRef.current) {
+          clearInterval(watchIntervalRef.current);
+          watchIntervalRef.current = null;
+        }
+        return;
+      }
+      // On other errors, put the seconds back to retry later
+      watchTimeAccumulatorRef.current += seconds;
+      console.error('Failed to send watch time', err);
+    }
+  }, [video.id]);
+
+  // Accumulate real-time watch time
+  const accumulateWatchTime = useCallback(() => {
+    if (!playing || !videoRef.current) return;
+    const now = Date.now();
+    const deltaSeconds = (now - lastReportTimeRef.current) / 1000;
+    lastReportTimeRef.current = now;
+
+    if (deltaSeconds > 0 && deltaSeconds < 60) {
+      watchTimeAccumulatorRef.current += deltaSeconds;
+      if (watchTimeAccumulatorRef.current >= 10) {
+        sendWatchTime();
+      }
+    }
+  }, [playing, sendWatchTime]);
+
+  // Start/stop interval based on playing state
+  useEffect(() => {
+    if (playing) {
+      lastReportTimeRef.current = Date.now();
+      if (!watchIntervalRef.current) {
+        watchIntervalRef.current = setInterval(accumulateWatchTime, 2000); // check every 2s for better accuracy
+      }
+    } else {
+      // Paused – flush any accumulated time immediately
+      if (watchTimeAccumulatorRef.current > 0) {
+        sendWatchTime();
+      }
+      if (watchIntervalRef.current) {
+        clearInterval(watchIntervalRef.current);
+        watchIntervalRef.current = null;
+      }
+    }
+    return () => {
+      if (watchIntervalRef.current) {
+        clearInterval(watchIntervalRef.current);
+        watchIntervalRef.current = null;
+      }
+    };
+  }, [playing, accumulateWatchTime, sendWatchTime]);
+
+  // Flush on unmount
+  useEffect(() => {
+    return () => {
+      if (watchTimeAccumulatorRef.current > 0) {
+        sendWatchTime();
+      }
+    };
+  }, [sendWatchTime]);
+
+  // --- timeupdate & ended handlers with end-flush ---
   useEffect(() => {
     const videoEl = videoRef.current;
     if (!videoEl) return;
 
     const handleTimeUpdate = () => {
-      if (playing && !viewRecordedRef.current) {
+      // --- existing view/history logic ---
+      if (playing && (!viewRecordedRef.current || !historyRecordedRef.current)) {
         if (watchStartTimeRef.current === null) {
           watchStartTimeRef.current = videoEl.currentTime;
         }
         const elapsed = videoEl.currentTime - watchStartTimeRef.current;
         if (elapsed >= VIEW_THRESHOLD || videoEl.currentTime >= videoEl.duration - 0.5) {
           recordViewOnce();
+          recordHistoryOnce();
         }
       } else if (!playing) {
         watchStartTimeRef.current = null;
+      }
+
+      // --- NEW: Flush watch time when near the end (within 1 second) ---
+      if (videoEl.duration && videoEl.currentTime >= videoEl.duration - 1) {
+        if (!endFlushDoneRef.current && watchTimeAccumulatorRef.current > 0) {
+          endFlushDoneRef.current = true;
+          sendWatchTime();
+        }
+      } else {
+        // Reset the flag when we're not near the end (e.g., user seeks back)
+        endFlushDoneRef.current = false;
       }
     };
 
     const handleEnded = () => {
       if (!viewRecordedRef.current) {
         recordViewOnce();
+      }
+      if (!historyRecordedRef.current) {
+        recordHistoryOnce();
+      }
+      // Flush any remaining watch time when video ends (safety net)
+      if (watchTimeAccumulatorRef.current > 0) {
+        sendWatchTime();
       }
       setPlaying(false);
     };
@@ -110,14 +223,24 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
       videoEl.removeEventListener('timeupdate', handleTimeUpdate);
       videoEl.removeEventListener('ended', handleEnded);
     };
-  }, [playing, recordViewOnce]);
+  }, [playing, recordViewOnce, recordHistoryOnce, sendWatchTime]);
 
+  // Reset flags when video changes
   useEffect(() => {
     viewRecordedRef.current = false;
     viewRecordingRef.current = false;
+    historyRecordedRef.current = false;
+    historyRecordingRef.current = false;
     watchStartTimeRef.current = null;
+    watchTimeAccumulatorRef.current = 0;
+    endFlushDoneRef.current = false;
+    if (watchIntervalRef.current) {
+      clearInterval(watchIntervalRef.current);
+      watchIntervalRef.current = null;
+    }
   }, [video.id]);
 
+  // Progress updates (unchanged)
   useEffect(() => {
     const videoEl = videoRef.current;
     if (!videoEl) return;
@@ -147,6 +270,7 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
     };
   }, []);
 
+  // Volume, playback rate, controls timeout (unchanged)
   useEffect(() => {
     if (videoRef.current) videoRef.current.volume = muted ? 0 : volume;
   }, [volume, muted]);
@@ -162,6 +286,7 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
     };
   }, [playing, resetControlsTimeout]);
 
+  // Toggle play / pause
   const togglePlay = () => {
     if (videoRef.current) {
       if (playing) videoRef.current.pause();
@@ -246,6 +371,7 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
     }
   };
 
+  // Keyboard shortcuts (unchanged)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
@@ -291,6 +417,7 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [volume, togglePlay, handleFullscreen, handlePictureInPicture]);
 
+  // Render (unchanged)
   return (
     <div
       ref={containerRef}
@@ -310,9 +437,9 @@ const VideoPlayer = ({ video, onViewRecorded }) => {
         onClick={togglePlay}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        preload="auto"               // <— load the video as soon as possible
-        playsInline                  // <— mobile optimisation
-        crossOrigin="anonymous"      // <— helps with CORS/caching
+        preload="auto"
+        playsInline
+        crossOrigin="anonymous"
       />
 
       {buffering && (

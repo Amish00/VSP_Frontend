@@ -128,7 +128,7 @@ const DashboardPage = ({ user }) => {
 
   const STATS = [
     { icon: <FiEye color="#60A5FA" />, label: 'Total Views', value: formatNumber(stats.totalViews), color: '#60A5FA' },
-    { icon: <FaMoneyBillWave color="#10B981" />, label: 'Earnings', value: `Rs.${stats.totalEarnings.toLocaleString()}`,  color: '#10B981' },
+    { icon: <FaMoneyBillWave color="#10B981" />, label: 'Earnings', value: `Rs.${formatNumber(stats.totalEarnings)}`,  color: '#10B981' },
     { icon: <FiUsers color="#F59E0B" />, label: 'Subscribers', value: formatNumber(stats.subscriberCount),  color: '#F59E0B' },
     { icon: <FaHeart color="#EF4444" />, label: 'Total Likes', value: formatNumber(stats.totalLikes), color: '#EF4444' },
   ];

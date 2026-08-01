@@ -59,7 +59,7 @@ const DropZone = ({ onFile }) => {
       onDragLeave={() => setDrag(false)}
       onDrop={(e) => { e.preventDefault(); setDrag(false); if (!busy) handle(e.dataTransfer.files[0]); }}
       onClick={() => { if (!busy && !previewUrl) ref.current?.click(); }}
-      className={`border-2 border-dashed rounded-xl p-6 sm:p-10 text-center transition-all duration-200 ${
+      className={`border-2 border-dashed rounded-xl p-8 sm:p-12 text-center transition-all duration-200 min-h-[340px] flex flex-col items-center justify-center ${
         busy || drag || previewUrl
           ? 'border-primary bg-primary/8'
           : 'border-border-light hover:border-primary/50 hover:bg-primary/4'
@@ -69,7 +69,7 @@ const DropZone = ({ onFile }) => {
     >
       <input ref={ref} type="file" accept="video/*" className="hidden" onChange={(e) => handle(e.target.files?.[0])} />
       {busy ? (
-        <div>
+        <div className="w-full">
           <Upload size={48} className="mx-auto mb-3 text-text-muted" />
           <p className="font-semibold text-md mb-1.5 text-text-primary">
             Uploading {currentFile?.name || 'video'}…
@@ -83,9 +83,9 @@ const DropZone = ({ onFile }) => {
           <p className="text-sm text-text-muted">{pct}%</p>
         </div>
       ) : previewUrl ? (
-        <div className="text-left space-y-4">
+        <div className="text-left space-y-4 w-full">
           <div className="overflow-hidden rounded-xl border border-border bg-black/20 shadow-[0_10px_30px_rgba(0,0,0,.25)]">
-            <video src={previewUrl} controls className="w-full max-h-[320px] bg-black" />
+            <video src={previewUrl} controls className="w-full max-h-[360px] bg-black" />
           </div>
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -102,7 +102,6 @@ const DropZone = ({ onFile }) => {
                 setCurrentFile(null);
                 setPct(0);
                 if (ref.current) ref.current.value = '';
-                // Also clear parent file
                 onFile?.(null);
               }}
             >
@@ -111,14 +110,14 @@ const DropZone = ({ onFile }) => {
           </div>
         </div>
       ) : (
-        <>
-          <Film size={48} className="mx-auto mb-3 text-text-muted" />
-          <p className="font-semibold text-md mb-1.5 text-text-primary">Drag & drop your video here</p>
-          <p className="text-sm text-text-muted mb-5">MP4, MOV, AVI, WEBM · up to 10 GB</p>
+        <div className="w-full">
+          <Film size={56} className="mx-auto mb-4 text-text-muted" />
+          <p className="font-semibold text-lg mb-2 text-text-primary">Drag & drop your video here</p>
+          <p className="text-sm text-text-muted mb-6">MP4, MOV, AVI, WEBM · up to 10 GB</p>
           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); ref.current?.click(); }}>
             Browse Files
           </Button>
-        </>
+        </div>
       )}
     </div>
   );

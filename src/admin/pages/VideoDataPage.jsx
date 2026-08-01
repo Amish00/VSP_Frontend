@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useSnackbar } from 'notistack';
-import {
-  Upload, X, Edit, Save, Eye, Heart, MessageCircle,
-  ThumbsUp, ArrowLeft, Film, CheckCircle, AlertCircle, XCircle, Clock
-} from 'lucide-react';
+import {Upload, Edit, Save, Eye, Heart, MessageCircle, ThumbsUp, ArrowLeft, Film, CheckCircle, AlertCircle, XCircle, Clock} from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import StatCard from '../components/ui/StatCard';
-import { creatorApi } from '../api/creatorApi';
+import { creatorApi } from '../../creator/api/creatorApi';
 import axios from 'axios';
 
 const inp = "w-full bg-bg-el text-text-primary text-base rounded-xl border border-border px-4 py-3 placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all";
@@ -18,7 +15,7 @@ const valueCard = "bg-bg-el rounded-xl border border-border px-4 py-3 text-text-
 const CATS = ['Technology', 'Design', 'Music', 'Gaming', 'Movies', 'Business', 'Education', 'Sports', 'Finance', 'Comedy', 'Travel', 'Food'];
 const VIDEO_TYPES = ['VIDEO', 'SHORTS'];
 
-const VideoInfoPage = () => {
+const VideoDataPage = () => {
   const { enqueueSnackbar } = useSnackbar();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -87,7 +84,7 @@ const VideoInfoPage = () => {
       } catch (err) {
         console.error(err);
         enqueueSnackbar('Failed to load video details', { variant: 'error' });
-        navigate('/creator/videos');
+        navigate('/admin/videos'); // <-- admin redirect
       } finally {
         setLoading(false);
       }
@@ -221,8 +218,9 @@ const VideoInfoPage = () => {
       setTimeout(() => {
         setShowProgressModal(false);
         setUploadSuccess(false);
+        const isShort = refreshed.data.type === 'SHORTS';
         const typeQuery = isShort ? '&type=short' : '';
-        navigate(`/creator/video/${id}?mode=view${typeQuery}`, { replace: true });
+        navigate(`/admin/video/${id}?mode=view${typeQuery}`, { replace: true }); // <-- admin path
       }, 2000);
     } catch (err) {
       console.error(err);
@@ -256,11 +254,12 @@ const VideoInfoPage = () => {
 
   const buildUrl = (viewMode) => {
     const typeQuery = effectiveType === 'short' ? '&type=short' : '';
-    return `/creator/video/${id}?mode=${viewMode}${typeQuery}`;
+    return `/admin/video/${id}?mode=${viewMode}${typeQuery}`; // <-- admin path
   };
 
   const handleBackToList = () => {
-    navigate(isShort ? '/creator/shorts' : '/creator/videos');
+    // Navigate to admin videos list (same as the table)
+    navigate(isShort ? '/admin/videos?type=short' : '/admin/videos'); // <-- admin list
   };
 
   const renderProgressContent = () => {
@@ -366,19 +365,12 @@ const VideoInfoPage = () => {
         />
         <StatCard
           icon={
-            video.status === 'APPROVED' ? <CheckCircle size={32} color="#10B981" /> :
-            video.status === 'REJECTED' ? <XCircle size={32} color="#EF4444" /> :
-            <Clock size={32} color="#F59E0B" />
+            video.status === 'APPROVED' ? <CheckCircle size={24} color="#10B981" /> :
+            video.status === 'REJECTED' ? <XCircle size={24} color="#EF4444" /> :
+            <Clock size={24} color="#F59E0B" />
           }
           label="Status"
-          value={
-            <span
-              className="text-2xl font-bold  py-1.5 rounded-full inline-block"
-              style={{ olor: status.color }}
-            >
-              {status.label}
-            </span>
-          }
+          value={<span className="text-sm font-medium">{status.label}</span>}
           color={status.color}
         />
       </div>
@@ -656,4 +648,4 @@ const VideoInfoPage = () => {
   );
 };
 
-export default VideoInfoPage;
+export default VideoDataPage;
